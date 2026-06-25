@@ -1,0 +1,30 @@
+# Line-ending policy (Windows build). Overrides per-developer core.autocrlf so the
+# repo is canonical LF and the goose sidecar .exe is never corrupted. See
+# docs/research/windows-build-2026-06.md ("Line endings (critical for the sidecar)").
+
+# Auto-detect text vs binary; store text with LF in the repo.
+* text=auto eol=lf
+
+# Windows executables are binary and must never be line-ending normalized.
+*.exe binary
+
+# The goose sidecar binaries (staged in Phase 4) are binary — protect them now.
+src-tauri/binaries/* binary
+
+# Defensive explicit binary markers so common assets are never mangled on Windows.
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.ico   binary
+*.icns  binary
+*.webp  binary
+*.woff  binary
+*.woff2 binary
+*.ttf   binary
+*.otf   binary
+*.pdf   binary
+*.tgz   binary
+*.zip   binary
+*.gz    binary
+*.keystore binary
