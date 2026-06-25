@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Martin Montero and the Alfred contributors
 /**
  * NIP-XX: Encrypted File Sync Types
  *
@@ -11,7 +13,7 @@ export const KIND_SHARED_DOCUMENT = 30802;
 
 // NIP-78 Application-specific data (for user preferences)
 export const KIND_APP_DATA = 30078;
-export const APP_DATA_IDENTIFIER = 'onyx/preferences';
+export const APP_DATA_IDENTIFIER = 'alfred/preferences';
 
 // NIP-51 Lists
 export const KIND_MUTE_LIST = 10000;
@@ -355,7 +357,7 @@ export interface NostrProfile {
 
 /**
  * User preferences synced via Nostr (NIP-78)
- * Encrypted to self, stored with d-tag "onyx/preferences"
+ * Encrypted to self, stored with d-tag "alfred/preferences"
  */
 export interface UserPreferences {
   /** Bookmarked file paths (relative to vault) */

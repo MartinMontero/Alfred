@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Martin Montero and the Alfred contributors
 import { Component, createSignal, createEffect, createResource, on, For, Show, onMount, onCleanup, lazy } from 'solid-js';
 import Sidebar from './components/Sidebar';
 import Editor from './components/Editor';
@@ -580,11 +582,11 @@ const App: Component = () => {
       window.removeEventListener('show-onboarding', handleShowOnboarding);
     });
     
-    // Set up deep link handler for Onyx Clipper integration
+    // Set up deep link handler for Alfred Clipper integration
     setupDeepLinkHandler();
   });
 
-  // Handle deep links from Onyx Clipper browser extension
+  // Handle deep links from Alfred Clipper browser extension
   const setupDeepLinkHandler = async () => {
     try {
       // Register handler for URLs received while app is running (macOS)
@@ -646,7 +648,7 @@ const App: Component = () => {
       const parsed = new URL(url);
       const protocol = parsed.protocol.replace(':', '');
       
-      if (protocol !== 'onyx') {
+      if (protocol !== 'alfred') {
         return;
       }
       
@@ -683,7 +685,7 @@ const App: Component = () => {
     }
   };
 
-  // Handle onyx://clip - Save clipped content from browser extension
+  // Handle alfred://clip - Save clipped content from browser extension
   const handleClipDeepLink = async (params: URLSearchParams, cachedClipboard?: string) => {
     const vault = vaultPath();
     if (!vault) {
@@ -756,7 +758,7 @@ const App: Component = () => {
     }
   };
 
-  // Handle onyx://open - Open a file in the vault
+  // Handle alfred://open - Open a file in the vault
   const handleOpenDeepLink = async (params: URLSearchParams) => {
     const vault = vaultPath();
     if (!vault) {
@@ -2084,7 +2086,7 @@ const App: Component = () => {
 
       // Layer 3: SHA-256 content matching (fallback for system file manager moves)
       // Match remaining local-only files against remaining remote-only files by checksum.
-      // This won't catch move+edit, but handles simple moves from outside Onyx.
+      // This won't catch move+edit, but handles simple moves from outside Alfred.
       if (localOnlyFiles.length > 0 && remoteFileMap.size > 0) {
         const remoteByChecksum = new Map<string, Array<{ path: string; file: typeof remoteFiles[0] }>>();
         for (const [path, file] of remoteFileMap) {
@@ -2448,7 +2450,7 @@ const App: Component = () => {
   const currentFileTitle = () => {
     const tab = currentTab();
     if (showGraphView()) return 'Graph View';
-    if (!tab) return 'Onyx';
+    if (!tab) return 'Alfred';
     return tab.name.replace(/\.md$/, '');
   };
 

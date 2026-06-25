@@ -1,20 +1,23 @@
-name: Onyx
-summary: Private, encrypted note-taking app with AI productivity tools
+# NOTE: Zapstore / app-distribution identity (assets, app id, signing) is a
+# stop-and-ask item per the standing context and is NOT finalized in Phase 0.
+# The fields below are re-identified from upstream; distribution specifics are
+# deferred until the release phase.
+name: Alfred
+summary: Sovereign, local-first, Nostr-native PKM for agentic AI development
 description: |
-  Onyx is a private, encrypted note-taking application built on the Nostr
-  protocol with integrated AI productivity tools. Your notes are encrypted
-  with your keys — no server, no company, no third party can read your content.
+  Alfred is the sovereign, local-first, Nostr-native Personal Knowledge
+  Management system for agentic AI development — a component of
+  wecanjustbuildthings.dev. Your notes are plain markdown on your own disk,
+  encrypted with your keys before any relay; no server, no company, no third
+  party can read your content.
 
   Features:
-  - End-to-end encrypted notes using Nostr
-  - AI-powered productivity (cloud and local model support)
-  - Cross-platform (Android, Desktop, macOS)
-  - Self-custodial — you own your data
-license: MIT
-repository: https://github.com/derekross/onyx
-website: https://onyxnotes.dev
-assets:
-  - app-universal-release.apk
+  - End-to-end encrypted notes using Nostr (NIP-44)
+  - Local-first plain-markdown vault that works offline
+  - Cross-platform desktop (Windows first) and a zero-backend PWA
+  - Self-custodial — you own your code, your data, and your keys
+license: AGPL-3.0-or-later
+repository: https://github.com/MartinMontero/Alfred
 metadata_sources:
   - github
 tags:
@@ -22,5 +25,5 @@ tags:
   - notes
   - encryption
   - privacy
-  - ai
-  - productivity
+  - pkm
+  - agentic

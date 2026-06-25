@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Martin Montero and the Alfred contributors
 import type { Search, SearchResult } from '../types';
 import { getVaultRoot } from './vault/opfs';
 

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Martin Montero and the Alfred contributors
 /**
  * OpenCodePanel - Wrapper component that allows switching between Chat and Terminal modes
  */

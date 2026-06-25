@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Martin Montero and the Alfred contributors
 import { Component, createSignal, For, Show, onMount, onCleanup, createEffect } from 'solid-js';
 import { platform } from '@platform';
 import {
@@ -2527,7 +2529,7 @@ const Settings: Component<SettingsProps> = (props) => {
                 <div class="setting-item">
                   <div class="setting-info">
                     <div class="setting-name">Welcome Tour</div>
-                    <div class="setting-description">Show the welcome tour again to learn about Onyx features</div>
+                    <div class="setting-description">Show the welcome tour again to learn about Alfred features</div>
                   </div>
                   <button 
                     class="setting-button secondary"
@@ -4740,14 +4742,14 @@ const Settings: Component<SettingsProps> = (props) => {
                       <polygon points="256,48 380,140 420,280 350,420 162,420 92,280 132,140" fill="none" stroke="#2a2a2a" stroke-width="2"/>
                     </svg>
                   </div>
-                  <h1>Onyx</h1>
-                  <p class="about-tagline">A local-first, Nostr-native note-taking app</p>
+                  <h1>Alfred</h1>
+                  <p class="about-tagline">A sovereign, local-first, Nostr-native PKM for agentic AI development</p>
                   <p class="about-version">Version {appVersion()}</p>
                 </div>
 
                 <div class="about-section">
                   <h3>About</h3>
-                  <p>Onyx is an open-source note-taking app built with privacy and decentralization in mind. Your notes are stored locally as plain markdown files, with optional encrypted sync via Nostr.</p>
+                  <p>Alfred is an open-source, local-first, Nostr-native PKM for agentic AI development, part of wecanjustbuildthings.dev. Your notes are stored locally as plain markdown files, with optional encrypted sync via Nostr.</p>
                 </div>
 
                 <div class="about-section">
@@ -4764,9 +4766,9 @@ const Settings: Component<SettingsProps> = (props) => {
                 <div class="about-section">
                   <h3>Links</h3>
                   <div class="about-links">
-                    <a href="https://github.com/derekross/onyx" target="_blank" class="about-link">GitHub Repository</a>
+                    <a href="https://github.com/MartinMontero/Alfred" target="_blank" class="about-link">GitHub Repository</a>
                     <a href="https://github.com/derekross/onyx-skills" target="_blank" class="about-link">AI Skills Repository</a>
-                    <a href="https://github.com/derekross/onyx/issues" target="_blank" class="about-link">Report an Issue</a>
+                    <a href="https://github.com/MartinMontero/Alfred/issues" target="_blank" class="about-link">Report an Issue</a>
                   </div>
                 </div>
 

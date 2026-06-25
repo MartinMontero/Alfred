@@ -1,0 +1,23 @@
+Alfred
+Copyright (c) 2026 Martin Montero and the Alfred contributors
+Part of wecanjustbuildthings.dev
+
+This product is licensed under the GNU Affero General Public License v3.0 or
+later (AGPL-3.0-or-later). See the LICENSE file for the full text.
+
+------------------------------------------------------------------------------
+Derived from upstream work
+------------------------------------------------------------------------------
+
+This software is a derivative of Onyx, by Derek Ross and the Onyx contributors,
+which is made available under the MIT License.
+
+  Upstream:        https://github.com/derekross/onyx
+  Imported commit: 62d6d58d2af7a57f9a5954c611de47f252cb27bd
+  Upstream license: MIT (preserved in LICENSE.onyx)
+
+The MIT license notice for the upstream work is retained in LICENSE.onyx and is
+required to be included in all copies or substantial portions of that work.
+
+See ATTRIBUTION.md and UPSTREAM.md for full provenance and the security
+back-port cadence.

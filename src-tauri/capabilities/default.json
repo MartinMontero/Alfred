@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Default capabilities for Onyx",
+  "description": "Default capabilities for Alfred",
   "windows": [
     "main"
   ],
@@ -19,7 +19,7 @@
         { "path": "$DOWNLOAD/**" },
         { "path": "$APPCONFIG/**" },
         { "path": "$APPDATA/**" },
-        { "path": "$HOME/.config/onyx/**" },
+        { "path": "$HOME/.config/alfred/**" },
         { "path": "$HOME/.config/opencode/**" }
       ]
     },

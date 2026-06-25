@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Martin Montero and the Alfred contributors
 import type { AIProviderProxy } from '../types';
 
 // Phase 4 wires this up to direct fetch + a CORS worker fallback. For Phase 2,

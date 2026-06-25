@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Martin Montero and the Alfred contributors
 #[cfg(not(target_os = "android"))]
 use keyring::Entry;
 use notify::{Config, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
@@ -48,7 +50,7 @@ fn get_config_dir_with_app(app: &AppHandle) -> PathBuf {
         // On Android, use the app's data directory
         app.path()
             .app_data_dir()
-            .unwrap_or_else(|_| PathBuf::from("/data/data/com.onyxnotes.dev/files"))
+            .unwrap_or_else(|_| PathBuf::from("/data/data/dev.wecanjustbuildthings.alfred/files"))
             .join("config")
     }
     #[cfg(not(target_os = "android"))]
@@ -64,7 +66,7 @@ fn get_config_dir_with_app(app: &AppHandle) -> PathBuf {
                     .map(|p| p.to_string_lossy().to_string())
                     .unwrap_or_else(|| ".".to_string())
             });
-        PathBuf::from(home).join(".config").join("onyx")
+        PathBuf::from(home).join(".config").join("alfred")
     }
 }
 
@@ -95,13 +97,13 @@ fn get_platform_info(app: AppHandle) -> PlatformInfo {
         app.path()
             .app_data_dir()
             .ok()
-            .map(|p| p.join("Onyx").to_string_lossy().to_string())
+            .map(|p| p.join("Alfred").to_string_lossy().to_string())
     } else {
-        // On desktop, use Documents/Onyx
+        // On desktop, use Documents/Alfred
         app.path()
             .document_dir()
             .ok()
-            .map(|p| p.join("Onyx").to_string_lossy().to_string())
+            .map(|p| p.join("Alfred").to_string_lossy().to_string())
     };
 
     PlatformInfo {
@@ -1268,7 +1270,7 @@ mod opencode_installer {
         let api_url = format!("https://api.github.com/repos/{}/releases/latest", RELEASE_REPO);
         let release: Option<serde_json::Value> = match client
             .get(&api_url)
-            .header("User-Agent", "onyx-opencode-installer")
+            .header("User-Agent", "alfred-opencode-installer")
             .header("Accept", "application/vnd.github+json")
             .send()
             .await
@@ -2393,7 +2395,7 @@ async fn fetch_skill_file(url: String) -> Result<String, String> {
 mod keyring_commands {
     use super::*;
 
-    const KEYRING_SERVICE: &str = "com.onyx.app";
+    const KEYRING_SERVICE: &str = "dev.wecanjustbuildthings.alfred";
 
     #[tauri::command]
     pub fn keyring_set(key: String, value: String) -> Result<(), String> {
@@ -2735,7 +2737,7 @@ async fn openclaw_gateway_request(
             "maxProtocol": 3,
             "client": {
                 "id": "gateway-client",
-                "displayName": "Onyx",
+                "displayName": "Alfred",
                 "version": "1.0.0",
                 "platform": std::env::consts::OS,
                 "mode": "ui"
@@ -2848,9 +2850,9 @@ fn get_deep_link_args() -> Vec<String> {
     let args: Vec<String> = std::env::args().collect();
     let mut deep_links = Vec::new();
     
-    // Skip the first arg (program name), check for URLs starting with onyx://
+    // Skip the first arg (program name), check for URLs starting with alfred://
     for arg in args.iter().skip(1) {
-        if arg.starts_with("onyx://") {
+        if arg.starts_with("alfred://") {
             deep_links.push(arg.clone());
         }
     }
@@ -2888,7 +2890,7 @@ pub fn run() {
             
             // Check for deep link URLs in args and emit them to the frontend
             for arg in args.iter().skip(1) {
-                if arg.starts_with("onyx://") {
+                if arg.starts_with("alfred://") {
                     let _ = app.emit("deep-link-received", arg.clone());
                 }
             }

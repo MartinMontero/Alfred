@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Martin Montero and the Alfred contributors
 import { getVersion, onBackButtonPress } from '@tauri-apps/api/app';
 import type { AppLifecycle } from '../types';
 

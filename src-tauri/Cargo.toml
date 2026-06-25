@@ -1,15 +1,15 @@
 [package]
-name = "onyx"
-version = "0.16.1"
-description = "Open source knowledge base and note-taking app"
-authors = ["you"]
-license = "MIT"
-repository = ""
+name = "alfred"
+version = "0.1.0"
+description = "Sovereign, local-first, Nostr-native PKM for agentic AI development"
+authors = ["Martin Montero"]
+license = "AGPL-3.0-or-later"
+repository = "https://github.com/MartinMontero/Alfred"
 edition = "2021"
 rust-version = "1.77.2"
 
 [lib]
-name = "onyx_lib"
+name = "alfred_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]

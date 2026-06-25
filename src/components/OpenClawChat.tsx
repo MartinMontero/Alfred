@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Martin Montero and the Alfred contributors
 /**
  * OpenClawChat - Chat interface for OpenClaw AI assistant
  * Communicates via OpenAI-compatible API (POST /v1/chat/completions)

@@ -1,8 +1,14 @@
 {
-  "name": "onyx",
-  "version": "0.16.1",
-  "description": "Open source knowledge base and note-taking app",
+  "name": "alfred",
+  "version": "0.1.0",
+  "description": "Sovereign, local-first, Nostr-native PKM for agentic AI development — part of wecanjustbuildthings.dev",
   "type": "module",
+  "author": "Martin Montero",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/MartinMontero/Alfred.git"
+  },
+  "homepage": "https://github.com/MartinMontero/Alfred",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -14,7 +20,7 @@
     "typecheck": "tsc --noEmit",
     "postinstall": "patch-package"
   },
-  "license": "MIT",
+  "license": "AGPL-3.0-or-later",
   "dependencies": {
     "@codemirror/lang-markdown": "^6.5.0",
     "@codemirror/state": "^6.5.4",

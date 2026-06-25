@@ -1,7 +1,9 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Martin Montero and the Alfred contributors
 // OPFS path-handle helpers.
 //
 // The "vault path" string from the Tauri world maps to a single OPFS root
-// directory name (default 'onyx-vault'). Absolute paths in the rest of the app
+// directory name (default 'alfred-vault'). Absolute paths in the rest of the app
 // look like `<vault>/<relative>`; here we strip the vault prefix and walk the
 // OPFS tree by segment.
 

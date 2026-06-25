@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Martin Montero and the Alfred contributors
 import { readText, writeText, readImage } from '@tauri-apps/plugin-clipboard-manager';
 import type { Clipboard, ClipboardImage } from '../types';
 

@@ -20,7 +20,7 @@
   <!-- Background glow -->
   <circle cx="100" cy="75" r="65" fill="url(#glow)"/>
   
-  <!-- Onyx rock logo - scaled and centered -->
+  <!-- Alfred logo - scaled and centered -->
   <g transform="translate(55, 30) scale(0.18)">
     <!-- Back facets (darker) -->
     <polygon points="256,48 380,140 420,280 350,420 162,420 92,280 132,140" fill="#0a0a0a"/>

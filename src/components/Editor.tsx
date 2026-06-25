@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Martin Montero and the Alfred contributors
 import { Component, onCleanup, Show, createSignal, createEffect, on } from 'solid-js';
 import { Editor, rootCtx, defaultValueCtx, editorViewCtx, parserCtx } from '@milkdown/core';
 import { commonmark, remarkPreserveEmptyLinePlugin } from '@milkdown/preset-commonmark';
@@ -730,7 +732,7 @@ const MilkdownEditor: Component<EditorProps> = (props) => {
             when={props.vaultPath}
             fallback={
               <>
-                <h1>Onyx</h1>
+                <h1>Alfred</h1>
                 <p>Open a vault to get started</p>
                 <div class="welcome-buttons">
                   <Show when={props.onOpenVault}>
@@ -760,7 +762,7 @@ const MilkdownEditor: Component<EditorProps> = (props) => {
               </>
             }
           >
-            <h1>Onyx</h1>
+            <h1>Alfred</h1>
             <p>Select a note from the sidebar or create a new one</p>
             <Show when={props.onCreateFile}>
               <button class="welcome-create-btn" onClick={() => {

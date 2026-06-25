@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=Alfred
+Comment=Sovereign, local-first, Nostr-native PKM for agentic AI development
+Exec=alfred %u
+Icon=alfred
+Terminal=false
+Type=Application
+Categories=Office;TextEditor;Utility;
+MimeType=x-scheme-handler/alfred;
+StartupWMClass=alfred
+StartupNotify=true

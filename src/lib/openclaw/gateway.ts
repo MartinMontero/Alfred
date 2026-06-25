@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Martin Montero and the Alfred contributors
 /**
  * OpenClaw Gateway client
  * Communicates with the OpenClaw Gateway WebSocket via Rust proxy.

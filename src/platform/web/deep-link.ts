@@ -1,8 +1,10 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Martin Montero and the Alfred contributors
 import type { DeepLink } from '../types';
 
 // Web deep-links work via:
 //   - URLs that land on /o/<payload>  (the SolidRouter handles the route).
-//   - The HTML5 navigator.registerProtocolHandler('web+onyx', '/o/%s') (best-effort).
+//   - The HTML5 navigator.registerProtocolHandler('web+alfred', '/o/%s') (best-effort).
 //
 // On first launch we read window.location and forward any /o/ path to onReceived
 // callbacks. Phase 2 doesn't wire the SolidRouter route yet — this is the hook
@@ -17,7 +19,7 @@ function tryRegisterProtocolHandler(): void {
   try {
     (navigator as unknown as {
       registerProtocolHandler?: (scheme: string, url: string) => void;
-    }).registerProtocolHandler?.('web+onyx', '/o/%s');
+    }).registerProtocolHandler?.('web+alfred', '/o/%s');
   } catch {
     /* ignore — Safari and others refuse non-https or unknown schemes */
   }

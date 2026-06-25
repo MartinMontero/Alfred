@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Martin Montero and the Alfred contributors
 import { Component, createSignal, createEffect, onCleanup } from 'solid-js';
 import { platform } from '@platform';
 import { sanitizeHtml } from '../lib/security';

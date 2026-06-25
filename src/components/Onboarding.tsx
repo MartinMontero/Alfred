@@ -1,7 +1,9 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Martin Montero and the Alfred contributors
 /**
  * Onboarding - Welcome wizard for new users
  * 
- * Guides users through setting up their Onyx workspace including:
+ * Guides users through setting up their Alfred workspace including:
  * - Vault creation/selection
  * - Nostr identity setup
  * - Cloud sync configuration
@@ -164,7 +166,7 @@ const Onboarding: Component<OnboardingProps> = (props) => {
     setVaultLoading(true);
     setVaultError(null);
     try {
-      const path = defaultVaultPath() || (props.isMobile ? null : `${await getHomeDir()}/Documents/Onyx Notes`);
+      const path = defaultVaultPath() || (props.isMobile ? null : `${await getHomeDir()}/Documents/Alfred Notes`);
       if (!path) throw new Error('Could not determine vault path');
       
       // Create the folder
@@ -477,9 +479,9 @@ const Onboarding: Component<OnboardingProps> = (props) => {
   const renderWelcome = () => (
     <>
       <div class="onboarding-illustration">
-        <img src={WelcomeSvg} alt="Welcome to Onyx" />
+        <img src={WelcomeSvg} alt="Welcome to Alfred" />
       </div>
-      <h1 class="onboarding-headline">Welcome to Onyx</h1>
+      <h1 class="onboarding-headline">Welcome to Alfred</h1>
       <p class="onboarding-subhead">Your AI-powered workspace for focused work and clear thinking.</p>
       
       <div class="onboarding-benefits">
@@ -536,7 +538,7 @@ const Onboarding: Component<OnboardingProps> = (props) => {
             </div>
             <div class="onboarding-vault-info">
               <div class="onboarding-vault-title">Create a new vault</div>
-              <div class="onboarding-vault-desc">We'll create a folder called "Onyx Notes"</div>
+              <div class="onboarding-vault-desc">We'll create a folder called "Alfred Notes"</div>
             </div>
           </div>
           <div class="onboarding-vault-option" onClick={chooseExistingVault}>
@@ -1135,7 +1137,7 @@ const Onboarding: Component<OnboardingProps> = (props) => {
           Create Your First Note
         </button>
         <button class="onboarding-button secondary" onClick={() => completeOnboarding(false)}>
-          Explore Onyx
+          Explore Alfred
         </button>
       </div>
     </>

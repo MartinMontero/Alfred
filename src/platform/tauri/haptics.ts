@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Martin Montero and the Alfred contributors
 // Tauri haptics adapter — uses @tauri-apps/plugin-haptics on mobile.
 // Plugin is dynamically imported so desktop builds don't carry it.
 

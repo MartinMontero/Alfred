@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Martin Montero and the Alfred contributors
 import { Component, For, Show, createSignal, createMemo } from 'solid-js';
 import { platform } from '@platform';
 import { NoteGraph } from '../lib/editor/note-index';

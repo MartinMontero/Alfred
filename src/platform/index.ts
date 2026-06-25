@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Martin Montero and the Alfred contributors
 // Platform adapter — alias entrypoint.
 //
 // Vite's `@platform` alias points here. The alias resolution in vite.config.ts

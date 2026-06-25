@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Martin Montero and the Alfred contributors
 /**
  * Nostr Login Service
  *
@@ -327,8 +329,8 @@ export async function fetchUserProfile(
 /**
  * Keyring keys - all sensitive data stored securely in OS keyring
  */
-const KEYRING_LOGIN_KEY = 'onyx:login';
-const KEYRING_PROFILE_KEY = 'onyx:profile';
+const KEYRING_LOGIN_KEY = 'alfred:login';
+const KEYRING_PROFILE_KEY = 'alfred:profile';
 
 /**
  * Save login to keyring (entire login stored securely)

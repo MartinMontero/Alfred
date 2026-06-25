@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Martin Montero and the Alfred contributors
 // Single IndexedDB connection shared across web adapter modules.
 //
 // Stores:
@@ -7,7 +9,7 @@
 
 import { openDB, type IDBPDatabase } from 'idb';
 
-const DB_NAME = 'onyx';
+const DB_NAME = 'alfred';
 const DB_VERSION = 1;
 
 let dbPromise: Promise<IDBPDatabase> | null = null;

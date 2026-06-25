@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Martin Montero and the Alfred contributors
 import { defineConfig } from 'vite';
 import solid from 'vite-plugin-solid';
 import { VitePWA } from 'vite-plugin-pwa';
@@ -36,7 +38,7 @@ const WEB_CSP = [
 ].join('; ');
 
 const webCspPlugin = () => ({
-  name: 'onyx-web-csp',
+  name: 'alfred-web-csp',
   apply: 'build' as const,
   transformIndexHtml() {
     return [
@@ -57,9 +59,9 @@ const webPlugins =
           registerType: 'autoUpdate',
           includeAssets: ['icons/icon.png', 'icons/128x128.png', 'icons/128x128@2x.png'],
           manifest: {
-            name: 'Onyx',
-            short_name: 'Onyx',
-            description: 'Nostr-synced markdown notes.',
+            name: 'Alfred',
+            short_name: 'Alfred',
+            description: 'Sovereign, local-first, Nostr-native PKM for agentic AI development.',
             theme_color: '#1e1e1e',
             background_color: '#1e1e1e',
             display: 'standalone',

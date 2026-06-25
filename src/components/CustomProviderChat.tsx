@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Martin Montero and the Alfred contributors
 /**
  * CustomProviderChat - Chat interface for any OpenAI-compatible API provider
  * Works with MapleAI Proxy, Ollama, LM Studio, vLLM, or any OpenAI-compatible endpoint.
@@ -364,7 +366,7 @@ const CustomProviderChat: Component<CustomProviderChatProps> = (props) => {
       if (props.vaultPath) {
         apiMessages.push({
           role: 'system',
-          content: `You are a helpful AI assistant running inside Onyx, a note-taking app. The user's vault is at: ${props.vaultPath}. Help the user with their questions and tasks.`
+          content: `You are a helpful AI assistant running inside Alfred, a note-taking app. The user's vault is at: ${props.vaultPath}. Help the user with their questions and tasks.`
         });
       }
 

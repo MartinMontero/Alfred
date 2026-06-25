@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Martin Montero and the Alfred contributors
 import { Component, createSignal, createEffect, onCleanup, Show } from 'solid-js';
 import { Network, Options } from 'vis-network';
 import { DataSet } from 'vis-data';

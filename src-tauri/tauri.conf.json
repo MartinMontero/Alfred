@@ -1,8 +1,8 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "Onyx",
-  "version": "0.16.1",
-  "identifier": "com.onyxnotes.dev",
+  "productName": "Alfred",
+  "version": "0.1.0",
+  "identifier": "dev.wecanjustbuildthings.alfred",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:1420",
@@ -13,7 +13,7 @@
     "withGlobalTauri": true,
     "windows": [
       {
-        "title": "Onyx",
+        "title": "Alfred",
         "width": 1200,
         "height": 800,
         "minWidth": 800,
@@ -32,7 +32,7 @@
   "plugins": {
     "deep-link": {
       "desktop": {
-        "schemes": ["onyx"]
+        "schemes": ["alfred"]
       }
     }
   },
@@ -48,10 +48,10 @@
     ],
     "linux": {
       "deb": {
-        "desktopTemplate": "desktop/onyx.desktop"
+        "desktopTemplate": "desktop/alfred.desktop"
       },
       "rpm": {
-        "desktopTemplate": "desktop/onyx.desktop"
+        "desktopTemplate": "desktop/alfred.desktop"
       },
       "appimage": {
         "bundleMediaFramework": false

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Martin Montero and the Alfred contributors
 import { $prose } from '@milkdown/utils';
 import { history, undo, redo } from '@milkdown/prose/history';
 import { keymap } from '@milkdown/prose/keymap';

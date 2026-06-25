@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Martin Montero and the Alfred contributors
 import type { AssetEntry, FileEntry, FileStats, VaultFS } from '../../types';
 import {
   getVaultRoot,
@@ -243,12 +245,12 @@ export const vault: VaultFS = {
 
   async setVaultScope(vaultPath) {
     currentVault = vaultPath;
-    (window as unknown as { __onyxVault?: string }).__onyxVault = vaultPath;
+    (window as unknown as { __alfredVault?: string }).__alfredVault = vaultPath;
   },
 
   async startWatching(vaultPath) {
     currentVault = vaultPath;
-    (window as unknown as { __onyxVault?: string }).__onyxVault = vaultPath;
+    (window as unknown as { __alfredVault?: string }).__alfredVault = vaultPath;
     await startWatcher(vaultPath);
   },
 

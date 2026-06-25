@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Martin Montero and the Alfred contributors
 import type { PlatformCapabilities, PlatformInfo } from '../types';
 
 function caps(): PlatformCapabilities {
@@ -23,7 +25,7 @@ let cached: PlatformInfo | null = null;
 export async function fetchPlatformInfo(): Promise<PlatformInfo> {
   cached = {
     platform: 'web',
-    default_vault_path: 'onyx-vault',
+    default_vault_path: 'alfred-vault',
     is_web: true,
     capabilities: caps(),
   };
@@ -33,7 +35,7 @@ export async function fetchPlatformInfo(): Promise<PlatformInfo> {
 export function defaultPlatformInfo(): PlatformInfo {
   return {
     platform: 'web',
-    default_vault_path: 'onyx-vault',
+    default_vault_path: 'alfred-vault',
     is_web: true,
     capabilities: caps(),
   };

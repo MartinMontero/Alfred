@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Martin Montero and the Alfred contributors
 import type { Dialog, DialogOpenOptions } from '../types';
 
 // Picked files (and directories) on the web don't have a stable absolute path,

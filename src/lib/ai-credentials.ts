@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Martin Montero and the Alfred contributors
 /**
  * AI credential storage
  *
@@ -97,11 +99,11 @@ function createCredential(secretKey: string, legacyKey: string): Credential {
   return { get, set, clear };
 }
 
-// Secret-store keys use the same 'onyx:' namespace as src/lib/nostr/login.ts.
+// Secret-store keys use the same 'alfred:' namespace as src/lib/nostr/login.ts.
 // The second argument is the legacy plaintext localStorage key being migrated.
-const openClawToken = createCredential('onyx:openclaw_token', 'openclaw_token');
+const openClawToken = createCredential('alfred:openclaw_token', 'openclaw_token');
 const customProviderApiKey = createCredential(
-  'onyx:custom_provider_api_key',
+  'alfred:custom_provider_api_key',
   'custom_provider_api_key',
 );
 

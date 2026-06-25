@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Martin Montero and the Alfred contributors
 // Master-passphrase prompt for the web build.
 //
 // Shown when the SecretStore reports isLocked() = true. The same passphrase
@@ -48,7 +50,7 @@ const UnlockDialog: Component<UnlockDialogProps> = (props) => {
   return (
     <div class="unlock-dialog-overlay">
       <form class="unlock-dialog" onSubmit={handleSubmit}>
-        <h2>{mode() === 'create' ? 'Create master passphrase' : 'Unlock Onyx'}</h2>
+        <h2>{mode() === 'create' ? 'Create master passphrase' : 'Unlock Alfred'}</h2>
         <p class="unlock-dialog-body">
           {mode() === 'create'
             ? 'Choose a passphrase. It encrypts your Nostr key in this browser. We cannot recover it for you.'

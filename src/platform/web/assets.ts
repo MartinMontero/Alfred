@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Martin Montero and the Alfred contributors
 import type { Assets } from '../types';
 import { tryResolveFile } from './vault/opfs';
 
@@ -29,9 +31,9 @@ function mimeFor(ext: string): string {
 
 function getActiveVault(): string | null {
   // The vault adapter stores currentVault internally; for asset resolution we
-  // read from window.__onyxVault, set on vault.setVaultScope. Avoids a circular
+  // read from window.__alfredVault, set on vault.setVaultScope. Avoids a circular
   // import.
-  return (window as unknown as { __onyxVault?: string }).__onyxVault ?? null;
+  return (window as unknown as { __alfredVault?: string }).__alfredVault ?? null;
 }
 
 async function buildBlobUrl(absolutePath: string): Promise<string> {
