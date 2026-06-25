@@ -535,7 +535,7 @@ const MilkdownEditor: Component<EditorProps> = (props) => {
     )
   );
 
-  // Handle external content changes (e.g., from OpenCode or file watcher)
+  // Handle external content changes (e.g., from an external editor or file watcher)
   createEffect(
     on(
       () => props.content,

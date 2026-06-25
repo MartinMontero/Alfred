@@ -20,19 +20,4 @@ export const ai: AIProviderProxy = {
     );
     return () => off();
   },
-  openClawRequest(url, token, body) {
-    return invoke<string>('openclaw_request', { url, token, body });
-  },
-  async openClawStream(requestId, url, token, body) {
-    await invoke<void>('openclaw_stream', { requestId, url, token, body });
-  },
-  async onOpenClawChunk(requestId, cb) {
-    const off = await listen<string>(`openclaw-stream-${requestId}`, (event) =>
-      cb(event.payload),
-    );
-    return () => off();
-  },
-  openClawGatewayRequest(wsUrl, token, method, params) {
-    return invoke<string>('openclaw_gateway_request', { wsUrl, token, method, params });
-  },
 };

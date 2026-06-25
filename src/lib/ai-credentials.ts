@@ -3,9 +3,9 @@
 /**
  * AI credential storage
  *
- * Stores AI provider secrets (OpenClaw gateway token, custom provider API key)
- * in the platform secret store (OS keyring on desktop, passphrase-sealed store
- * on web) instead of plaintext localStorage.
+ * Stores AI provider secrets (the custom provider API key) in the platform
+ * secret store (OS keyring on desktop, passphrase-sealed store on web) instead
+ * of plaintext localStorage.
  *
  * Migration: legacy plaintext copies in localStorage are moved into the secret
  * store on first read and removed from localStorage. If the secret store is
@@ -101,25 +101,10 @@ function createCredential(secretKey: string, legacyKey: string): Credential {
 
 // Secret-store keys use the same 'alfred:' namespace as src/lib/nostr/login.ts.
 // The second argument is the legacy plaintext localStorage key being migrated.
-const openClawToken = createCredential('alfred:openclaw_token', 'openclaw_token');
 const customProviderApiKey = createCredential(
   'alfred:custom_provider_api_key',
   'custom_provider_api_key',
 );
-
-// --- OpenClaw gateway token ---
-
-export async function getOpenClawToken(): Promise<string | null> {
-  return openClawToken.get();
-}
-
-export async function setOpenClawToken(value: string): Promise<void> {
-  return openClawToken.set(value);
-}
-
-export async function clearOpenClawToken(): Promise<void> {
-  return openClawToken.clear();
-}
 
 // --- Custom provider API key ---
 

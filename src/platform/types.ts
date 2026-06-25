@@ -13,10 +13,6 @@ export interface PlatformCapabilities {
   filesystemWatch: boolean;
   nativeDialog: boolean;
   systemKeyring: boolean;
-  openCodeLocal: boolean;
-  openCodeRemote: boolean;
-  ptyLocal: boolean;
-  ptyRemote: boolean;
   shellOpen: boolean;
   haptics: boolean;
   biometric: boolean;
@@ -97,7 +93,6 @@ export interface SecretStore {
 
 export interface AppSettings {
   vault_path?: string | null;
-  show_terminal?: boolean;
 }
 
 export interface Settings {
@@ -207,51 +202,11 @@ export interface Biometric {
   authenticate(reason: string): Promise<boolean>;
 }
 
-// ---------- OpenCode / PTY ----------
-
-export interface StartOpenCodeOptions {
-  command: string;
-  cwd?: string;
-  port: number;
-}
-
-export interface OpenCodeInstallProgress {
-  stage: string;
-  progress: number;
-  bytes_downloaded?: number;
-  total_bytes?: number;
-  message: string;
-}
-
-export interface PtySpawnOptions {
-  command: string;
-  cwd?: string;
-  cols: number;
-  rows: number;
-}
-
-export interface OpenCode {
-  isInstalled(): Promise<string | null>;
-  getInstallPath(): Promise<string>;
-  install(onProgress?: (p: OpenCodeInstallProgress) => void): Promise<string>;
-  getVersion(): Promise<string>;
-
-  registerPath(path: string): Promise<string>;
-  getRegisteredPath(): Promise<string | null>;
-
-  startServer(opts: StartOpenCodeOptions): Promise<void>;
-  stopServer(): Promise<void>;
-  isServerManaged(): Promise<boolean>;
-
-  spawnPty(opts: PtySpawnOptions): Promise<string>;
-  writePty(sessionId: string, data: string): Promise<void>;
-  resizePty(sessionId: string, cols: number, rows: number): Promise<void>;
-  killPty(sessionId: string): Promise<void>;
-  onPtyOutput(sessionId: string, cb: (chunk: string) => void): Promise<() => void>;
-  onPtyExit(sessionId: string, cb: () => void): Promise<() => void>;
-}
-
 // ---------- AI provider proxy (CORS bypass on Tauri, direct/CORS-worker on web) ----------
+//
+// Only the generic OpenAI-compatible "custom provider" proxy remains; it is the
+// BYOK path gated by the allowlist in src/lib/ai-credentials.ts (Anthropic +
+// Google + local/Ollama only). The OpenClaw gateway was removed in Phase 1.
 
 export interface AIProviderProxy {
   customProviderRequest(url: string, apiKey: string, body: string): Promise<string>;
@@ -266,38 +221,6 @@ export interface AIProviderProxy {
     requestId: string,
     cb: (chunk: string) => void,
   ): Promise<() => void>;
-
-  openClawRequest(url: string, token: string, body: string): Promise<string>;
-  openClawStream(
-    requestId: string,
-    url: string,
-    token: string,
-    body: string,
-  ): Promise<void>;
-  onOpenClawChunk(
-    requestId: string,
-    cb: (chunk: string) => void,
-  ): Promise<() => void>;
-
-  openClawGatewayRequest(
-    wsUrl: string,
-    token: string,
-    method: string,
-    params: string,
-  ): Promise<string>;
-}
-
-// ---------- Skills ----------
-
-export interface Skills {
-  isInstalled(skillId: string): Promise<boolean>;
-  listInstalled(): Promise<string[]>;
-  saveFile(skillId: string, fileName: string, content: string): Promise<void>;
-  readFile(skillId: string, fileName: string): Promise<string>;
-  remove(skillId: string): Promise<void>;
-  importZip(zipPath: string): Promise<string>;
-  fetchSkillsSh(pages?: number): Promise<string>;
-  fetchSkillFile(url: string): Promise<string>;
 }
 
 // ---------- Misc app surfaces ----------
@@ -330,8 +253,6 @@ export interface PlatformAdapter {
   notifications: Notifications;
   haptics: Haptics;
   biometric: Biometric;
-  opencode: OpenCode;
   ai: AIProviderProxy;
-  skills: Skills;
   app: AppLifecycle;
 }

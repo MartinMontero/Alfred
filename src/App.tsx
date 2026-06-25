@@ -8,8 +8,6 @@ import CommandPalette from './components/CommandPalette';
 import SearchPanel from './components/SearchPanel';
 // Lazy-load heavy panels so vis-network, xterm, jszip, and the office/PDF
 // viewers stay out of the startup bundle — they all render behind <Show>.
-const OpenCodePanel = lazy(() => import('./components/OpenCodePanel'));
-import OpenClawChat from './components/OpenClawChat';
 import CustomProviderChat from './components/CustomProviderChat';
 const Settings = lazy(() => import('./components/Settings'));
 const GraphView = lazy(() => import('./components/GraphView'));
@@ -30,7 +28,6 @@ import Onboarding, { type OnboardingResult } from './components/Onboarding';
 import UnlockDialog from './components/UnlockDialog';
 import { MobileHeader, MobileNav, MobileDrawer, type MobileNavTab } from './components/mobile';
 import { initPlatform, usePlatformInfo, isWeb } from './lib/platform';
-import { getOpenClawToken } from './lib/ai-credentials';
 import { impactLight, impactMedium, notificationSuccess, notificationError } from './lib/haptics';
 import { platform } from '@platform';
 import { getSyncEngine, getCurrentLogin, calculateChecksum } from './lib/nostr';
@@ -107,22 +104,11 @@ const App: Component = () => {
   const [showQuickSwitcher, setShowQuickSwitcher] = createSignal(false);
   const [showCommandPalette, setShowCommandPalette] = createSignal(false);
   const [showSearch, setShowSearch] = createSignal(false);
-  const [showTerminal, setShowTerminal] = createSignal(false);
-  const [showOpenClaw, setShowOpenClaw] = createSignal(false);
-  const [openClawWidth, setOpenClawWidth] = createSignal(
-    parseInt(localStorage.getItem('openclaw_width') || '500')
-  );
   const [showCustomProvider, setShowCustomProvider] = createSignal(false);
   const [customProviderWidth, setCustomProviderWidth] = createSignal(
     parseInt(localStorage.getItem('custom_provider_width') || '500')
   );
   // AI provider visibility toggles (persisted in localStorage)
-  const [openCodeEnabled, setOpenCodeEnabled] = createSignal(
-    localStorage.getItem('opencode_enabled') !== 'false'
-  );
-  const [openClawEnabled, setOpenClawEnabled] = createSignal(
-    localStorage.getItem('openclaw_enabled') !== 'false'
-  );
   const [customProviderEnabled, setCustomProviderEnabled] = createSignal(
     localStorage.getItem('custom_provider_enabled') !== 'false'
   );
@@ -135,7 +121,6 @@ const App: Component = () => {
   const [showSettings, setShowSettings] = createSignal(false);
   const [settingsSection, setSettingsSection] = createSignal<string | undefined>(undefined);
   const [showGraphView, setShowGraphView] = createSignal(false);
-  const [terminalWidth, setTerminalWidth] = createSignal(500);
   const [sidebarWidth, setSidebarWidth] = createSignal(session?.sidebarWidth ?? 260);
   const [sidebarCollapsed, setSidebarCollapsed] = createSignal(session?.sidebarCollapsed ?? false);
   const [sidebarView, setSidebarView] = createSignal<SidebarView>(session?.sidebarView ?? 'files');
@@ -403,7 +388,7 @@ const App: Component = () => {
             await platform.vault.createFolder(platformInfo.default_vault_path, platformInfo.default_vault_path);
             vaultToOpen = platformInfo.default_vault_path;
             // Save this as the vault path
-            await platform.settings.save({ vault_path: vaultToOpen, show_terminal: false });
+            await platform.settings.save({ vault_path: vaultToOpen });
             console.log('[App] Mobile vault auto-initialized and saved');
           }
         } catch (err) {
@@ -463,10 +448,6 @@ const App: Component = () => {
           }
         }
       }
-      if (settings.show_terminal) {
-        setShowTerminal(true);
-      }
-      
       // Mark settings as loaded - now the save effect can run
       console.log('[App] Settings load complete, enabling save effect');
       setSettingsLoaded(true);
@@ -1040,7 +1021,6 @@ const App: Component = () => {
   // Save settings when vault path changes (but not before initial load)
   createEffect(() => {
     const path = vaultPath();
-    const terminal = showTerminal();
     const loaded = settingsLoaded();
     
     // Don't save settings until initial load is complete to prevent race conditions
@@ -1053,7 +1033,6 @@ const App: Component = () => {
     console.log('[App] Saving settings - vault_path:', path);
     platform.settings.save({
       vault_path: path,
-      show_terminal: terminal,
     }).catch(console.error);
   });
 
@@ -1413,9 +1392,6 @@ const App: Component = () => {
       } else if (isMod && e.key === 's') {
         e.preventDefault();
         saveCurrentTab();
-      } else if (isMod && e.key === '`') {
-        e.preventDefault();
-        if (!isWeb()) setShowTerminal(!showTerminal());
       } else if (isMod && e.shiftKey && e.key === 'O') {
         e.preventDefault();
         setShowOutline(!showOutline());
@@ -1450,15 +1426,9 @@ const App: Component = () => {
 
     // Listen for AI provider toggle changes from Settings
     const handleProviderToggle = () => {
-      const oc = localStorage.getItem('opencode_enabled') !== 'false';
-      const ocl = localStorage.getItem('openclaw_enabled') !== 'false';
       const cp = localStorage.getItem('custom_provider_enabled') !== 'false';
-      setOpenCodeEnabled(oc);
-      setOpenClawEnabled(ocl);
       setCustomProviderEnabled(cp);
       // Close panels for disabled providers
-      if (!oc) setShowTerminal(false);
-      if (!ocl) setShowOpenClaw(false);
       if (!cp) setShowCustomProvider(false);
     };
     window.addEventListener('ai-provider-toggle', handleProviderToggle);
@@ -2316,7 +2286,6 @@ const App: Component = () => {
     { id: 'save', name: 'Save', shortcut: 'Ctrl+S', action: saveCurrentTab },
     { id: 'quick-switcher', name: 'Quick Switcher', shortcut: 'Ctrl+O', action: () => setShowQuickSwitcher(true) },
     { id: 'search', name: 'Search in Files', shortcut: 'Ctrl+Shift+F', action: () => setShowSearch(true) },
-    { id: 'toggle-terminal', name: 'Toggle Terminal', shortcut: 'Ctrl+`', action: () => { if (!isWeb()) setShowTerminal(!showTerminal()); } },
     { id: 'toggle-outline', name: 'Toggle Outline', shortcut: 'Ctrl+Shift+O', action: () => setShowOutline(!showOutline()) },
     { id: 'toggle-backlinks', name: 'Toggle Backlinks', shortcut: 'Ctrl+Shift+B', action: () => setShowBacklinks(!showBacklinks()) },
     { id: 'toggle-properties', name: 'Toggle Properties', shortcut: 'Ctrl+Shift+P', action: () => setShowProperties(!showProperties()) },
@@ -2331,15 +2300,6 @@ const App: Component = () => {
     setIsResizing('sidebar');
     setResizeStartX(e.clientX);
     setResizeStartWidth(sidebarWidth());
-    document.body.style.cursor = 'col-resize';
-    document.body.style.userSelect = 'none';
-  };
-
-  const handleTerminalResizeStart = (e: MouseEvent) => {
-    e.preventDefault();
-    setIsResizing('terminal');
-    setResizeStartX(e.clientX);
-    setResizeStartWidth(terminalWidth());
     document.body.style.cursor = 'col-resize';
     document.body.style.userSelect = 'none';
   };
@@ -2389,11 +2349,6 @@ const App: Component = () => {
       const delta = e.clientX - resizeStartX();
       const newWidth = resizeStartWidth() + delta;
       setSidebarWidth(Math.max(200, Math.min(500, newWidth)));
-    } else if (target === 'terminal') {
-      // Terminal: dragging left = wider terminal
-      const delta = resizeStartX() - e.clientX;
-      const newWidth = resizeStartWidth() + delta;
-      setTerminalWidth(Math.max(300, Math.min(800, newWidth)));
     } else if (target === 'outline') {
       // Outline: dragging left = wider panel (same as terminal)
       const delta = resizeStartX() - e.clientX;
@@ -2663,27 +2618,6 @@ const App: Component = () => {
           </Show>
         </button>
         <div class="icon-bar-spacer"></div>
-        {/* OpenClaw button - Hidden on mobile, only shown when enabled */}
-        <Show when={!isMobileApp() && !isWeb() && openClawEnabled()}>
-          <button
-            class={`icon-btn openclaw-icon ${showOpenClaw() ? 'active' : ''}`}
-            onClick={async () => {
-              const url = localStorage.getItem('openclaw_url');
-              const token = await getOpenClawToken();
-              if (!url || !token) {
-                setSettingsSection('openclaw');
-                setShowSettings(true);
-              } else {
-                setShowOpenClaw(!showOpenClaw());
-              }
-            }}
-            title="Toggle OpenClaw"
-          >
-            <svg width="22" height="22" viewBox="0 0 512 512" fill="currentColor">
-              <path d="m175.656 22.375-48.47 82.094c-23.017 4.384-43.547 11.782-60.124 22.374-24.436 15.613-40.572 37.414-45.5 67.875-4.79 29.62 1.568 68.087 24.125 116.093 93.162 22.88 184.08-10.908 257.25-18.813 37.138-4.012 71.196-.898 96.344 22.97 22.33 21.19 36.21 56.808 41.908 113.436 29.246-35.682 44.538-69.065 49.343-99.594 5.543-35.207-2.526-66.97-20.31-95.593-8.52-13.708-19.368-26.618-32-38.626l14.217-33-41.218 10.625c-8.637-6.278-17.765-12.217-27.314-17.782l-7.03-59.782-38.157 37.406a423.505 423.505 0 0 0-38.158-13.812l-8.375-71.28-57.625 56.5c-9.344-1.316-18.625-2.333-27.812-2.97l-31.094-78.125zM222 325.345c-39.146 7.525-82.183 14.312-127.156 11.686 47.403 113.454 207.056 224.082 260.125 87-101.18 33.84-95.303-49.595-132.97-98.686z"/>
-            </svg>
-          </button>
-        </Show>
         {/* Custom Provider button - Hidden on mobile, only shown when enabled */}
         <Show when={!isMobileApp() && !isWeb() && customProviderEnabled()}>
           <button
@@ -2703,18 +2637,6 @@ const App: Component = () => {
               <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
               <path d="M2 17l10 5 10-5"></path>
               <path d="M2 12l10 5 10-5"></path>
-            </svg>
-          </button>
-        </Show>
-        {/* OpenCode button - Hidden on mobile, only shown when enabled */}
-        <Show when={!isMobileApp() && !isWeb() && openCodeEnabled()}>
-          <button
-            class={`icon-btn opencode-icon ${showTerminal() ? 'active' : ''}`}
-            onClick={() => setShowTerminal(!showTerminal())}
-            title="Toggle OpenCode (Ctrl+`)"
-          >
-            <svg width="24" height="24" viewBox="0 0 512 512" fill="currentColor">
-              <path fill-rule="evenodd" clip-rule="evenodd" d="M384 416H128V96H384V416ZM320 160H192V352H320V160Z"/>
             </svg>
           </button>
         </Show>
@@ -2988,47 +2910,6 @@ const App: Component = () => {
             </div>
           </Show>
 
-          {/* OpenClaw Panel - Right Side (Desktop only) */}
-          <Show when={showOpenClaw() && !isMobileApp() && !isWeb()}>
-            <div
-              class="resize-handle"
-              onMouseDown={(e: MouseEvent) => {
-                e.preventDefault();
-                setIsResizing('terminal');
-                const startX = e.clientX;
-                const startWidth = openClawWidth();
-                const handleMouseMove = (e: MouseEvent) => {
-                  const delta = startX - e.clientX;
-                  const newWidth = Math.max(300, Math.min(startWidth + delta, window.innerWidth * 0.6));
-                  setOpenClawWidth(newWidth);
-                };
-                const handleMouseUp = () => {
-                  setIsResizing(null);
-                  localStorage.setItem('openclaw_width', openClawWidth().toString());
-                  document.removeEventListener('mousemove', handleMouseMove);
-                  document.removeEventListener('mouseup', handleMouseUp);
-                };
-                document.addEventListener('mousemove', handleMouseMove);
-                document.addEventListener('mouseup', handleMouseUp);
-              }}
-            />
-            <div style={{ width: `${openClawWidth()}px` }}>
-              <OpenClawChat
-                onClose={() => setShowOpenClaw(false)}
-                onOpenSettings={() => {
-                  setSettingsSection('openclaw');
-                  setShowSettings(true);
-                }}
-                vaultPath={vaultPath()}
-                currentFile={currentTab() ? { path: currentTab()!.path, content: currentTab()!.content } : null}
-                vaultFiles={noteIndex() ? Array.from(noteIndex()!.allPaths).map(path => ({
-                  path,
-                  name: path.replace(/\\/g, '/').split('/').pop()?.replace(/\.md$/i, '') || path
-                })) : []}
-              />
-            </div>
-          </Show>
-
           {/* Custom Provider Panel - Right Side (Desktop only) */}
           <Show when={showCustomProvider() && !isMobileApp() && !isWeb()}>
             <div
@@ -3070,28 +2951,6 @@ const App: Component = () => {
             </div>
           </Show>
 
-          {/* OpenCode Panel - Right Side (Desktop only) */}
-          <Show when={showTerminal() && !isMobileApp() && !isWeb()}>
-            <div
-              class="resize-handle"
-              onMouseDown={handleTerminalResizeStart}
-            />
-            <div style={{ width: `${terminalWidth()}px` }}>
-              <OpenCodePanel
-                vaultPath={vaultPath()}
-                currentFile={currentTab() ? { path: currentTab()!.path, content: currentTab()!.content } : null}
-                vaultFiles={noteIndex() ? Array.from(noteIndex()!.allPaths).map(path => ({
-                  path,
-                  name: path.replace(/\\/g, '/').split('/').pop()?.replace(/\.md$/i, '') || path
-                })) : []}
-                onClose={() => setShowTerminal(false)}
-                onOpenSettings={() => {
-                  setSettingsSection('opencode');
-                  setShowSettings(true);
-                }}
-              />
-            </div>
-          </Show>
         </div>
 
         {/* Status Bar */}
@@ -3299,7 +3158,7 @@ const App: Component = () => {
           vaultPath={vaultPath()}
           onSyncComplete={() => refreshSidebar?.()}
           onSyncEnabledChange={(enabled) => setSyncStatus(enabled ? 'idle' : 'off')}
-          initialSection={settingsSection() as 'general' | 'editor' | 'files' | 'appearance' | 'hotkeys' | 'opencode' | 'openclaw' | 'customprovider' | 'productivity' | 'sync' | 'nostr' | 'about' | undefined}
+          initialSection={settingsSection() as 'general' | 'editor' | 'files' | 'appearance' | 'hotkeys' | 'customprovider' | 'sync' | 'nostr' | 'about' | undefined}
         />
       </Show>
 

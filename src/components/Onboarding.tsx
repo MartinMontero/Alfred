@@ -7,11 +7,9 @@
  * - Vault creation/selection
  * - Nostr identity setup
  * - Cloud sync configuration
- * - OpenCode AI assistant (desktop only)
- * - Productivity skills (desktop only)
  */
 
-import { Component, createSignal, createEffect, Show, For, onMount } from 'solid-js';
+import { Component, createSignal, Show, For, onMount } from 'solid-js';
 import { platform } from '@platform';
 import { generateNewLogin, importNsecLogin, saveLogin } from '../lib/nostr/login';
 import type { NostrIdentity } from '../lib/nostr/types';
@@ -23,8 +21,6 @@ import VaultSvg from '../assets/onboarding/vault.svg';
 import FeaturesSvg from '../assets/onboarding/features.svg';
 import NostrSvg from '../assets/onboarding/nostr.svg';
 import SyncSvg from '../assets/onboarding/sync.svg';
-import AiSvg from '../assets/onboarding/ai.svg';
-import SkillsSvg from '../assets/onboarding/skills.svg';
 import CompleteSvg from '../assets/onboarding/complete.svg';
 
 // Types
@@ -33,8 +29,6 @@ export interface OnboardingResult {
   nostrSetup: 'created' | 'imported' | 'skipped';
   nostrNpub?: string;
   syncEnabled: boolean;
-  openCodeInstalled: boolean;
-  installedSkills: string[];
   createFirstNote: boolean;
 }
 
@@ -43,25 +37,7 @@ interface OnboardingProps {
   onComplete: (result: OnboardingResult) => void;
 }
 
-type OnboardingStep = 'welcome' | 'vault' | 'features' | 'nostr' | 'sync' | 'opencode' | 'skills' | 'complete';
-
-// Skills manifest URL
-const SKILLS_MANIFEST_URL = 'https://raw.githubusercontent.com/derekross/onyx-skills/main/manifest.json';
-const SKILLS_BASE_URL = 'https://raw.githubusercontent.com/derekross/onyx-skills/main';
-
-interface SkillInfo {
-  id: string;
-  name: string;
-  description: string;
-  files: string[];
-}
-
-// Install progress from Rust backend
-interface InstallProgress {
-  stage: 'checking' | 'downloading' | 'extracting' | 'configuring' | 'complete' | 'error';
-  progress: number;
-  message: string;
-}
+type OnboardingStep = 'welcome' | 'vault' | 'features' | 'nostr' | 'sync' | 'complete';
 
 const Onboarding: Component<OnboardingProps> = (props) => {
   // Steps based on platform
@@ -69,7 +45,7 @@ const Onboarding: Component<OnboardingProps> = (props) => {
     if (props.isMobile) {
       return ['welcome', 'vault', 'features', 'nostr', 'sync', 'complete'];
     }
-    return ['welcome', 'vault', 'features', 'nostr', 'sync', 'opencode', 'skills', 'complete'];
+    return ['welcome', 'vault', 'features', 'nostr', 'sync', 'complete'];
   };
 
   const steps = getSteps();
@@ -81,8 +57,6 @@ const Onboarding: Component<OnboardingProps> = (props) => {
   const [nostrSetup, setNostrSetup] = createSignal<'created' | 'imported' | 'skipped' | null>(null);
   const [nostrIdentity, setNostrIdentity] = createSignal<NostrIdentity | null>(null);
   const [syncEnabled, setSyncEnabled] = createSignal(false);
-  const [openCodeInstalled, setOpenCodeInstalled] = createSignal(false);
-  const [installedSkills, setInstalledSkills] = createSignal<string[]>([]);
 
   // Step-specific state
   // Vault
@@ -97,18 +71,6 @@ const Onboarding: Component<OnboardingProps> = (props) => {
   const [importKey, setImportKey] = createSignal('');
   const [showNsec, setShowNsec] = createSignal(false);
   const [copiedKey, setCopiedKey] = createSignal<'npub' | 'nsec' | null>(null);
-
-  // OpenCode
-  const [openCodeStatus, setOpenCodeStatus] = createSignal<'checking' | 'not-installed' | 'installing' | 'installed' | 'error'>('checking');
-  const [openCodeError, setOpenCodeError] = createSignal<string | null>(null);
-  const [installProgress, setInstallProgress] = createSignal<InstallProgress | null>(null);
-
-  // Skills
-  const [availableSkills, setAvailableSkills] = createSignal<SkillInfo[]>([]);
-  const [selectedSkills, setSelectedSkills] = createSignal<Set<string>>(new Set());
-  const [skillsLoading, setSkillsLoading] = createSignal(false);
-  const [skillsInstalling, setSkillsInstalling] = createSignal(false);
-  const [skillsError, setSkillsError] = createSignal<string | null>(null);
 
   // Navigation
   const goNext = () => {
@@ -129,8 +91,6 @@ const Onboarding: Component<OnboardingProps> = (props) => {
       nostrSetup: nostrSetup() || 'skipped',
       nostrNpub: nostrIdentity()?.npub,
       syncEnabled: syncEnabled(),
-      openCodeInstalled: openCodeInstalled(),
-      installedSkills: installedSkills(),
       createFirstNote: createNote,
     });
   };
@@ -144,20 +104,6 @@ const Onboarding: Component<OnboardingProps> = (props) => {
       }
     } catch (err) {
       console.error('Failed to get platform info:', err);
-    }
-  });
-
-  // Check OpenCode status when reaching that step
-  createEffect(() => {
-    if (currentStep() === 'opencode' && openCodeStatus() === 'checking') {
-      checkOpenCodeInstalled();
-    }
-  });
-
-  // Load skills when reaching that step
-  createEffect(() => {
-    if (currentStep() === 'skills' && availableSkills().length === 0) {
-      loadSkills();
     }
   });
 
@@ -285,193 +231,6 @@ const Onboarding: Component<OnboardingProps> = (props) => {
 
   const skipSync = () => {
     setSyncEnabled(false);
-    goNext();
-  };
-
-  // === Utility Functions ===
-  // Helper to add timeout to async operations
-  const withTimeout = <T,>(promise: Promise<T>, ms: number, errorMsg: string): Promise<T> => {
-    return Promise.race([
-      promise,
-      new Promise<T>((_, reject) => 
-        setTimeout(() => reject(new Error(errorMsg)), ms)
-      )
-    ]);
-  };
-
-  // === OpenCode Functions ===
-  const checkOpenCodeInstalled = async () => {
-    setOpenCodeStatus('checking');
-    try {
-      const path = await withTimeout(
-        platform.opencode.isInstalled(),
-        10000, // 10 second timeout
-        'Timed out checking for OpenCode'
-      );
-      if (path) {
-        setOpenCodeInstalled(true);
-        setOpenCodeStatus('installed');
-      } else {
-        setOpenCodeStatus('not-installed');
-      }
-    } catch (err) {
-      console.error('Failed to check OpenCode:', err);
-      setOpenCodeStatus('not-installed');
-    }
-  };
-
-  const installOpenCode = async () => {
-    setOpenCodeStatus('installing');
-    setOpenCodeError(null);
-    setInstallProgress({ stage: 'checking', progress: 0, message: 'Preparing installation...' });
-
-    let installCompleted = false;
-    // Set a timeout to prevent hanging forever (5 minutes max for installation)
-    const timeoutId = setTimeout(() => {
-      console.error('OpenCode installation timed out');
-      setOpenCodeError('Installation timed out. You can try again later in Settings.');
-      setOpenCodeStatus('error');
-    }, 5 * 60 * 1000);
-
-    try {
-      await platform.opencode.install((payload) => {
-        setInstallProgress(payload as InstallProgress);
-        if (payload.stage === 'complete') {
-          installCompleted = true;
-          setOpenCodeInstalled(true);
-          setOpenCodeStatus('installed');
-        } else if (payload.stage === 'error') {
-          setOpenCodeError(payload.message);
-          setOpenCodeStatus('error');
-        }
-      });
-      if (!installCompleted) {
-        setOpenCodeInstalled(true);
-        setOpenCodeStatus('installed');
-      }
-    } catch (err) {
-      console.error('Failed to install OpenCode:', err);
-      setOpenCodeError(err instanceof Error ? err.message : 'Installation failed');
-      setOpenCodeStatus('error');
-    } finally {
-      clearTimeout(timeoutId);
-    }
-  };
-
-  const skipOpenCode = () => {
-    setOpenCodeInstalled(false);
-    goNext();
-  };
-
-  // === Skills Functions ===
-  const loadSkills = async () => {
-    setSkillsLoading(true);
-    setSkillsError(null);
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
-      
-      const response = await fetch(SKILLS_MANIFEST_URL, { signal: controller.signal });
-      clearTimeout(timeoutId);
-      
-      if (!response.ok) throw new Error('Failed to fetch skills');
-      
-      const manifest = await response.json();
-      const skills: SkillInfo[] = manifest.skills || [];
-      setAvailableSkills(skills);
-      
-      // Pre-select all skills by default
-      const allIds = new Set(skills.map(s => s.id));
-      setSelectedSkills(allIds);
-    } catch (err) {
-      console.error('Failed to load skills:', err);
-      if (err instanceof Error && err.name === 'AbortError') {
-        setSkillsError('Timed out loading skills. Check your internet connection.');
-      } else {
-        setSkillsError(err instanceof Error ? err.message : 'Failed to load skills');
-      }
-    } finally {
-      setSkillsLoading(false);
-    }
-  };
-
-  const toggleSkill = (skillId: string) => {
-    setSelectedSkills(prev => {
-      const next = new Set(prev);
-      if (next.has(skillId)) {
-        next.delete(skillId);
-      } else {
-        next.add(skillId);
-      }
-      return next;
-    });
-  };
-
-  const installSelectedSkills = async () => {
-    const toInstall = Array.from(selectedSkills());
-    if (toInstall.length === 0) {
-      goNext();
-      return;
-    }
-
-    setSkillsInstalling(true);
-    setSkillsError(null);
-    const installed: string[] = [];
-
-    // Overall timeout for skill installation (2 minutes)
-    const overallTimeout = setTimeout(() => {
-      console.error('Skills installation timed out');
-      setSkillsError('Installation timed out. You can install skills later in Settings.');
-      setSkillsInstalling(false);
-      // Still proceed with whatever was installed
-      setInstalledSkills(installed);
-      goNext();
-    }, 2 * 60 * 1000);
-
-    try {
-      for (const skillId of toInstall) {
-        const skill = availableSkills().find(s => s.id === skillId);
-        if (!skill) continue;
-
-        try {
-          // Download all skill files with timeout
-          for (const file of skill.files) {
-            const fileUrl = `${SKILLS_BASE_URL}/${skillId}/${file}`;
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 sec per file
-            
-            const response = await fetch(fileUrl, { signal: controller.signal });
-            clearTimeout(timeoutId);
-            
-            if (!response.ok) throw new Error(`Failed to download ${file}`);
-            const content = await response.text();
-            await withTimeout(
-              platform.skills.saveFile(skillId, file, content),
-              10000,
-              `Timed out saving ${file}`
-            );
-          }
-          installed.push(skillId);
-        } catch (err) {
-          console.error(`Failed to install skill ${skillId}:`, err);
-          // Continue with other skills
-        }
-      }
-
-      clearTimeout(overallTimeout);
-      setInstalledSkills(installed);
-      goNext();
-    } catch (err) {
-      clearTimeout(overallTimeout);
-      console.error('Failed to install skills:', err);
-      setSkillsError(err instanceof Error ? err.message : 'Failed to install skills');
-    } finally {
-      setSkillsInstalling(false);
-    }
-  };
-
-  const skipSkills = () => {
-    setInstalledSkills([]);
     goNext();
   };
 
@@ -861,182 +620,6 @@ const Onboarding: Component<OnboardingProps> = (props) => {
     </>
   );
 
-  const renderOpenCode = () => (
-    <>
-      <div class="onboarding-illustration">
-        <img src={AiSvg} alt="Meet your AI writing partner" />
-      </div>
-      <h1 class="onboarding-headline">Meet your AI writing partner</h1>
-      <p class="onboarding-subhead">Get help with research, writing, and editing — right inside your notes</p>
-
-      <div class="onboarding-benefits">
-        <div class="onboarding-benefit-item">
-          <span class="onboarding-benefit-icon">💡</span>
-          <span class="onboarding-benefit-text">Ask questions and get instant answers</span>
-        </div>
-        <div class="onboarding-benefit-item">
-          <span class="onboarding-benefit-icon">✍️</span>
-          <span class="onboarding-benefit-text">Help with writing, editing, and summarizing</span>
-        </div>
-        <div class="onboarding-benefit-item">
-          <span class="onboarding-benefit-icon">🔍</span>
-          <span class="onboarding-benefit-text">Research topics without leaving your notes</span>
-        </div>
-        <div class="onboarding-benefit-item">
-          <span class="onboarding-benefit-icon">📝</span>
-          <span class="onboarding-benefit-text">Generate outlines, drafts, and ideas</span>
-        </div>
-      </div>
-
-      <div class="onboarding-opencode-status">
-        <Show when={openCodeStatus() === 'checking'}>
-          <div class="onboarding-status-icon checking">
-            <div class="onboarding-spinner"></div>
-          </div>
-          <span class="onboarding-status-text">Checking for AI assistant...</span>
-        </Show>
-
-        <Show when={openCodeStatus() === 'installed'}>
-          <div class="onboarding-status-icon success">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="20 6 9 17 4 12"/>
-            </svg>
-          </div>
-          <span class="onboarding-status-text">AI Assistant is ready!</span>
-        </Show>
-
-        <Show when={openCodeStatus() === 'not-installed'}>
-          <button 
-            class="onboarding-button primary" 
-            onClick={installOpenCode}
-          >
-            Install AI Assistant
-          </button>
-        </Show>
-
-        <Show when={openCodeStatus() === 'installing'}>
-          <div class="onboarding-install-progress">
-            <div class="onboarding-progress-bar">
-              <div 
-                class="onboarding-progress-fill" 
-                style={{ width: `${installProgress()?.progress || 0}%` }}
-              ></div>
-            </div>
-            <p class="onboarding-progress-text">{installProgress()?.message || 'Installing...'}</p>
-          </div>
-        </Show>
-
-        <Show when={openCodeStatus() === 'error'}>
-          <div class="onboarding-error">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="10"/>
-              <line x1="12" y1="8" x2="12" y2="12"/>
-              <line x1="12" y1="16" x2="12.01" y2="16"/>
-            </svg>
-            <p>{openCodeError() || 'Installation failed'}</p>
-          </div>
-          <button class="onboarding-button primary" onClick={installOpenCode}>
-            Retry Installation
-          </button>
-        </Show>
-      </div>
-
-      <Show when={openCodeStatus() === 'installed'}>
-        <div class="onboarding-actions">
-          <button class="onboarding-button primary" onClick={goNext}>
-            Continue
-          </button>
-        </div>
-      </Show>
-
-      <Show when={openCodeStatus() !== 'checking' && openCodeStatus() !== 'installing' && openCodeStatus() !== 'installed'}>
-        <button class="onboarding-skip" onClick={skipOpenCode}>
-          Set up later in Settings
-        </button>
-      </Show>
-    </>
-  );
-
-  const renderSkills = () => (
-    <>
-      <div class="onboarding-illustration">
-        <img src={SkillsSvg} alt="Supercharge your workflow" />
-      </div>
-      <h1 class="onboarding-headline">Supercharge your workflow</h1>
-      <p class="onboarding-subhead">Skills teach your AI assistant new tricks</p>
-
-      <p class="onboarding-explanation">
-        Skills are like apps for your AI — install the ones that match how you work.
-      </p>
-
-      <Show when={skillsLoading()}>
-        <div class="onboarding-opencode-status">
-          <div class="onboarding-spinner"></div>
-          <span class="onboarding-status-text">Loading skills...</span>
-        </div>
-      </Show>
-
-      <Show when={skillsError()}>
-        <div class="onboarding-error">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10"/>
-            <line x1="12" y1="8" x2="12" y2="12"/>
-            <line x1="12" y1="16" x2="12.01" y2="16"/>
-          </svg>
-          <p>{skillsError()}</p>
-        </div>
-      </Show>
-
-      <Show when={!skillsLoading() && !skillsInstalling() && availableSkills().length > 0}>
-        <div class="onboarding-skills-list">
-          <For each={availableSkills()}>
-            {(skill) => (
-              <div 
-                class={`onboarding-skill-item ${selectedSkills().has(skill.id) ? 'selected' : ''}`}
-                onClick={() => toggleSkill(skill.id)}
-              >
-                <div class="onboarding-skill-checkbox">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
-                    <polyline points="20 6 9 17 4 12"/>
-                  </svg>
-                </div>
-                <div class="onboarding-skill-info">
-                  <div class="onboarding-skill-name">{skill.name}</div>
-                  <div class="onboarding-skill-desc">{skill.description}</div>
-                </div>
-              </div>
-            )}
-          </For>
-        </div>
-
-        <div class="onboarding-actions">
-          <button 
-            class="onboarding-button primary" 
-            onClick={installSelectedSkills}
-            disabled={skillsInstalling()}
-          >
-            {selectedSkills().size > 0 
-              ? `Install ${selectedSkills().size} Skill${selectedSkills().size > 1 ? 's' : ''}`
-              : 'Continue Without Skills'}
-          </button>
-        </div>
-      </Show>
-
-      <Show when={skillsInstalling()}>
-        <div class="onboarding-skills-installing">
-          <div class="onboarding-spinner"></div>
-          <span class="onboarding-status-text">Installing skills...</span>
-        </div>
-      </Show>
-
-      <Show when={!skillsLoading() && !skillsInstalling()}>
-        <button class="onboarding-skip" onClick={skipSkills}>
-          Browse skills later in Settings
-        </button>
-      </Show>
-    </>
-  );
-
   const renderComplete = () => (
     <>
       <div class="onboarding-illustration">
@@ -1091,45 +674,6 @@ const Onboarding: Component<OnboardingProps> = (props) => {
           </span>
         </div>
 
-        <Show when={!props.isMobile}>
-          <div class="onboarding-summary-item">
-            <div class={`onboarding-summary-icon ${openCodeInstalled() ? 'completed' : 'skipped'}`}>
-              <Show when={openCodeInstalled()} fallback={
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M5 12h14"/>
-                  <path d="M12 5l7 7-7 7"/>
-                </svg>
-              }>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
-                  <polyline points="20 6 9 17 4 12"/>
-                </svg>
-              </Show>
-            </div>
-            <span class={`onboarding-summary-text ${!openCodeInstalled() ? 'skipped' : ''}`}>
-              {openCodeInstalled() ? 'AI assistant installed' : 'AI assistant — set up in Settings'}
-            </span>
-          </div>
-
-          <div class="onboarding-summary-item">
-            <div class={`onboarding-summary-icon ${installedSkills().length > 0 ? 'completed' : 'skipped'}`}>
-              <Show when={installedSkills().length > 0} fallback={
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M5 12h14"/>
-                  <path d="M12 5l7 7-7 7"/>
-                </svg>
-              }>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
-                  <polyline points="20 6 9 17 4 12"/>
-                </svg>
-              </Show>
-            </div>
-            <span class={`onboarding-summary-text ${installedSkills().length === 0 ? 'skipped' : ''}`}>
-              {installedSkills().length > 0 
-                ? `${installedSkills().length} skill${installedSkills().length > 1 ? 's' : ''} installed` 
-                : 'Skills — browse in Settings'}
-            </span>
-          </div>
-        </Show>
       </div>
 
       <div class="onboarding-actions">
@@ -1167,8 +711,6 @@ const Onboarding: Component<OnboardingProps> = (props) => {
           <Show when={currentStep() === 'features'}>{renderFeatures()}</Show>
           <Show when={currentStep() === 'nostr'}>{renderNostr()}</Show>
           <Show when={currentStep() === 'sync'}>{renderSync()}</Show>
-          <Show when={currentStep() === 'opencode'}>{renderOpenCode()}</Show>
-          <Show when={currentStep() === 'skills'}>{renderSkills()}</Show>
           <Show when={currentStep() === 'complete'}>{renderComplete()}</Show>
         </div>
       </div>

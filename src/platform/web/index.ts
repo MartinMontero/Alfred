@@ -14,9 +14,7 @@ import { shell } from './shell';
 import { notifications } from './notifications';
 import { haptics } from './haptics';
 import { biometric } from './biometric';
-import { opencode } from './opencode';
 import { ai } from './ai';
-import { skills } from './skills';
 import { app } from './app';
 
 const adapterState = { info: defaultPlatformInfo() };
@@ -44,9 +42,7 @@ export const platform: PlatformAdapter = {
   notifications,
   haptics,
   biometric,
-  opencode,
   ai,
-  skills,
   app,
 };
 

@@ -25,16 +25,4 @@ export const ai: AIProviderProxy = {
   async onCustomProviderChunk() {
     return notImplemented('onCustomProviderChunk');
   },
-  async openClawRequest() {
-    return notImplemented('openClawRequest');
-  },
-  async openClawStream() {
-    return notImplemented('openClawStream');
-  },
-  async onOpenClawChunk() {
-    return notImplemented('onOpenClawChunk');
-  },
-  async openClawGatewayRequest() {
-    return notImplemented('openClawGatewayRequest');
-  },
 };
