@@ -1,0 +1,848 @@
+import { Component, onCleanup, Show, createSignal, createEffect, on } from 'solid-js';
+import { Editor, rootCtx, defaultValueCtx, editorViewCtx, parserCtx } from '@milkdown/core';
+import { commonmark, remarkPreserveEmptyLinePlugin } from '@milkdown/preset-commonmark';
+import { gfm } from '@milkdown/preset-gfm';
+import { nord } from '@milkdown/theme-nord';
+import { listener, listenerCtx } from '@milkdown/plugin-listener';
+import { TextSelection, EditorState } from '@milkdown/prose/state';
+import { platform } from '@platform';
+// Note: dragDropEnabled is false in tauri.conf.json so HTML5 drag events
+// work on Windows (WebView2 native handler blocks them otherwise).
+// OS file drops come through as standard DOM events on all platforms.
+import { hashtagPlugin, setHashtagClickHandler } from '../lib/hashtagPlugin';
+import { wikilinkPlugin, setWikilinkClickHandler, setWikilinkNoteIndex } from '../lib/editor/wikilink-plugin';
+import { NoteIndex } from '../lib/editor/note-index';
+import { taskPlugin } from '../lib/taskPlugin';
+import { headingPlugin, headingPluginKey, HeadingInfo } from '../lib/editor/heading-plugin';
+import { blockPlugin, blockPluginKey } from '../lib/editor/block-plugin';
+import { linkAutocompletePlugin, setAutocompleteContext } from '../lib/editor/link-autocomplete-plugin';
+import { slashCommandsPlugin } from '../lib/editor/slash-commands';
+import {
+  embedSchema,
+  embedView,
+  embedInputRule,
+  embedProsePlugin,
+  setEmbedAssetIndex,
+  setEmbedNoteIndex,
+  setEmbedVaultPath,
+  setEmbedCurrentFilePath,
+} from '../lib/editor/embed-plugin';
+import {
+  nostrEmbedSchema,
+  nostrEmbedView,
+  nostrMentionSchema,
+  nostrMentionView,
+  nostrProsePlugin,
+} from '../lib/editor/nostr-embed-plugin';
+import { highlightPlugin } from '../lib/editor/highlight-plugin';
+import { commentPlugin } from '../lib/editor/comment-plugin';
+import { calloutPlugin } from '../lib/editor/callout-plugin';
+import { historyPlugin, historyKeymap } from '../lib/editor/history';
+import { AssetIndex } from '../lib/editor/asset-index';
+import {
+  vaultUploadPlugin,
+  setUploadVaultPath,
+  setOnFilesUploaded,
+  joinPath,
+  sanitizeFileName,
+  getUniqueFileNameInVault,
+  ALL_EXTENSIONS,
+} from '../lib/editor/upload-config';
+
+import '@milkdown/theme-nord/style.css';
+
+interface EditorProps {
+  content: string;
+  onContentChange: (content: string) => void;
+  filePath: string | null;
+  vaultPath: string | null;
+  onCreateFile?: () => void;
+  onOpenVault?: () => void;
+  onHashtagClick?: (tag: string) => void;
+  scrollToLine?: number | null;
+  onScrollComplete?: () => void;
+  onWikilinkClick?: (target: string, heading?: string | null, blockId?: string | null) => void;
+  noteIndex?: NoteIndex | null;
+  assetIndex?: AssetIndex | null;
+  // File contents map for autocomplete
+  fileContents?: Map<string, string>;
+  // Heading plugin props
+  onHeadingsChange?: (headings: HeadingInfo[]) => void;
+  onActiveHeadingChange?: (id: string | null) => void;
+  scrollToHeadingId?: string | null;
+  // Anchor navigation props (for wikilink heading/block references)
+  scrollToHeadingText?: string | null;
+  scrollToBlockId?: string | null;
+  // Upload callback for when files are dropped/pasted
+  onFilesUploaded?: () => void;
+  // View mode: 'live' = rendered markdown, 'source' = raw markdown
+  viewMode?: 'live' | 'source';
+}
+
+const MilkdownEditor: Component<EditorProps> = (props) => {
+  const [saving, setSaving] = createSignal(false);
+  const [currentPath, setCurrentPath] = createSignal<string | null>(null);
+  let editorInstance: Editor | null = null;
+  let containerRef: HTMLDivElement | undefined;
+  let scrollDebounce: number | null = null;
+  let scrollHandler: (() => void) | null = null;
+  let dropHandler: ((e: DragEvent) => void) | null = null;
+  let dragOverHandler: ((e: DragEvent) => void) | null = null;
+  // Track the last content we set in the editor to detect external changes
+  let lastEditorContent: string = '';
+  // Source editor state: completely independent from Milkdown.
+  // Reads/writes directly to disk, never touches Milkdown's serializer.
+  const [_sourceContent, setSourceContent] = createSignal('');
+  let sourceAutoSaveTimeout: number | null = null;
+
+  const saveFile = async () => {
+    if (!props.filePath || saving()) return;
+    setSaving(true);
+    try {
+      await platform.vault.write(props.filePath, props.content, props.vaultPath ?? '');
+      console.log('File saved:', props.filePath);
+    } catch (err) {
+      console.error('Failed to save file:', err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const createEditor = async (container: HTMLDivElement, initialContent: string) => {
+    if (editorInstance) {
+      await editorInstance.destroy();
+      editorInstance = null;
+    }
+
+    // Set up click handlers (same pattern for hashtags and wikilinks)
+    setHashtagClickHandler(props.onHashtagClick || null);
+    setWikilinkClickHandler(props.onWikilinkClick || null);
+    setWikilinkNoteIndex(props.noteIndex || null);
+
+    // Set up embed context
+    setEmbedAssetIndex(props.assetIndex || null);
+    setEmbedNoteIndex(props.noteIndex || null);
+    setEmbedVaultPath(props.vaultPath || null);
+    setEmbedCurrentFilePath(props.filePath || null);
+
+    // Set up autocomplete context for heading/block suggestions
+    setAutocompleteContext(props.vaultPath || null, props.filePath || null, props.fileContents);
+
+    // Set up upload context for drag-drop and paste
+    setUploadVaultPath(props.vaultPath || null);
+    setOnFilesUploaded(props.onFilesUploaded || null);
+
+    // Filter out remarkPreserveEmptyLinePlugin to prevent <br /> tags in empty lines
+    // This plugin causes empty paragraphs to be serialized as <br /> instead of blank lines
+    const customCommonmark = commonmark.filter(
+      (plugin) => plugin !== remarkPreserveEmptyLinePlugin.plugin && plugin !== remarkPreserveEmptyLinePlugin.options
+    );
+
+    editorInstance = await Editor.make()
+      .config((ctx) => {
+        ctx.set(rootCtx, container);
+        ctx.set(defaultValueCtx, initialContent);
+      })
+      .config(nord)
+      .use(customCommonmark)
+      .use(gfm)
+      // Undo/redo (commonmark preset does not include prosemirror-history)
+      .use(historyPlugin)
+      .use(historyKeymap)
+      .use(embedSchema)
+      .use(embedView)
+      .use(embedInputRule)
+      .use(embedProsePlugin)
+      .use(nostrEmbedSchema)
+      .use(nostrEmbedView)
+      .use(nostrMentionSchema)
+      .use(nostrMentionView)
+      .use(nostrProsePlugin)
+      .use(vaultUploadPlugin) // Custom upload plugin for paste/drop
+      .use(listener)
+      .use(hashtagPlugin)
+      .use(wikilinkPlugin)
+      .use(taskPlugin)
+      .use(headingPlugin)
+      .use(blockPlugin)
+      .use(linkAutocompletePlugin)
+      .use(slashCommandsPlugin)
+      .use(highlightPlugin)
+      .use(commentPlugin)
+      .use(calloutPlugin)
+      // Configure listener after the plugin is loaded
+      .config((ctx) => {
+        ctx.get(listenerCtx).markdownUpdated((ctx, markdown, _prevMarkdown) => {
+          // Strip backslash escapes from [ ] _ ! that remark-stringify adds.
+          // These are literal in Milkdown (links/emphasis/images are nodes).
+          const cleaned = markdown.replace(/\\([[\]_!])/g, '$1');
+          lastEditorContent = cleaned;
+          props.onContentChange(cleaned);
+
+          // Export headings from plugin state
+          const view = ctx.get(editorViewCtx);
+          const headings = headingPluginKey.getState(view.state);
+          props.onHeadingsChange?.(headings || []);
+        });
+      })
+      .create();
+
+    // Initialize lastEditorContent with the initial content
+    lastEditorContent = initialContent;
+    return editorInstance;
+  };
+
+  const initEditor = async (container: HTMLDivElement) => {
+    containerRef = container;
+
+    // Apply editor settings from localStorage
+    const fontFamily = localStorage.getItem('editor_font_family') || 'system-ui, sans-serif';
+    const fontSize = localStorage.getItem('editor_font_size') || '16';
+    const lineHeight = localStorage.getItem('editor_line_height') || '1.6';
+    const spellCheck = localStorage.getItem('spell_check') !== 'false';
+
+    container.style.fontFamily = fontFamily;
+    container.style.fontSize = `${fontSize}px`;
+    container.style.lineHeight = lineHeight;
+    container.setAttribute('spellcheck', spellCheck.toString());
+
+    // Add keyboard listener for save
+    container.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        saveFile();
+      }
+    });
+
+    // Initialize with the content passed in props
+    if (props.filePath && props.content !== undefined) {
+      setCurrentPath(props.filePath);
+      await createEditor(container, props.content);
+
+      // Set up scroll tracking for active heading after editor is created
+      if (editorInstance?.ctx) {
+        const view = editorInstance.ctx.get(editorViewCtx);
+
+        // Export initial headings
+        const initialHeadings = headingPluginKey.getState(view.state) || [];
+        props.onHeadingsChange?.(initialHeadings);
+
+        // Create scroll handler for tracking active heading
+        scrollHandler = () => {
+          if (scrollDebounce) clearTimeout(scrollDebounce);
+          scrollDebounce = window.setTimeout(() => {
+            if (!editorInstance?.ctx) return;
+
+            const view = editorInstance.ctx.get(editorViewCtx);
+            const headings = headingPluginKey.getState(view.state) || [];
+            const containerRect = view.dom.getBoundingClientRect();
+
+            for (const heading of headings) {
+              try {
+                const coords = view.coordsAtPos(heading.pos);
+                if (coords.top >= containerRect.top - 50) {
+                  props.onActiveHeadingChange?.(heading.id);
+                  return;
+                }
+              } catch (e) {
+                // Position may be invalid if doc changed, skip
+              }
+            }
+
+            const last = headings[headings.length - 1];
+            props.onActiveHeadingChange?.(last?.id || null);
+          }, 100);
+        };
+
+        // Attach scroll listener to the editor content
+        view.dom.addEventListener('scroll', scrollHandler, true);
+
+        // Set up DOM drop handler for OS file drops into the editor.
+        // dragDropEnabled is false so OS file drops come through as DOM events.
+        if (!dropHandler) {
+          dragOverHandler = (e: DragEvent) => {
+            if (e.dataTransfer?.types.includes('Files')) {
+              e.preventDefault();
+              e.dataTransfer.dropEffect = 'copy';
+            }
+          };
+
+          dropHandler = (e: DragEvent) => {
+            if (!e.dataTransfer?.files.length) return;
+            e.preventDefault();
+
+            // Grab File objects synchronously before dataTransfer is invalidated
+            const droppedFiles: File[] = [];
+            for (let i = 0; i < e.dataTransfer.files.length; i++) {
+              const file = e.dataTransfer.files.item(i);
+              if (file && file.size > 0) droppedFiles.push(file);
+            }
+            if (droppedFiles.length === 0) return;
+
+            (async () => {
+              if (!props.vaultPath || !editorInstance?.ctx) return;
+              const currentView = editorInstance.ctx.get(editorViewCtx);
+
+              for (const file of droppedFiles) {
+                const ext = file.name.split('.').pop()?.toLowerCase();
+                if (!ext || !ALL_EXTENSIONS.includes(ext)) continue;
+
+                const fileName = await getUniqueFileNameInVault(
+                  props.vaultPath, 'attachments', sanitizeFileName(file.name)
+                );
+                const attachmentsDir = joinPath(props.vaultPath, 'attachments');
+
+                // Ensure attachments dir exists
+                const dirExists = await platform.vault.exists(attachmentsDir);
+                if (!dirExists) {
+                  await platform.vault.createFolder(attachmentsDir, props.vaultPath);
+                }
+
+                try {
+                  const arrayBuffer = await file.arrayBuffer();
+                  const destPath = joinPath(attachmentsDir, fileName);
+                  await platform.vault.writeBinary(
+                    destPath,
+                    new Uint8Array(arrayBuffer),
+                    props.vaultPath,
+                  );
+
+                  const embedType = currentView.state.schema.nodes.embed;
+                  if (embedType) {
+                    const relativePath = `attachments/${fileName}`;
+                    const node = embedType.create({ target: relativePath, anchor: null, width: null, height: null });
+                    const tr = currentView.state.tr.replaceSelectionWith(node);
+                    currentView.dispatch(tr);
+                  }
+                } catch (err) {
+                  console.error('[DragDrop] Failed to process file:', err);
+                }
+              }
+              props.onFilesUploaded?.();
+            })();
+          };
+
+          view.dom.addEventListener('dragover', dragOverHandler);
+          view.dom.addEventListener('drop', dropHandler);
+        }
+      }
+    }
+  };
+
+  // Helper function to scroll to a line
+  const scrollToLineNumber = (line: number) => {
+    if (!editorInstance) return;
+
+    try {
+      const ctx = editorInstance.ctx;
+      if (!ctx) return;
+
+      const view = ctx.get(editorViewCtx);
+      const doc = view.state.doc;
+
+      // Calculate character position at the start of target line
+      const content = props.content || '';
+      const lines = content.split('\n');
+
+      let charPos = 0;
+      for (let i = 0; i < Math.min(line - 1, lines.length); i++) {
+        charPos += lines[i].length + 1; // +1 for newline
+      }
+
+      // Find the closest position in the doc
+      let targetPos = Math.min(charPos, doc.content.size - 1);
+
+      // Resolve to a valid position
+      const resolvedPos = doc.resolve(Math.max(0, targetPos));
+
+      // Find the DOM element at this position and scroll to it
+      if (resolvedPos.pos >= 0) {
+        const domInfo = view.domAtPos(resolvedPos.pos);
+
+        if (domInfo.node) {
+          let element: Element | null = null;
+          if (domInfo.node instanceof Element) {
+            element = domInfo.node;
+          } else if (domInfo.node.parentElement) {
+            element = domInfo.node.parentElement;
+          }
+
+          // Find the nearest block-level parent
+          while (element && !['P', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'LI', 'PRE', 'BLOCKQUOTE', 'DIV'].includes(element.tagName)) {
+            element = element.parentElement;
+          }
+
+          if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }
+      }
+
+      // Clear the scroll target
+      props.onScrollComplete?.();
+    } catch (err) {
+      console.error('Failed to scroll to line:', err);
+    }
+  };
+
+  // Watch for file path changes (tab switches)
+  createEffect(
+    on(
+      () => props.filePath,
+      async (filePath, _prevPath) => {
+        if (filePath && filePath !== currentPath() && containerRef) {
+          setCurrentPath(filePath);
+
+          // Fast path: reuse the existing editor instance and swap the
+          // document in place. This avoids destroying/recreating ~15 plugins
+          // and re-mounting the view on every tab switch (100-300ms of lag).
+          let swapped = false;
+          if (editorInstance?.ctx) {
+            try {
+              const ctx = editorInstance.ctx;
+              const view = ctx.get(editorViewCtx);
+
+              // Only swap when the editor view is still attached to the DOM.
+              // A view-mode toggle (live <-> source) replaces the container
+              // element, in which case we must fall back to a full recreate.
+              if (view.dom.isConnected) {
+                // Refresh per-file plugin context. All of these are lazy
+                // module-level globals (read at interaction/render time, not
+                // captured at editor creation), so updating the setters is
+                // sufficient — mirrors what createEditor() does.
+                setHashtagClickHandler(props.onHashtagClick || null);
+                setWikilinkClickHandler(props.onWikilinkClick || null);
+                setWikilinkNoteIndex(props.noteIndex || null);
+                setEmbedAssetIndex(props.assetIndex || null);
+                setEmbedNoteIndex(props.noteIndex || null);
+                setEmbedVaultPath(props.vaultPath || null);
+                setEmbedCurrentFilePath(filePath);
+                setAutocompleteContext(props.vaultPath || null, filePath, props.fileContents);
+                setUploadVaultPath(props.vaultPath || null);
+                setOnFilesUploaded(props.onFilesUploaded || null);
+
+                // Parse the new file's markdown with the existing parser
+                const parser = ctx.get(parserCtx);
+                const doc = parser(props.content);
+                if (!doc) {
+                  throw new Error('Parser returned no document');
+                }
+
+                // Create a brand-new EditorState instead of dispatching a
+                // replace transaction: this resets prosemirror-history so
+                // Ctrl+Z cannot restore the previous file's content, while
+                // keeping the same plugin instances and view (incl. scroll
+                // and drop listeners attached to view.dom).
+                view.updateState(
+                  EditorState.create({
+                    doc,
+                    schema: view.state.schema,
+                    plugins: view.state.plugins,
+                  })
+                );
+
+                // updateState doesn't dispatch a transaction, so the
+                // markdownUpdated listener won't fire — sync tracking
+                // manually so the external-content effect stays quiet.
+                lastEditorContent = props.content;
+
+                // Reset scroll position for the new document
+                view.dom.scrollTop = 0;
+
+                // Export headings for the new document (recomputed by the
+                // heading plugin's state.init during EditorState.create)
+                const headings = headingPluginKey.getState(view.state) || [];
+                props.onHeadingsChange?.(headings);
+
+                swapped = true;
+              }
+            } catch (err) {
+              console.warn('[Editor] Doc swap failed, falling back to full recreate:', err);
+            }
+          }
+
+          if (!swapped) {
+            // Fallback / initial path: full editor recreate.
+
+            // Remove old scroll listener before destroying editor
+            if (scrollHandler && editorInstance?.ctx) {
+              try {
+                const view = editorInstance.ctx.get(editorViewCtx);
+                view.dom.removeEventListener('scroll', scrollHandler, true);
+              } catch (e) {
+                // Ignore errors if view is already destroyed
+              }
+            }
+
+            // Destroy existing instance first
+            if (editorInstance) {
+              await editorInstance.destroy();
+              editorInstance = null;
+            }
+
+            // Clear the container DOM to prevent duplicate content
+            // Milkdown's destroy() doesn't always clean up the DOM fully
+            if (containerRef) {
+              containerRef.innerHTML = '';
+            }
+
+            // Create fresh editor with new content
+            const editor = await createEditor(containerRef, props.content);
+
+            // Set up scroll tracking for active heading after editor is created
+            if (editor?.ctx) {
+              const view = editor.ctx.get(editorViewCtx);
+
+              // Export initial headings
+              const initialHeadings = headingPluginKey.getState(view.state) || [];
+              props.onHeadingsChange?.(initialHeadings);
+
+              // Attach scroll listener
+              if (scrollHandler) {
+                view.dom.addEventListener('scroll', scrollHandler, true);
+              }
+            }
+          }
+
+          // After editor is ready, scroll to line if specified
+          if (props.scrollToLine) {
+            // Give the editor a moment to fully render
+            setTimeout(() => {
+              scrollToLineNumber(props.scrollToLine!);
+            }, 100);
+          }
+        }
+      }
+    )
+  );
+
+  // Handle scroll to line (for when file is already open)
+  createEffect(
+    on(
+      () => props.scrollToLine,
+      (line) => {
+        // Only handle if we have a line to scroll to and an editor that's ready
+        // The filePath effect handles scrolling when opening a new file
+        if (line && editorInstance && props.filePath === currentPath()) {
+          // Small delay to ensure the view is stable
+          setTimeout(() => {
+            scrollToLineNumber(line);
+          }, 50);
+        }
+      }
+    )
+  );
+
+  // Handle external content changes (e.g., from OpenCode or file watcher)
+  createEffect(
+    on(
+      () => props.content,
+      (newContent) => {
+        // Only update if:
+        // 1. We have an editor instance
+        // 2. The file path matches (same file)
+        // 3. The content is different from what the editor currently has
+        if (
+          editorInstance?.ctx &&
+          props.filePath === currentPath() &&
+          newContent !== lastEditorContent
+        ) {
+          try {
+            // Replace the editor content with the new markdown
+            editorInstance.action((ctx) => {
+              const view = ctx.get(editorViewCtx);
+              const parser = ctx.get(parserCtx);
+              const doc = parser(newContent);
+              if (doc) {
+                const tr = view.state.tr.replaceWith(0, view.state.doc.content.size, doc.content);
+                view.dispatch(tr);
+                lastEditorContent = newContent;
+              }
+            });
+          } catch (err) {
+            console.error('[Editor] Failed to update content:', err);
+          }
+        }
+      }
+    )
+  );
+
+  // Handle scroll to heading (from outline panel click)
+  createEffect(
+    on(
+      () => props.scrollToHeadingId,
+      (id) => {
+        if (!id || !editorInstance?.ctx) return;
+
+        const view = editorInstance.ctx.get(editorViewCtx);
+        const headings = headingPluginKey.getState(view.state) || [];
+        const heading = headings.find(h => h.id === id);
+
+        if (heading) {
+          try {
+            // Use nodeDOM to get the heading element directly (h1-h6)
+            const domNode = view.nodeDOM(heading.pos);
+            if (domNode instanceof HTMLElement) {
+              domNode.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              return;
+            }
+
+            // Fallback: use transaction with scrollIntoView
+            const { tr } = view.state;
+            const $pos = view.state.doc.resolve(heading.pos);
+            view.dispatch(tr.setSelection(TextSelection.near($pos)).scrollIntoView());
+          } catch (e) {
+            console.error('Failed to scroll to heading:', e);
+          }
+        }
+      }
+    )
+  );
+
+  // Handle scroll to heading by text (from wikilink anchor navigation)
+  createEffect(
+    on(
+      () => props.scrollToHeadingText,
+      (headingText) => {
+        if (!headingText || !editorInstance?.ctx) return;
+
+        const view = editorInstance.ctx.get(editorViewCtx);
+        const headings = headingPluginKey.getState(view.state) || [];
+        // Find heading by text (case-insensitive)
+        const heading = headings.find(
+          h => h.text.toLowerCase() === headingText.toLowerCase()
+        );
+
+        if (heading) {
+          try {
+            const domNode = view.nodeDOM(heading.pos);
+            if (domNode instanceof HTMLElement) {
+              domNode.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              return;
+            }
+
+            const { tr } = view.state;
+            const $pos = view.state.doc.resolve(heading.pos);
+            view.dispatch(tr.setSelection(TextSelection.near($pos)).scrollIntoView());
+          } catch (e) {
+            console.error('Failed to scroll to heading:', e);
+          }
+        }
+      }
+    )
+  );
+
+  // Handle scroll to block (from wikilink anchor navigation)
+  createEffect(
+    on(
+      () => props.scrollToBlockId,
+      (blockId) => {
+        if (!blockId || !editorInstance?.ctx) return;
+
+        const view = editorInstance.ctx.get(editorViewCtx);
+        const blocks = blockPluginKey.getState(view.state) || [];
+        const block = blocks.find(b => b.id === blockId);
+
+        if (block) {
+          try {
+            // Use nodeDOM like heading navigation does
+            const domNode = view.nodeDOM(block.pos);
+            if (domNode instanceof HTMLElement) {
+              domNode.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              return;
+            }
+
+            // Fallback to selection-based scrolling
+            const { tr } = view.state;
+            const $pos = view.state.doc.resolve(block.pos);
+            view.dispatch(tr.setSelection(TextSelection.near($pos)).scrollIntoView());
+          } catch (e) {
+            console.error('Failed to scroll to block:', e);
+          }
+        }
+      }
+    )
+  );
+
+  onCleanup(async () => {
+    // Remove scroll listener
+    if (scrollHandler && editorInstance?.ctx) {
+      try {
+        const view = editorInstance.ctx.get(editorViewCtx);
+        view.dom.removeEventListener('scroll', scrollHandler, true);
+      } catch (e) {
+        // Ignore errors if view is already destroyed
+      }
+    }
+    // Clean up DOM drop handlers
+    if (editorInstance?.ctx) {
+      try {
+        const editorView = editorInstance.ctx.get(editorViewCtx);
+        if (dragOverHandler) editorView.dom.removeEventListener('dragover', dragOverHandler);
+        if (dropHandler) editorView.dom.removeEventListener('drop', dropHandler);
+      } catch (_) { /* view already destroyed */ }
+    }
+    dropHandler = null;
+    dragOverHandler = null;
+    if (scrollDebounce) {
+      clearTimeout(scrollDebounce);
+    }
+    if (editorInstance) {
+      await editorInstance.destroy();
+      editorInstance = null;
+    }
+  });
+
+  return (
+    <Show
+      when={props.filePath}
+      fallback={
+        <div class="welcome-screen">
+          <div class="welcome-logo">
+            <svg width="96" height="96" viewBox="0 0 512 512">
+              <defs>
+                <linearGradient id="welcomeRockShine" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" style="stop-color:#3a3a3a"/>
+                  <stop offset="30%" style="stop-color:#1a1a1a"/>
+                  <stop offset="70%" style="stop-color:#0a0a0a"/>
+                  <stop offset="100%" style="stop-color:#000000"/>
+                </linearGradient>
+                <linearGradient id="welcomeHighlight" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" style="stop-color:#4a4a4a"/>
+                  <stop offset="100%" style="stop-color:#2a2a2a"/>
+                </linearGradient>
+              </defs>
+              <g>
+                <polygon points="256,48 380,140 420,280 350,420 162,420 92,280 132,140" fill="#0a0a0a"/>
+                <polygon points="132,140 92,280 162,420 200,320 180,200" fill="#151515"/>
+                <polygon points="380,140 420,280 350,420 312,320 332,200" fill="#101010"/>
+                <polygon points="162,420 350,420 312,320 256,360 200,320" fill="#080808"/>
+                <polygon points="256,48 132,140 180,200 256,160" fill="url(#welcomeHighlight)"/>
+                <polygon points="256,48 380,140 332,200 256,160" fill="#2a2a2a"/>
+                <polygon points="180,200 332,200 312,320 256,360 200,320" fill="url(#welcomeRockShine)"/>
+                <polygon points="200,210 280,210 260,260 210,250" fill="#4a4a4a" opacity="0.3"/>
+                <polygon points="210,220 250,220 240,245 215,240" fill="#5a5a5a" opacity="0.2"/>
+              </g>
+              <polygon points="256,48 380,140 420,280 350,420 162,420 92,280 132,140" fill="none" stroke="#2a2a2a" stroke-width="2"/>
+            </svg>
+          </div>
+          <Show
+            when={props.vaultPath}
+            fallback={
+              <>
+                <h1>Onyx</h1>
+                <p>Open a vault to get started</p>
+                <div class="welcome-buttons">
+                  <Show when={props.onOpenVault}>
+                    <button class="welcome-create-btn" onClick={props.onOpenVault}>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                      </svg>
+                      Open Vault
+                    </button>
+                  </Show>
+                  {/* On mobile, also show Create Note which will auto-create vault */}
+                  <Show when={props.onCreateFile}>
+                    <button class="welcome-create-btn secondary" onClick={() => {
+                      console.log('[Editor] Create new note button clicked (no vault)');
+                      props.onCreateFile?.();
+                    }}>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="12" y1="18" x2="12" y2="12"></line>
+                        <line x1="9" y1="15" x2="15" y2="15"></line>
+                      </svg>
+                      Create New Note
+                    </button>
+                  </Show>
+                </div>
+              </>
+            }
+          >
+            <h1>Onyx</h1>
+            <p>Select a note from the sidebar or create a new one</p>
+            <Show when={props.onCreateFile}>
+              <button class="welcome-create-btn" onClick={() => {
+                console.log('[Editor] Create new note button clicked');
+                props.onCreateFile?.();
+              }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                  <polyline points="14 2 14 8 20 8"></polyline>
+                  <line x1="12" y1="18" x2="12" y2="12"></line>
+                  <line x1="9" y1="15" x2="15" y2="15"></line>
+                </svg>
+                Create new note
+              </button>
+            </Show>
+          </Show>
+        </div>
+      }
+    >
+      <Show when={props.viewMode === 'source'} fallback={
+        <div class="editor-container milkdown-editor" ref={initEditor} />
+      }>
+        <div class="editor-container source-editor">
+          <textarea
+            class="source-textarea"
+            ref={(el) => {
+              // Load content directly from disk when source view mounts.
+              // This completely bypasses Milkdown's serializer.
+              if (props.filePath) {
+                platform.vault.read(props.filePath, props.vaultPath ?? '').then((diskContent) => {
+                  el.value = diskContent;
+                  setSourceContent(diskContent);
+                }).catch((err) => {
+                  console.error('[SourceEditor] Failed to read file:', err);
+                  // Fall back to tab content if disk read fails
+                  el.value = props.content || '';
+                  setSourceContent(props.content || '');
+                });
+              } else {
+                el.value = props.content || '';
+                setSourceContent(props.content || '');
+              }
+
+              el.spellcheck = localStorage.getItem('spell_check') !== 'false';
+
+              el.addEventListener('input', () => {
+                const value = el.value;
+                setSourceContent(value);
+                // Update tab content so the app state stays in sync
+                props.onContentChange(value);
+
+                // Auto-save to disk after 2 seconds of no typing
+                if (sourceAutoSaveTimeout) clearTimeout(sourceAutoSaveTimeout);
+                sourceAutoSaveTimeout = window.setTimeout(async () => {
+                  if (props.filePath) {
+                    try {
+                      await platform.vault.write(props.filePath, value, props.vaultPath ?? '');
+                    } catch (err) {
+                      console.error('[SourceEditor] Failed to save:', err);
+                    }
+                  }
+                }, 2000);
+              });
+
+              el.addEventListener('keydown', (e) => {
+                if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+                  e.preventDefault();
+                  // Immediate save on Ctrl+S
+                  if (sourceAutoSaveTimeout) clearTimeout(sourceAutoSaveTimeout);
+                  if (props.filePath) {
+                    platform.vault.write(props.filePath, el.value, props.vaultPath ?? '').catch(
+                      (err) => console.error('[SourceEditor] Failed to save:', err)
+                    );
+                  }
+                }
+              });
+            }}
+          />
+        </div>
+      </Show>
+    </Show>
+  );
+};
+
+export default MilkdownEditor;

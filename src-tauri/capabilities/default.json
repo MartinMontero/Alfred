@@ -1,0 +1,42 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Default capabilities for Onyx",
+  "windows": [
+    "main"
+  ],
+  "permissions": [
+    "core:default",
+    "dialog:default",
+    "shell:allow-open",
+    "fs:default",
+    "fs:allow-read",
+    "fs:allow-write",
+    {
+      "identifier": "fs:scope",
+      "allow": [
+        { "path": "$DOCUMENT/**" },
+        { "path": "$DOWNLOAD/**" },
+        { "path": "$APPCONFIG/**" },
+        { "path": "$APPDATA/**" },
+        { "path": "$HOME/.config/onyx/**" },
+        { "path": "$HOME/.config/opencode/**" }
+      ]
+    },
+    "store:default",
+    "haptics:allow-vibrate",
+    "haptics:allow-impact-feedback",
+    "haptics:allow-notification-feedback",
+    "haptics:allow-selection-feedback",
+    "notification:default",
+    "opener:default",
+    "biometric:default",
+    "deep-link:default",
+    "clipboard-manager:default",
+    "clipboard-manager:allow-read-text",
+    "clipboard-manager:allow-write-text",
+    "clipboard-manager:allow-read-image",
+    "clipboard-manager:allow-write-image",
+    "clipboard-manager:allow-write-html"
+  ]
+}
