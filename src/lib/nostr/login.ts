@@ -12,9 +12,8 @@
  * Only non-sensitive metadata is stored in localStorage.
  */
 
-import { nip19, generateSecretKey, getPublicKey } from 'nostr-tools';
+import { nip19, generateSecretKey, getPublicKey, SimplePool } from 'nostr-tools';
 import { bytesToHex, hexToBytes, randomBytes } from '@noble/hashes/utils.js';
-import { NRelay1 } from '@nostrify/nostrify';
 import { platform } from '@platform';
 import type { NostrIdentity } from './types';
 import { authenticateWithBiometric } from '../biometric';
@@ -168,50 +167,31 @@ export async function fetchUserRelays(
   pubkey: string,
   relays: string[]
 ): Promise<RelayEntry[]> {
-  for (const relayUrl of relays) {
-    try {
-      const relay = new NRelay1(relayUrl);
+  const pool = new SimplePool();
+  try {
+    const event = await pool.get(
+      relays,
+      { kinds: [KIND_NIP65_RELAY_LIST], authors: [pubkey], limit: 1 },
+      { maxWait: 5000 }
+    );
+    if (!event) return [];
 
-      const sub = relay.req([
-        {
-          kinds: [KIND_NIP65_RELAY_LIST],
-          authors: [pubkey],
-          limit: 1,
-        },
-      ]);
-
-      const timeout = setTimeout(() => {
-        relay.close();
-      }, 5000);
-
-      for await (const msg of sub) {
-        if (msg[0] === 'EVENT') {
-          const event = msg[2];
-          clearTimeout(timeout);
-          relay.close();
-
-          // Parse relay tags
-          const relayEntries = event.tags
-            .filter(([name]: string[]) => name === 'r')
-            .map(([_, url, marker]: string[]) => ({
-              url,
-              read: !marker || marker === 'read',
-              write: !marker || marker === 'write',
-            }));
-
-          return relayEntries;
-        } else if (msg[0] === 'EOSE') {
-          clearTimeout(timeout);
-          relay.close();
-          break;
-        }
-      }
-    } catch (e) {
-      console.error(`Failed to fetch from ${relayUrl}:`, e);
-    }
+    return event.tags
+      .filter((tag) => tag[0] === 'r')
+      .map((tag) => {
+        const marker = tag[2];
+        return {
+          url: tag[1],
+          read: !marker || marker === 'read',
+          write: !marker || marker === 'write',
+        };
+      });
+  } catch (e) {
+    console.error('Failed to fetch relay list:', e);
+    return [];
+  } finally {
+    pool.close(relays);
   }
-
-  return [];
 }
 
 /**
@@ -221,46 +201,24 @@ export async function fetchUserBlossomServers(
   pubkey: string,
   relays: string[]
 ): Promise<string[]> {
-  for (const relayUrl of relays) {
-    try {
-      const relay = new NRelay1(relayUrl);
+  const pool = new SimplePool();
+  try {
+    const event = await pool.get(
+      relays,
+      { kinds: [KIND_BLOSSOM_SERVER_LIST], authors: [pubkey], limit: 1 },
+      { maxWait: 5000 }
+    );
+    if (!event) return [];
 
-      const sub = relay.req([
-        {
-          kinds: [KIND_BLOSSOM_SERVER_LIST],
-          authors: [pubkey],
-          limit: 1,
-        },
-      ]);
-
-      const timeout = setTimeout(() => {
-        relay.close();
-      }, 5000);
-
-      for await (const msg of sub) {
-        if (msg[0] === 'EVENT') {
-          const event = msg[2];
-          clearTimeout(timeout);
-          relay.close();
-
-          // Parse server tags
-          const servers = event.tags
-            .filter(([name]: string[]) => name === 'server')
-            .map(([_, url]: string[]) => url);
-
-          return servers;
-        } else if (msg[0] === 'EOSE') {
-          clearTimeout(timeout);
-          relay.close();
-          break;
-        }
-      }
-    } catch (e) {
-      console.error(`Failed to fetch blossom servers from ${relayUrl}:`, e);
-    }
+    return event.tags
+      .filter((tag) => tag[0] === 'server')
+      .map((tag) => tag[1]);
+  } catch (e) {
+    console.error('Failed to fetch blossom servers:', e);
+    return [];
+  } finally {
+    pool.close(relays);
   }
-
-  return [];
 }
 
 /**
@@ -283,47 +241,27 @@ export async function fetchUserProfile(
   pubkey: string,
   relays: string[]
 ): Promise<UserProfile | null> {
-  for (const relayUrl of relays) {
+  const pool = new SimplePool();
+  try {
+    const event = await pool.get(
+      relays,
+      { kinds: [0], authors: [pubkey], limit: 1 },
+      { maxWait: 5000 }
+    );
+    if (!event) return null;
+
     try {
-      const relay = new NRelay1(relayUrl);
-
-      const sub = relay.req([
-        {
-          kinds: [0],
-          authors: [pubkey],
-          limit: 1,
-        },
-      ]);
-
-      const timeout = setTimeout(() => {
-        relay.close();
-      }, 5000);
-
-      for await (const msg of sub) {
-        if (msg[0] === 'EVENT') {
-          const event = msg[2];
-          clearTimeout(timeout);
-          relay.close();
-
-          try {
-            const profile = JSON.parse(event.content) as UserProfile;
-            return profile;
-          } catch (e) {
-            console.error('Failed to parse profile:', e);
-            return null;
-          }
-        } else if (msg[0] === 'EOSE') {
-          clearTimeout(timeout);
-          relay.close();
-          break;
-        }
-      }
+      return JSON.parse(event.content) as UserProfile;
     } catch (e) {
-      console.error(`Failed to fetch profile from ${relayUrl}:`, e);
+      console.error('Failed to parse profile:', e);
+      return null;
     }
+  } catch (e) {
+    console.error('Failed to fetch profile:', e);
+    return null;
+  } finally {
+    pool.close(relays);
   }
-
-  return null;
 }
 
 /**
