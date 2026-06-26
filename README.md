@@ -16,7 +16,8 @@ and re-identified as Alfred. See [`ATTRIBUTION.md`](ATTRIBUTION.md) and
 > - **Phase 0** — independent AGPL repo, severed history, re-identified, clean dual build.
 > - **Phase 1** — ethos hardening: OpenCode/OpenClaw removed, **zero Soapbox**
 >   (`@nostrify/nostrify` → nostr-tools), **zero React** (`qrcode.react` dropped),
->   app-side provider lockdown (Anthropic + Google + local only).
+>   app-side provider lockdown (**denylist**: excludes Meta/OpenAI/xAI, permits every
+>   other provider/model — Anthropic, Google, Mistral, open-weights, local/Ollama).
 > - **Phase 2** — the **agentic vault scaffold**: deterministic topology, `hot.md`
 >   anchor, load-bearing frontmatter, tiered memory, Spec Kit flow, Proposal-First Librarian.
 > - **Phase 3** — the **Alfred MCP server** ([`docs/mcp-server.md`](docs/mcp-server.md)):
