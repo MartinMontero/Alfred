@@ -1495,42 +1495,6 @@ const Settings: Component<SettingsProps> = (props) => {
 
                 <div class="setting-item">
                   <div class="setting-info">
-                    <div class="setting-name">OpenCode</div>
-                    <div class="setting-description">Show OpenCode AI assistant in the sidebar</div>
-                  </div>
-                  <label class="setting-toggle">
-                    <input
-                      type="checkbox"
-                      checked={localStorage.getItem('opencode_enabled') !== 'false'}
-                      onChange={(e) => {
-                        localStorage.setItem('opencode_enabled', e.currentTarget.checked ? 'true' : 'false');
-                        window.dispatchEvent(new CustomEvent('ai-provider-toggle'));
-                      }}
-                    />
-                    <span class="toggle-slider"></span>
-                  </label>
-                </div>
-
-                <div class="setting-item">
-                  <div class="setting-info">
-                    <div class="setting-name">OpenClaw</div>
-                    <div class="setting-description">Show OpenClaw AI assistant in the sidebar</div>
-                  </div>
-                  <label class="setting-toggle">
-                    <input
-                      type="checkbox"
-                      checked={localStorage.getItem('openclaw_enabled') !== 'false'}
-                      onChange={(e) => {
-                        localStorage.setItem('openclaw_enabled', e.currentTarget.checked ? 'true' : 'false');
-                        window.dispatchEvent(new CustomEvent('ai-provider-toggle'));
-                      }}
-                    />
-                    <span class="toggle-slider"></span>
-                  </label>
-                </div>
-
-                <div class="setting-item">
-                  <div class="setting-info">
                     <div class="setting-name">Custom Provider</div>
                     <div class="setting-description">Show Custom AI provider in the sidebar</div>
                   </div>
@@ -1879,14 +1843,6 @@ const Settings: Component<SettingsProps> = (props) => {
 
                 <div class="setting-item">
                   <div class="setting-info">
-                    <div class="setting-name">Toggle terminal</div>
-                    <div class="setting-description">Show/hide OpenCode terminal</div>
-                  </div>
-                  <div class="hotkey-display">Ctrl + `</div>
-                </div>
-
-                <div class="setting-item">
-                  <div class="setting-info">
                     <div class="setting-name">Close</div>
                     <div class="setting-description">Close modals and panels</div>
                   </div>
@@ -1951,7 +1907,7 @@ const Settings: Component<SettingsProps> = (props) => {
                   </div>
                 </div>
                 <div class="setting-item column">
-                  <div class="openclaw-token-input">
+                  <div class="custom-provider-token-input">
                     <input
                       type={customProviderApiKeyVisible() ? 'text' : 'password'}
                       class="setting-input wide"

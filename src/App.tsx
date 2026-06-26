@@ -507,7 +507,7 @@ const App: Component = () => {
 
             // If the content is different from what we have, reload it
             // This handles both dirty and non-dirty cases - external changes take precedence
-            // (e.g., OpenCode editing a file should always be reflected in the editor)
+            // (e.g., an external editor changing a file should always be reflected here)
             if (newContent !== tab.content) {
               // Cancel any pending autosave to prevent overwriting external changes
               if (autoSaveTimeout) {

@@ -3322,7 +3322,7 @@ body {
   }
 }
 
-/* Outline Panel - follows opencode-terminal-panel pattern */
+/* Outline Panel */
 .outline-panel-container {
   flex-shrink: 0;
   height: 100%;
@@ -9366,14 +9366,14 @@ body {
   font-size: 11px;
 }
 
-/* OpenClaw token input in settings */
-.openclaw-token-input {
+/* Custom provider token input in settings */
+.custom-provider-token-input {
   display: flex;
   gap: 8px;
   align-items: center;
 }
 
-.openclaw-token-input .setting-input {
+.custom-provider-token-input .setting-input {
   flex: 1;
 }
 
