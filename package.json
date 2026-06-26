@@ -18,10 +18,12 @@
     "preview:web": "vite preview --outDir dist-web",
     "tauri": "tauri",
     "typecheck": "tsc --noEmit",
+    "typecheck:mcp": "tsc -p mcp/tsconfig.json",
+    "mcp": "tsx mcp/run.ts",
     "test": "vitest run",
     "check:exclusion": "tsx ../wecanjustbuildthings.dev/enforcement/cli.ts layer1 --tree . && tsx ../wecanjustbuildthings.dev/enforcement/cli.ts layer2 --tree .",
     "check:exclusion:l3": "tsx ../wecanjustbuildthings.dev/enforcement/cli.ts layer3 --tree . || exit 0",
-    "verify:all": "npm run typecheck && npm run test && npm run check:exclusion && npm run check:exclusion:l3 && npm run build && npm run build:web",
+    "verify:all": "npm run typecheck && npm run typecheck:mcp && npm run test && npm run check:exclusion && npm run check:exclusion:l3 && npm run build && npm run build:web",
     "postinstall": "patch-package"
   },
   "license": "AGPL-3.0-or-later",
@@ -39,6 +41,7 @@
     "@milkdown/prose": "^7.18.0",
     "@milkdown/theme-nord": "^7.18.0",
     "@milkdown/utils": "^7.18.0",
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "@noble/ciphers": "^2.1.1",
     "@noble/hashes": "^2.0.1",
     "@solidjs/router": "^0.15.4",
@@ -67,12 +70,14 @@
     "uuid": "^13.0.0",
     "vis-data": "^8.0.3",
     "vis-network": "^10.0.2",
-    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@tauri-apps/api": "^2.9.1",
     "@tauri-apps/cli": "^2.9.6",
     "@types/jszip": "^3.4.0",
+    "@types/node": "^24.13.2",
     "@types/uuid": "^10.0.0",
     "cross-env": "^7.0.3",
     "idb": "^8.0.3",
