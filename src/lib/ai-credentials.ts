@@ -17,6 +17,18 @@
 
 import { platform } from '@platform';
 
+// --- Provider lockdown (vendor-exclusion chokepoint) ---
+// The provider allowlist (Anthropic + Google + local only; Meta/OpenAI/xAI
+// hard-refused) lives in provider-policy.ts (pure + unit-tested) and is enforced
+// at the platform AI adapter (src/platform/tauri/ai.ts) for every custom-provider
+// request. Re-exported here so the lockdown is reachable from the credentials layer.
+export {
+  assertProviderAllowed,
+  isProviderAllowed,
+  checkProviderEndpoint,
+  ProviderNotAllowedError,
+} from './provider-policy';
+
 interface Credential {
   get(): Promise<string | null>;
   set(value: string): Promise<void>;

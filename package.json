@@ -18,6 +18,9 @@
     "preview:web": "vite preview --outDir dist-web",
     "tauri": "tauri",
     "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "check:exclusion": "tsx ../wecanjustbuildthings.dev/enforcement/cli.ts all --tree .",
+    "verify:all": "npm run typecheck && npm run test && npm run check:exclusion && npm run build && npm run build:web",
     "postinstall": "patch-package"
   },
   "license": "AGPL-3.0-or-later",
@@ -73,10 +76,12 @@
     "cross-env": "^7.0.3",
     "idb": "^8.0.3",
     "patch-package": "^8.0.1",
+    "tsx": "^4.22.4",
     "typescript": "^5.9.3",
     "vite": "^7.3.1",
     "vite-plugin-pwa": "^1.3.0",
     "vite-plugin-solid": "^2.11.10",
+    "vitest": "^4.1.9",
     "workbox-window": "^7.4.1"
   }
 }
