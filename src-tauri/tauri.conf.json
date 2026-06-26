@@ -6,8 +6,8 @@
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:1420",
-    "beforeDevCommand": "npm run dev",
-    "beforeBuildCommand": "npm run build"
+    "beforeDevCommand": "npm run stage:goose && npm run dev",
+    "beforeBuildCommand": "npm run stage:goose && npm run build"
   },
   "app": {
     "withGlobalTauri": true,
@@ -39,6 +39,7 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "externalBin": ["binaries/goose"],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",

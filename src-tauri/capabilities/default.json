@@ -9,6 +9,30 @@
     "core:default",
     "dialog:default",
     "shell:allow-open",
+    {
+      "identifier": "shell:allow-spawn",
+      "allow": [
+        { "name": "binaries/goose", "sidecar": true, "args": ["acp"] },
+        {
+          "name": "binaries/goose",
+          "sidecar": true,
+          "args": ["run", "--recipe", { "validator": ".+" }, "--no-session"]
+        }
+      ]
+    },
+    {
+      "identifier": "shell:allow-execute",
+      "allow": [
+        { "name": "binaries/goose", "sidecar": true, "args": ["acp"] },
+        {
+          "name": "binaries/goose",
+          "sidecar": true,
+          "args": ["recipe", "validate", { "validator": ".+" }]
+        }
+      ]
+    },
+    "shell:allow-stdin-write",
+    "shell:allow-kill",
     "fs:default",
     "fs:allow-read",
     "fs:allow-write",

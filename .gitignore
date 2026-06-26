@@ -6,6 +6,11 @@ dist/
 dist-web/
 src-tauri/target/
 
+# Staged goose sidecar — large (~236 MB) and platform-specific. Not committed;
+# regenerated from the local goose install by scripts/stage-goose-sidecar.mjs
+# (runs automatically before `tauri dev`/`tauri build`). See docs/audit/phase4.md.
+src-tauri/binaries/
+
 # IDE
 .vscode/
 .idea/

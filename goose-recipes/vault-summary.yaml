@@ -1,0 +1,16 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# A sample Alfred goose recipe. Reads the vault as ground truth via the
+# alfred-vault MCP extension (registered in Alfred's goose config) and produces
+# a concise status summary. Validate with: goose recipe validate <path>.
+version: "1.0.0"
+title: Vault Summary
+description: Summarize the current state of the Alfred vault from hot.md and the Memory Bank.
+instructions: >
+  You are Alfred's assistant. The Alfred vault is your ground truth. Use the
+  alfred-vault tools (hot_read, memory_bank_read, vault_search) to read the
+  vault before answering. Do not invent facts that are not in the vault.
+prompt: >
+  Summarize the current state of my vault: what I am working on now, the most
+  recent decisions, and the next steps. Cite the notes you used.
+parameters: []
+extensions: []

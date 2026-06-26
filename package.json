@@ -17,6 +17,7 @@
     "build:web": "cross-env BUILD_TARGET=web vite build",
     "preview:web": "vite preview --outDir dist-web",
     "tauri": "tauri",
+    "stage:goose": "node scripts/stage-goose-sidecar.mjs",
     "typecheck": "tsc --noEmit",
     "typecheck:mcp": "tsc -p mcp/tsconfig.json",
     "mcp": "tsx mcp/run.ts",
@@ -28,6 +29,7 @@
   },
   "license": "AGPL-3.0-or-later",
   "dependencies": {
+    "@agentclientprotocol/sdk": "^1.0.0",
     "@codemirror/lang-markdown": "^6.5.0",
     "@codemirror/state": "^6.5.4",
     "@codemirror/theme-one-dark": "^6.1.3",

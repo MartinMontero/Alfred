@@ -11,6 +11,9 @@ import SearchPanel from './components/SearchPanel';
 import CustomProviderChat from './components/CustomProviderChat';
 const Settings = lazy(() => import('./components/Settings'));
 const GraphView = lazy(() => import('./components/GraphView'));
+// Desktop-only goose harness panel — keeps the ACP SDK, Tauri shell, and xterm
+// out of the web/startup bundle (rendered behind <Show> on desktop only).
+const GoosePanel = lazy(() => import('./components/GoosePanel'));
 import OutlinePanel from './components/OutlinePanel';
 import BacklinksPanel from './components/BacklinksPanel';
 import PropertiesPanel from './components/PropertiesPanel';
@@ -109,6 +112,11 @@ const App: Component = () => {
   const [showCustomProvider, setShowCustomProvider] = createSignal(false);
   const [customProviderWidth, setCustomProviderWidth] = createSignal(
     parseInt(localStorage.getItem('custom_provider_width') || '500')
+  );
+  // goose agent panel (desktop only)
+  const [showGoose, setShowGoose] = createSignal(false);
+  const [gooseWidth, setGooseWidth] = createSignal(
+    parseInt(localStorage.getItem('goose_width') || '500')
   );
   // AI provider visibility toggles (persisted in localStorage)
   const [customProviderEnabled, setCustomProviderEnabled] = createSignal(
@@ -2714,6 +2722,19 @@ const App: Component = () => {
             </svg>
           </button>
         </Show>
+        {/* goose agent button - desktop only */}
+        <Show when={!isMobileApp() && !isWeb()}>
+          <button
+            class={`icon-btn goose-icon ${showGoose() ? 'active' : ''}`}
+            onClick={() => setShowGoose(!showGoose())}
+            title="Toggle goose agent"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="4 17 10 11 4 5"></polyline>
+              <line x1="12" y1="19" x2="20" y2="19"></line>
+            </svg>
+          </button>
+        </Show>
         <button
           class={`icon-btn ${showSettings() ? 'active' : ''}`}
           onClick={() => setShowSettings(true)}
@@ -3021,6 +3042,42 @@ const App: Component = () => {
                   path,
                   name: path.replace(/\\/g, '/').split('/').pop()?.replace(/\.md$/i, '') || path
                 })) : []}
+              />
+            </div>
+          </Show>
+
+          {/* goose Agent Panel - Right Side (Desktop only) */}
+          <Show when={showGoose() && !isMobileApp() && !isWeb()}>
+            <div
+              class="resize-handle"
+              onMouseDown={(e: MouseEvent) => {
+                e.preventDefault();
+                setIsResizing('terminal');
+                const startX = e.clientX;
+                const startWidth = gooseWidth();
+                const handleMouseMove = (e: MouseEvent) => {
+                  const delta = startX - e.clientX;
+                  const newWidth = Math.max(320, Math.min(startWidth + delta, window.innerWidth * 0.6));
+                  setGooseWidth(newWidth);
+                };
+                const handleMouseUp = () => {
+                  setIsResizing(null);
+                  localStorage.setItem('goose_width', gooseWidth().toString());
+                  document.removeEventListener('mousemove', handleMouseMove);
+                  document.removeEventListener('mouseup', handleMouseUp);
+                };
+                document.addEventListener('mousemove', handleMouseMove);
+                document.addEventListener('mouseup', handleMouseUp);
+              }}
+            />
+            <div style={{ width: `${gooseWidth()}px` }}>
+              <GoosePanel
+                vaultPath={vaultPath()}
+                onClose={() => setShowGoose(false)}
+                onOpenSettings={() => {
+                  setSettingsSection('customprovider');
+                  setShowSettings(true);
+                }}
               />
             </div>
           </Show>

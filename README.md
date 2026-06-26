@@ -12,7 +12,7 @@ Alfred is an independent, **cloned (not forked)** evolution of the MIT-licensed
 and re-identified as Alfred. See [`ATTRIBUTION.md`](ATTRIBUTION.md) and
 [`UPSTREAM.md`](UPSTREAM.md) for full provenance and the security back-port cadence.
 
-> **Status: Phases 0–3 complete** (of 8), building on native Windows 11.
+> **Status: Phases 0–4 complete** (of 8), building on native Windows 11.
 > - **Phase 0** — independent AGPL repo, severed history, re-identified, clean dual build.
 > - **Phase 1** — ethos hardening: OpenCode/OpenClaw removed, **zero Soapbox**
 >   (`@nostrify/nostrify` → nostr-tools), **zero React** (`qrcode.react` dropped),
@@ -23,8 +23,12 @@ and re-identified as Alfred. See [`ATTRIBUTION.md`](ATTRIBUTION.md) and
 > - **Phase 3** — the **Alfred MCP server** ([`docs/mcp-server.md`](docs/mcp-server.md)):
 >   exposes the vault as ground truth to any harness over stdio (spec 2025-11-25), with
 >   strict, path-confined, traversal-proof tools.
+> - **Phase 4** — the **embedded goose harness** ([`docs/goose.md`](docs/goose.md)):
+>   Alfred drives goose over ACP/stdio (`@agentclientprotocol/sdk` 1.0), reads the vault
+>   via the MCP extension, runs recipes/subagents, and locks providers to the **denylist**
+>   (excluded vendors present-in-binary but unreachable through Alfred — no fork).
 >
-> Still ahead: embedded goose harness (Phase 4), observability + agent safety (Phase 5),
+> Still ahead: observability + agent safety (Phase 5),
 > the AT Protocol pack (Phase 6), platform integration + i18n (Phase 7). See
 > [`docs/audit/`](docs/audit) for the per-phase record and [`CLAUDE.md`](CLAUDE.md) for
 > the standing context.

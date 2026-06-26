@@ -1,0 +1,20 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# A subagent / sub-recipe demonstration. The main agent delegates the vault
+# summary to a sub-recipe (which runs in an isolated session — its own context),
+# keeping the main conversation clean. goose decides when to invoke sub-recipes
+# and can run them in parallel. Validate with: goose recipe validate <path>.
+version: "1.0.0"
+title: Vault Research
+description: Research a topic against the vault, delegating the status summary to a sub-recipe subagent.
+instructions: >
+  You are Alfred's research lead. Use the alfred-vault tools as ground truth.
+  When you need the current vault status, delegate to the vault-summary sub-recipe
+  (it runs as an isolated subagent) instead of summarizing inline, so your main
+  context stays focused on the research question.
+prompt: >
+  Research the requested topic against my vault and report findings. Delegate the
+  vault status summary to the vault-summary subagent.
+parameters: []
+sub_recipes:
+  - name: vault-summary
+    path: ./vault-summary.yaml
