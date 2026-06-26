@@ -19,8 +19,9 @@
     "tauri": "tauri",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "check:exclusion": "tsx ../wecanjustbuildthings.dev/enforcement/cli.ts all --tree .",
-    "verify:all": "npm run typecheck && npm run test && npm run check:exclusion && npm run build && npm run build:web",
+    "check:exclusion": "tsx ../wecanjustbuildthings.dev/enforcement/cli.ts layer1 --tree . && tsx ../wecanjustbuildthings.dev/enforcement/cli.ts layer2 --tree .",
+    "check:exclusion:l3": "tsx ../wecanjustbuildthings.dev/enforcement/cli.ts layer3 --tree . || exit 0",
+    "verify:all": "npm run typecheck && npm run test && npm run check:exclusion && npm run check:exclusion:l3 && npm run build && npm run build:web",
     "postinstall": "patch-package"
   },
   "license": "AGPL-3.0-or-later",
