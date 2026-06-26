@@ -35,6 +35,8 @@ import { getSignerFromStoredLogin } from './lib/nostr/signer';
 import { sanitizeFilePath } from './lib/security';
 import { buildNoteIndex, resolveWikilink, NoteIndex, NoteGraph, buildNoteGraphFromContents, readContentsParallel } from './lib/editor/note-index';
 import { openDailyNote, loadDailyNotesConfig } from './lib/daily-notes';
+import { scaffoldAgenticVault, refreshHotMd, runLibrarianAudit, createSpecKitFeature } from './lib/agentic/vault';
+import { lintNote } from './lib/agentic/frontmatter-schema';
 import { listTemplates, getTemplateContent, createNoteFromTemplate, loadTemplatesConfig, type TemplateInfo } from './lib/templates';
 import { HeadingInfo } from './lib/editor/heading-plugin';
 import { AssetIndex, buildAssetIndex } from './lib/editor/asset-index';
@@ -1341,6 +1343,14 @@ const App: Component = () => {
       setTabs(tabs().map((t, i) => i === index ? { ...t, content, isDirty: false } : t));
       // Keep the backlinks/graph content cache fresh without any disk read
       updateCachedContent(tab.path, content);
+      // PostToolUse-style validator: warn (never block) on malformed frontmatter
+      // or wikilinks so the load-bearing schema stays well-formed.
+      if (tab.path.toLowerCase().endsWith('.md')) {
+        const lint = lintNote(content);
+        if (lint.errors.length > 0) {
+          console.warn(`[frontmatter] ${tab.path}: ${lint.errors.map((e) => `${e.field}: ${e.message}`).join('; ')}`);
+        }
+      }
     } catch (err) {
       console.error('Failed to save:', err);
     }
@@ -2281,8 +2291,72 @@ const App: Component = () => {
     }
   };
 
+  // --- Agentic vault (Phase 2) ---
+  const agenticNotify = (title: string, body?: string) => {
+    console.log(`[Alfred] ${title}${body ? ' — ' + body : ''}`);
+    platform.notifications.send(title, body).catch(() => {});
+  };
+
+  const handleScaffoldAgenticVault = async () => {
+    const vault = vaultPath();
+    if (!vault) { agenticNotify('Open a vault first'); return; }
+    try {
+      const project = vault.replace(/[/\\]+$/, '').split(/[/\\]/).pop() || 'Agentic Project';
+      const { created, skipped } = await scaffoldAgenticVault(vault, { project });
+      agenticNotify('Agentic vault scaffolded', `${created.length} created, ${skipped.length} already present`);
+    } catch (e) { console.error('Scaffold failed:', e); agenticNotify('Scaffold failed', String(e)); }
+  };
+
+  const handleRefreshHotMd = async () => {
+    const vault = vaultPath();
+    if (!vault) { agenticNotify('Open a vault first'); return; }
+    try { await refreshHotMd(vault); agenticNotify('hot.md refreshed'); }
+    catch (e) { console.error('hot.md refresh failed:', e); }
+  };
+
+  const handleRunLibrarian = async () => {
+    const vault = vaultPath();
+    if (!vault) { agenticNotify('Open a vault first'); return; }
+    try {
+      const proposals = await runLibrarianAudit(vault);
+      console.groupCollapsed(`[Librarian] ${proposals.length} proposal(s) — review only; nothing was written`);
+      for (const p of proposals) console.log(`${p.kind} · ${p.path} — ${p.detail} -> ${p.suggestion}`);
+      console.groupEnd();
+      agenticNotify('Librarian audit (proposal-only)', `${proposals.length} proposal(s); see console. Nothing changed.`);
+    } catch (e) { console.error('Librarian audit failed:', e); }
+  };
+
+  const handleNewSpecFeature = async () => {
+    const vault = vaultPath();
+    if (!vault) { agenticNotify('Open a vault first'); return; }
+    const feature = window.prompt('New Spec Kit feature name:');
+    if (!feature) return;
+    try {
+      const { created } = await createSpecKitFeature(vault, feature);
+      agenticNotify('Spec Kit feature created', `${created.length} artifact(s) under specs/`);
+    } catch (e) { console.error('Spec Kit feature failed:', e); }
+  };
+
+  // Session-end hook (Stop-hook analog): refresh hot.md when the app is hidden or
+  // closing. createIfMissing:false leaves non-agentic vaults untouched.
+  createEffect(() => {
+    const vault = vaultPath();
+    if (!vault) return;
+    const onHidden = () => {
+      if (document.visibilityState === 'hidden') {
+        refreshHotMd(vault, { createIfMissing: false }).catch((e) => console.error('hot.md session-end refresh failed:', e));
+      }
+    };
+    document.addEventListener('visibilitychange', onHidden);
+    onCleanup(() => document.removeEventListener('visibilitychange', onHidden));
+  });
+
   const commands = [
     { id: 'new-file', name: 'New File', action: () => console.log('New file - use sidebar') },
+    { id: 'scaffold-agentic', name: 'Scaffold Agentic Project', action: handleScaffoldAgenticVault },
+    { id: 'refresh-hot', name: 'Refresh hot.md', action: handleRefreshHotMd },
+    { id: 'librarian-audit', name: 'Run AI Librarian (proposal-only)', action: handleRunLibrarian },
+    { id: 'speckit-feature', name: 'Spec Kit: New Feature', action: handleNewSpecFeature },
     { id: 'save', name: 'Save', shortcut: 'Ctrl+S', action: saveCurrentTab },
     { id: 'quick-switcher', name: 'Quick Switcher', shortcut: 'Ctrl+O', action: () => setShowQuickSwitcher(true) },
     { id: 'search', name: 'Search in Files', shortcut: 'Ctrl+Shift+F', action: () => setShowSearch(true) },

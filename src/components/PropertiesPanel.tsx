@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Martin Montero and the Alfred contributors
 import { Component, For, Show, createSignal, createEffect } from 'solid-js';
 import { parseFrontmatter, serializeFrontmatter, FrontmatterProperty } from '../lib/frontmatter';
+import { validateFrontmatterObject, propertiesToObject, generateStableId } from '../lib/agentic/frontmatter-schema';
 
 interface PropertiesPanelProps {
   content: string | null;
@@ -189,6 +190,24 @@ const PropertiesPanel: Component<PropertiesPanelProps> = (props) => {
     setEditingValue(valueToString(prop.value));
   };
 
+  // Load-bearing frontmatter schema validation (Phase 2 — agentic vault).
+  const validation = () => validateFrontmatterObject(propertiesToObject(properties()));
+
+  // Fill in any missing load-bearing fields (id, description, tags, domain, updated).
+  const completeLoadBearingFields = () => {
+    const existing = properties();
+    const has = (k: string) => existing.some((p) => p.key === k);
+    const today = new Date().toISOString().slice(0, 10);
+    const additions: FrontmatterProperty[] = [];
+    if (!has('id')) additions.push({ key: 'id', value: generateStableId(), type: 'text' });
+    if (!has('description')) additions.push({ key: 'description', value: '', type: 'text' });
+    if (!has('tags')) additions.push({ key: 'tags', value: [], type: 'list' });
+    if (!has('domain')) additions.push({ key: 'domain', value: '', type: 'text' });
+    if (!has('updated')) additions.push({ key: 'updated', value: today, type: 'date' });
+    if (additions.length === 0) return;
+    applyChanges([...additions, ...existing]);
+  };
+
   return (
     <div class="properties-panel">
       <div class="properties-header">
@@ -244,6 +263,26 @@ const PropertiesPanel: Component<PropertiesPanelProps> = (props) => {
                 </div>
               )}
             </For>
+          </div>
+
+          {/* Load-bearing schema status (Phase 2 — agentic vault) */}
+          <div class="properties-schema">
+            <Show
+              when={!validation().valid}
+              fallback={<div class="properties-schema-status">Load-bearing frontmatter: complete</div>}
+            >
+              <div class="properties-schema-status">
+                Load-bearing frontmatter: {validation().errors.length} issue(s)
+              </div>
+              <ul class="properties-schema-issues">
+                <For each={validation().errors}>
+                  {(issue) => <li>{issue.field}: {issue.message}</li>}
+                </For>
+              </ul>
+              <button class="property-add-btn" onClick={completeLoadBearingFields}>
+                Complete load-bearing fields
+              </button>
+            </Show>
           </div>
 
           {/* Add Property */}
