@@ -147,8 +147,6 @@ keeping the main context clean. Subagent activity surfaces in the panel via ACP
   builds don't see it.
 - `ClientSideConnection` is `@deprecated` upstream (still functional). Migration to
   `client().connectWith()` is a low-risk future cleanup.
-- Stale `$HOME/.config/opencode/**` entry remains in `capabilities/default.json`
-  (dead since the Phase-1 OpenCode removal) — cosmetic, out of Phase-4 scope.
 
 ## 7. Constitution check
 
