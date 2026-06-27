@@ -105,7 +105,7 @@ describe('buildGooseEnv', () => {
   });
 
   it('refuses an excluded model even on a permitted provider id', () => {
-    expect(() => buildGooseEnv({ provider: 'ollama', model: 'llama3.2' })).toThrow(ProviderNotAllowedError);
+    expect(() => buildGooseEnv({ provider: 'ollama', model: 'gpt-4o' })).toThrow(ProviderNotAllowedError);
   });
 
   it('does not let `extra` re-introduce an excluded-vendor credential', () => {

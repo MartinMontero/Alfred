@@ -82,7 +82,7 @@ function modelVendor(model: string): ExcludedVendor | null {
     m.includes('chatgpt') ||
     m.includes('davinci') ||
     m.includes('codex') ||
-    /(^|[^a-z0-9])gpt-?(3|4|5|oss|image|audio|realtime)/.test(m) ||
+    /(^|[^a-z0-9])gpt-(3|4|5|oss|image|audio|realtime)/.test(m) ||
     /^o[1-4](-|$)/.test(m)
   ) {
     return 'openai';
@@ -91,9 +91,9 @@ function modelVendor(model: string): ExcludedVendor | null {
   // xAI: Grok.
   if (m.includes('grok') || /(^|[^a-z])xai(\b|[^a-z])/.test(m)) return 'xai';
 
-  // Meta: Llama family (llama, codellama) — resolves to Meta the vendor.
-  if (/(^|[^a-z])(codellama|code-llama|llama)/.test(m)) return 'meta';
-
+  // No Meta model-id rule: Meta has no first-party hosted chat model, and Llama
+  // weights served by permitted infra (Ollama/Groq/Together/…) pay Meta-the-vendor
+  // nothing. Meta-the-vendor stays excluded via META_HOSTS + META_PROVIDER_TOKENS.
   return null;
 }
 

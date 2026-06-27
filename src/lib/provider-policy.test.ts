@@ -35,10 +35,12 @@ describe('provider denylist — excluded vendors (Meta/OpenAI/xAI) are refused',
     expect(checkProvider({ model: 'grok-beta' }).vendor).toBe('xai');
   });
 
-  it('refuses Meta by endpoint and Llama by model (even on a local endpoint)', () => {
+  it('refuses Meta the vendor by host, but allows Llama weights on permitted infra', () => {
+    // Meta-the-vendor host stays blocked.
     expect(isProviderAllowed('https://www.llama-api.com/v1', 'llama-3.1-70b')).toBe(false);
-    expect(isProviderAllowed('http://localhost:11434/v1', 'llama3.2')).toBe(false);
-    expect(isProviderAllowed('http://localhost:11434/v1', 'codellama')).toBe(false);
+    // Llama weights served by permitted infra (local Ollama) pay Meta nothing → allowed.
+    expect(isProviderAllowed('http://localhost:11434/v1', 'llama3.2')).toBe(true);
+    expect(isProviderAllowed('http://localhost:11434/v1', 'codellama')).toBe(true);
   });
 
   it('refuses an excluded model even via a permitted host (model id poisons the identity)', () => {
@@ -85,7 +87,7 @@ describe('provider denylist — non-excluded providers/models are ACCEPTED (the 
     expect(isProviderAllowed('https://api.groq.com/openai/v1', 'mixtral-8x7b')).toBe(true);
     expect(isProviderAllowed('https://api.deepseek.com/v1', 'deepseek-chat')).toBe(true);
     expect(isProviderAllowed('https://api.cohere.com/v1', 'command-r-plus')).toBe(true);
-    expect(isProviderAllowed('https://api.fireworks.ai/inference/v1', 'accounts/fireworks/llama')).toBe(false); // llama → Meta
+    expect(isProviderAllowed('https://api.fireworks.ai/inference/v1', 'accounts/fireworks/llama')).toBe(true);
     expect(isProviderAllowed('https://api.fireworks.ai/inference/v1', 'accounts/fireworks/qwen2p5')).toBe(true);
   });
 
@@ -113,7 +115,7 @@ describe('resolveExcludedVendor', () => {
     expect(resolveExcludedVendor({ endpoint: 'https://api.openai.com/v1' })).toBe('openai');
     expect(resolveExcludedVendor({ model: 'gpt-5' })).toBe('openai');
     expect(resolveExcludedVendor({ model: 'grok-2' })).toBe('xai');
-    expect(resolveExcludedVendor({ model: 'llama3.3' })).toBe('meta');
+    expect(resolveExcludedVendor({ model: 'llama3.3' })).toBeNull();
   });
 });
 
