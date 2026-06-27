@@ -16,12 +16,16 @@ import {
   prepareGooseDistribution,
   validateRecipe,
   runRecipe,
+  scanRecipeFile,
+  buildRecipePreview,
   filterGooseProviderOptions,
   type GooseSession,
   type GooseProviderOption,
   type GooseProviderCreds,
   type RecipeRun,
+  type RecipePreview,
 } from '../lib/goose';
+import ActionPreview from './ActionPreview';
 import type { SessionNotification, RequestPermissionRequest } from '@agentclientprotocol/sdk';
 
 interface GoosePanelProps {
@@ -56,6 +60,7 @@ const GoosePanel: Component<GoosePanelProps> = (props) => {
   const [error, setError] = createSignal<string | null>(null);
   const [messages, setMessages] = createSignal<ChatMessage[]>([]);
   const [input, setInput] = createSignal('');
+  const [recipePreview, setRecipePreview] = createSignal<{ preview: RecipePreview; recipePath: string } | null>(null);
 
   let session: GooseSession | null = null;
   let recipeRun: RecipeRun | null = null;
@@ -188,22 +193,41 @@ const GoosePanel: Component<GoosePanelProps> = (props) => {
     }
   }
 
-  async function runVaultRecipe() {
+  // Pre-flight: scan the recipe and show the action preview. No run happens here.
+  async function previewVaultRecipe() {
     if (!props.vaultPath || busy()) return;
     setBusy(true);
     setError(null);
     try {
       const recipePath = `${props.vaultPath.replace(/\\/g, '/')}/goose-recipes/vault-summary.yaml`;
-      const v = await validateRecipe(recipePath);
+      const scan = await scanRecipeFile(recipePath);
+      setRecipePreview({ preview: buildRecipePreview(scan), recipePath });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  // Runs only after the operator acknowledged the preview (and every warning).
+  async function runPreviewedRecipe() {
+    const pending = recipePreview();
+    if (!pending || !props.vaultPath || busy()) return;
+    setRecipePreview(null);
+    setBusy(true);
+    setError(null);
+    try {
+      const v = await validateRecipe(pending.recipePath);
       termWrite(`\x1b[33m$ goose recipe validate\x1b[0m\n${v.output}\n`);
       if (!v.valid) {
         setError('Recipe is invalid — see terminal.');
         return;
       }
-      append('system', 'Running recipe: vault-summary');
-      recipeRun = await runRecipe(recipePath, {
+      append('system', 'Running recipe: vault-summary (cleaned)');
+      recipeRun = await runRecipe(pending.recipePath, {
         creds: { provider: provider(), model: model(), apiKey: apiKey() || undefined },
         cwd: props.vaultPath,
+        acknowledged: true,
         onOutput: (t) => termWrite(t),
       });
       await recipeRun.done;
@@ -262,9 +286,26 @@ const GoosePanel: Component<GoosePanelProps> = (props) => {
         }
       >
         <div class="goose-panel__toolbar" style={{ display: 'flex', gap: '6px', padding: '4px 8px' }}>
-          <button disabled={busy()} onClick={runVaultRecipe}>Run vault-summary recipe</button>
+          <button disabled={busy()} onClick={previewVaultRecipe}>Preview & run vault-summary recipe</button>
           <button onClick={disconnect}>Disconnect</button>
         </div>
+      </Show>
+
+      <Show when={recipePreview()}>
+        {(p) => (
+          <div style={{ padding: '0 8px' }}>
+            <ActionPreview
+              title="Recipe pre-flight: vault-summary"
+              summary="Review the actions this recipe will take. Invisible characters are stripped; any warning must be acknowledged before it runs."
+              actions={p().preview.actions}
+              notices={p().preview.notices}
+              warnings={p().preview.warnings}
+              runLabel="Run cleaned recipe"
+              onRun={runPreviewedRecipe}
+              onCancel={() => setRecipePreview(null)}
+            />
+          </div>
+        )}
       </Show>
 
       <Show when={error()}>
