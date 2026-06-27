@@ -45,6 +45,12 @@ keyring = { version = "3", features = ["sync-secret-service", "apple-native", "w
 tauri-plugin-single-instance = "2.3.7"
 tauri-plugin-window-state = "2"
 
+# Windows-only: Job Object orphan-guard for the goose sidecar (src/job_guard.rs).
+# Pinned to 0.61 to match the copy Tauri already resolves (no duplicate). Win32_Security
+# is required because CreateJobObjectW's signature references SECURITY_ATTRIBUTES.
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.61", features = ["Win32_Foundation", "Win32_Security", "Win32_System_JobObjects", "Win32_System_Threading"] }
+
 [profile.release]
 opt-level = "s"
 lto = true

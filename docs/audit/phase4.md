@@ -33,7 +33,7 @@ That was corrected to a **vendor-identity denylist** — exclude only Meta/OpenA
 permit everything else (`src/lib/provider-policy.ts`, commit `db9612b`). Phase 4
 routes goose's provider/credential setup through that same denylist.
 
-## 1. Can config make the excluded vendors unreachable, or only default away?
+## 1. Can config *remove* the excluded vendors, or only default away from them?
 
 **Honest answer: config can only *default away* from them and withhold credentials
 — it cannot remove them from the binary.** The OpenAI/xAI/Codex provider code is
@@ -130,6 +130,21 @@ keeping the main context clean. Subagent activity surfaces in the panel via ACP
   key and is verified manually / by an opt-in run — the plumbing (env, MCP
   extension, streaming, kill) is in place and unit/integration-tested up to the
   model boundary.
+- **Orphaned goose on abnormal app exit (Windows) — HANDLED: Job Object kill-on-close.**
+  `src/job_guard.rs` binds Alfred to a Windows **Job Object** with
+  `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE`, wired as the **first** call in `run()` (before
+  `tauri::Builder`, so even startup-phase crashes are covered). Every process Alfred
+  spawns — the goose `acp` sidecar and its whole descendant tree — inherits the job;
+  when the last handle to the job closes, which the OS does automatically on **any**
+  parent exit (crash, SIGKILL, Task Manager — where the graceful JS hooks never run),
+  the OS kills every remaining job member. **No orphans.** Verified by a behavioral
+  test (`src/job_guard_tests.rs`): an independent kill-on-close job + a long-lived
+  member child → closing the job handle kills the child within 5 s. Degrades
+  gracefully (logs a warning and keeps running) if the process is already in an
+  incompatible job. The graceful JS hooks in `acp-client.ts` remain the fast path for
+  normal shutdown; the Job Object is the backstop for abnormal death. The dep is
+  Windows-only (`[target.'cfg(windows)'.dependencies] windows = "0.61"`); non-Windows
+  builds don't see it.
 - `ClientSideConnection` is `@deprecated` upstream (still functional). Migration to
   `client().connectWith()` is a low-risk future cleanup.
 - Stale `$HOME/.config/opencode/**` entry remains in `capabilities/default.json`

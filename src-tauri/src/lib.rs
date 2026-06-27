@@ -1,5 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Martin Montero and the Alfred contributors
+
+// Windows Job Object orphan-guard for the goose sidecar.
+#[cfg(windows)]
+mod job_guard;
+#[cfg(all(test, windows))]
+mod job_guard_tests;
+
 #[cfg(not(target_os = "android"))]
 use keyring::Entry;
 use notify::{Config, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
@@ -1019,6 +1026,12 @@ fn get_deep_link_args() -> Vec<String> {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // FIRST: on Windows, bind this process (and every child it spawns — notably the
+    // goose acp sidecar) to a Job Object the OS destroys on our death. This covers
+    // startup-phase crashes too, before any graceful shutdown hook exists.
+    #[cfg(windows)]
+    job_guard::assign_self_to_kill_on_close_job();
+
     let mut builder = tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
