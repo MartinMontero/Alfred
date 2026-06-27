@@ -43,8 +43,7 @@
         { "path": "$DOWNLOAD/**" },
         { "path": "$APPCONFIG/**" },
         { "path": "$APPDATA/**" },
-        { "path": "$HOME/.config/alfred/**" },
-        { "path": "$HOME/.config/opencode/**" }
+        { "path": "$HOME/.config/alfred/**" }
       ]
     },
     "store:default",
