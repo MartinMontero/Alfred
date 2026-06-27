@@ -127,6 +127,8 @@ export function buildGooseEnv(creds: GooseProviderCreds, options: GooseEnvOption
     GOOSE_DISABLE_KEYRING: '1',
     GOOSE_PROVIDER: creds.provider,
     GOOSE_MODEL: creds.model,
+    // Force goose's own telemetry off — Alfred owns telemetry, opt-in + local-only.
+    GOOSE_TELEMETRY_ENABLED: 'false',
   };
   if (options.pathRoot) env.GOOSE_PATH_ROOT = options.pathRoot;
 

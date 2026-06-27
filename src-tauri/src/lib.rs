@@ -7,6 +7,11 @@ mod job_guard;
 #[cfg(all(test, windows))]
 mod job_guard_tests;
 
+// Born-redacted local telemetry store (opt-in, off by default).
+mod telemetry;
+#[cfg(test)]
+mod telemetry_tests;
+
 #[cfg(not(target_os = "android"))]
 use keyring::Entry;
 use notify::{Config, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
@@ -26,6 +31,9 @@ use walkdir::WalkDir;
 pub struct AppSettings {
     #[serde(default)]
     pub vault_path: Option<String>,
+    /// Telemetry opt-in. None/false = OFF (deny-by-default); only Some(true) enables capture.
+    #[serde(default)]
+    pub telemetry_enabled: Option<bool>,
 }
 
 fn get_config_dir_with_app(app: &AppHandle) -> PathBuf {
@@ -1024,6 +1032,70 @@ fn get_deep_link_args() -> Vec<String> {
     deep_links
 }
 
+// ---------- Telemetry (born-redacted, opt-in, Rust-owned single writer) ----------
+
+fn telemetry_db_path(app: &AppHandle) -> PathBuf {
+    get_config_dir_with_app(app).join("telemetry.db")
+}
+
+/// The ONLY write path into telemetry.db. Accepts only the typed event shape, so a
+/// note body / prompt / key / tool argument cannot be passed. Deny-by-default: when
+/// opted out it returns without opening or creating the db, and the write itself
+/// goes through the shared `record_gated` gate the cargo tests drive — no decoy.
+#[tauri::command]
+fn telemetry_record(app: AppHandle, event: telemetry::TelemetryEvent) -> Result<(), String> {
+    let settings_json = fs::read_to_string(get_settings_path(&app)).unwrap_or_default();
+    if !telemetry::is_enabled_from_settings(&settings_json) {
+        return Ok(()); // opted out: telemetry.db is never opened or created
+    }
+    let dir = get_config_dir_with_app(&app);
+    fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    let conn = telemetry::open_store(&telemetry_db_path(&app)).map_err(|e| e.to_string())?;
+    telemetry::prune(&conn, telemetry::RETENTION_DAYS).map_err(|e| e.to_string())?;
+    telemetry::record_gated(&conn, &settings_json, &event)
+        .map(|_| ())
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn telemetry_wipe(app: AppHandle) -> Result<telemetry::WipeResult, String> {
+    let path = telemetry_db_path(&app);
+    if !path.exists() {
+        return Ok(telemetry::WipeResult { rows_before: 0, rows_after: 0, file_bytes: 0 });
+    }
+    let conn = telemetry::open_store(&path).map_err(|e| e.to_string())?;
+    let mut result = telemetry::wipe(&conn).map_err(|e| e.to_string())?;
+    drop(conn);
+    result.file_bytes = fs::metadata(&path).map(|m| m.len() as i64).unwrap_or(0);
+    Ok(result)
+}
+
+#[tauri::command]
+fn telemetry_metrics(app: AppHandle) -> Result<telemetry::Metrics, String> {
+    let path = telemetry_db_path(&app);
+    if !path.exists() {
+        return Ok(telemetry::Metrics {
+            total_events: 0,
+            input_tokens: 0,
+            output_tokens: 0,
+            by_kind: vec![],
+            errors: vec![],
+        });
+    }
+    let conn = telemetry::open_store(&path).map_err(|e| e.to_string())?;
+    telemetry::metrics(&conn).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn telemetry_export(app: AppHandle) -> Result<Vec<telemetry::StoredEvent>, String> {
+    let path = telemetry_db_path(&app);
+    if !path.exists() {
+        return Ok(vec![]);
+    }
+    let conn = telemetry::open_store(&path).map_err(|e| e.to_string())?;
+    telemetry::export_rows(&conn).map_err(|e| e.to_string())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     // FIRST: on Windows, bind this process (and every child it spawns — notably the
@@ -1230,6 +1302,10 @@ pub fn run() {
             custom_provider_request,
             custom_provider_stream,
             custom_provider_list_models,
+            telemetry_record,
+            telemetry_wipe,
+            telemetry_metrics,
+            telemetry_export,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
