@@ -19,6 +19,9 @@ import {
   scanRecipeFile,
   buildRecipePreview,
   filterGooseProviderOptions,
+  classifyToolCall,
+  selectAllowOption,
+  DENY,
   type GooseSession,
   type GooseProviderOption,
   type GooseProviderCreds,
@@ -26,7 +29,11 @@ import {
   type RecipePreview,
 } from '../lib/goose';
 import ActionPreview from './ActionPreview';
-import type { SessionNotification, RequestPermissionRequest } from '@agentclientprotocol/sdk';
+import type {
+  SessionNotification,
+  RequestPermissionRequest,
+  RequestPermissionResponse,
+} from '@agentclientprotocol/sdk';
 
 interface GoosePanelProps {
   vaultPath: string | null;
@@ -61,6 +68,10 @@ const GoosePanel: Component<GoosePanelProps> = (props) => {
   const [messages, setMessages] = createSignal<ChatMessage[]>([]);
   const [input, setInput] = createSignal('');
   const [recipePreview, setRecipePreview] = createSignal<{ preview: RecipePreview; recipePath: string } | null>(null);
+  const [pendingPermission, setPendingPermission] = createSignal<{
+    req: RequestPermissionRequest;
+    resolve: (r: RequestPermissionResponse) => void;
+  } | null>(null);
 
   let session: GooseSession | null = null;
   let recipeRun: RecipeRun | null = null;
@@ -119,14 +130,24 @@ const GoosePanel: Component<GoosePanelProps> = (props) => {
     }
   }
 
-  async function onRequestPermission(req: RequestPermissionRequest) {
-    const title = req.toolCall?.title ?? 'a tool call';
-    const allow = req.options.find((o) => o.kind === 'allow_once' || o.kind === 'allow_always');
-    const ok =
-      typeof window !== 'undefined' &&
-      window.confirm(`goose wants to run: ${title}\n\nAllow?`);
-    if (ok && allow) return { outcome: { outcome: 'selected' as const, optionId: allow.optionId } };
-    return { outcome: { outcome: 'cancelled' as const } };
+  // Deterministic gate: read-only vault tools auto-allow; every write/shell/unknown
+  // routes through the ActionPreview ack surface. Default-deny on no acknowledgement.
+  function onRequestPermission(req: RequestPermissionRequest): Promise<RequestPermissionResponse> {
+    if (classifyToolCall(req.toolCall) === 'auto-allow') {
+      return Promise.resolve(selectAllowOption(req.options));
+    }
+    return new Promise<RequestPermissionResponse>((resolve) => {
+      // A previous pending request (if any) is denied before showing the new one.
+      pendingPermission()?.resolve(DENY);
+      setPendingPermission({ req, resolve });
+    });
+  }
+
+  function resolvePermission(decision: RequestPermissionResponse) {
+    const p = pendingPermission();
+    if (!p) return;
+    setPendingPermission(null);
+    p.resolve(decision);
   }
 
   async function connect() {
@@ -240,6 +261,8 @@ const GoosePanel: Component<GoosePanelProps> = (props) => {
   }
 
   async function disconnect() {
+    pendingPermission()?.resolve(DENY); // never leave goose waiting
+    setPendingPermission(null);
     await session?.kill();
     await recipeRun?.kill();
     session = null;
@@ -303,6 +326,35 @@ const GoosePanel: Component<GoosePanelProps> = (props) => {
               runLabel="Run cleaned recipe"
               onRun={runPreviewedRecipe}
               onCancel={() => setRecipePreview(null)}
+            />
+          </div>
+        )}
+      </Show>
+
+      <Show when={pendingPermission()}>
+        {(p) => (
+          <div style={{ padding: '0 8px' }}>
+            <ActionPreview
+              title="Approve tool call"
+              summary="goose wants to run a tool that can modify your vault or run a command. Approve to allow this one call; cancel to deny."
+              actions={[{ label: p().req.toolCall?.title ?? 'tool call', detail: p().req.toolCall?.kind ?? undefined }]}
+              warnings={[
+                {
+                  id: p().req.toolCall?.toolCallId ?? 'tool',
+                  label: `Run: ${p().req.toolCall?.title ?? 'tool'}`,
+                  detail: ((): string | undefined => {
+                    try {
+                      const ri = p().req.toolCall?.rawInput;
+                      return ri ? JSON.stringify(ri).slice(0, 200) : undefined;
+                    } catch {
+                      return undefined;
+                    }
+                  })(),
+                },
+              ]}
+              runLabel="Approve"
+              onRun={() => resolvePermission(selectAllowOption(p().req.options))}
+              onCancel={() => resolvePermission(DENY)}
             />
           </div>
         )}

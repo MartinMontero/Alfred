@@ -72,6 +72,13 @@ describe.skipIf(!GOOSE)('goose ACP handshake (live)', () => {
         expect(typeof session.sessionId).toBe('string');
         expect(session.sessionId.length).toBeGreaterThan(0);
 
+        // goose defaults to 'auto' (the bypass). Step 2 takes it off auto at runtime;
+        // prove setSessionMode('approve') applies against real goose (no error).
+        expect(session.modes?.currentModeId).toBe('auto');
+        await expect(
+          conn.setSessionMode({ sessionId: session.sessionId, modeId: 'approve' }),
+        ).resolves.toBeDefined();
+
         // The provider list goose advertises over ACP contains the excluded vendors
         // (they are compiled into the binary). Alfred's denylist must filter them out.
         const providerOpt = session.configOptions?.find((o) => o.id === 'provider');

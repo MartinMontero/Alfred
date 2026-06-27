@@ -19,7 +19,6 @@ import {
   ClientSideConnection,
   ndJsonStream,
   PROTOCOL_VERSION,
-  type Agent,
   type Client,
   type Stream,
   type McpServer,
@@ -92,6 +91,9 @@ export interface GooseSessionOptions {
   extraEnv?: Record<string, string>;
   /** Initialize timeout (ms). */
   timeoutMs?: number;
+  /** Session permission mode. Default 'approve' (deterministic gate). NEVER 'auto'
+   *  (bypasses the gate) or 'smart_approve' (adds an LLM inference step). */
+  mode?: string;
 }
 
 export interface GooseSession {
@@ -184,7 +186,8 @@ export async function startGooseSession(opts: GooseSessionOptions): Promise<Goos
     },
   };
 
-  const conn: Agent = new ClientSideConnection(() => client, stream);
+  // Concrete connection type (not the Agent interface) so setSessionMode is available.
+  const conn = new ClientSideConnection(() => client, stream);
 
   const kill = async (): Promise<void> => {
     liveChildren.delete(child);
@@ -213,6 +216,13 @@ export async function startGooseSession(opts: GooseSessionOptions): Promise<Goos
     const session = await Promise.resolve(
       conn.newSession({ cwd: opts.cwd, mcpServers: opts.mcpServers ?? [] }),
     );
+
+    // Take the session OFF goose's default 'auto' mode so every write/shell tool
+    // call routes through the client's permission gate. The handshake returns
+    // 'auto', so config alone is not trusted — the mode is applied at runtime here.
+    // Fail closed: if it cannot be applied, the session is not used.
+    const mode = opts.mode ?? 'approve';
+    await Promise.resolve(conn.setSessionMode({ sessionId: session.sessionId, modeId: mode }));
 
     return {
       sessionId: session.sessionId,

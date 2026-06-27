@@ -16,12 +16,15 @@
 import { appConfigDir, join } from '@tauri-apps/api/path';
 import { mkdir, writeTextFile, exists } from '@tauri-apps/plugin-fs';
 import { buildGooseConfigYaml, buildGooseEnv, type GooseProviderCreds } from './provider-lockdown';
+import { buildPermissionYaml, goosePermissionPath } from './tool-gate';
 
 export interface GooseDistribution {
   /** GOOSE_PATH_ROOT — Alfred's isolated goose root under the app config dir. */
   pathRoot: string;
   /** The generated config.yaml path (<pathRoot>/config/config.yaml). */
   configPath: string;
+  /** The curated permission.yaml path (<pathRoot>/config/permission.yaml). */
+  permissionPath: string;
   /** The locked-down spawn env (provider pinned, keyring off, excluded keys blanked). */
   env: Record<string, string>;
 }
@@ -57,5 +60,10 @@ export async function prepareGooseDistribution(opts: PrepareGooseOptions): Promi
   });
   await writeTextFile(configPath, yaml);
 
-  return { pathRoot, configPath, env: buildGooseEnv(opts.creds, { pathRoot }) };
+  // Curated permission.yaml in the SAME isolated config dir: read-only vault tools
+  // always_allow (no prompt-fatigue), every write + the shell surface ask_before.
+  const permissionPath = goosePermissionPath(pathRoot);
+  await writeTextFile(permissionPath, buildPermissionYaml());
+
+  return { pathRoot, configPath, permissionPath, env: buildGooseEnv(opts.creds, { pathRoot }) };
 }

@@ -7,5 +7,6 @@
 export * from './provider-lockdown';
 export * from './acp-client';
 export * from './distribution';
+export * from './tool-gate';
 export * from './recipe-scan';
 export * from './recipes';
