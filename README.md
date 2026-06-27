@@ -1,56 +1,90 @@
 # Alfred
 
-**Sovereign, local-first, Nostr-native Personal Knowledge Management for agentic AI development.**
-A component of [wecanjustbuildthings.dev](https://github.com/MartinMontero/wecanjustbuildthings.dev).
+**Your sovereign, local-first external mind for building with AI.**
 
-Alfred is the persistent "external mind" where a non-developer's specs, decisions,
-context, and memory live — and the ground truth their AI harness reads. The platform
-is the judgment layer; **goose** is the hands; **Alfred is the memory.**
+Alfred is a Nostr-native personal knowledge management tool for the *builder* — the
+person who directs AI to build software but doesn't write the code themselves. It's
+the persistent place your specs, decisions, context, and memory live, and the ground
+truth your agentic AI dev tools read before they act.
 
-Alfred is an independent, **cloned (not forked)** evolution of the MIT-licensed
-[`derekross/onyx`](https://github.com/derekross/onyx), relicensed **AGPL-3.0-or-later**
-and re-identified as Alfred. See [`ATTRIBUTION.md`](ATTRIBUTION.md) and
-[`UPSTREAM.md`](UPSTREAM.md) for full provenance and the security back-port cadence.
+The platform is the judgment; **goose** is the hands; **Alfred is the memory.** Part
+of [wecanjustbuildthings.dev](https://github.com/MartinMontero/wecanjustbuildthings.dev).
 
-> **Status: Phases 0–4 complete** (of 8), building on native Windows 11.
-> - **Phase 0** — independent AGPL repo, severed history, re-identified, clean dual build.
-> - **Phase 1** — ethos hardening: OpenCode/OpenClaw removed, **zero Soapbox**
->   (`@nostrify/nostrify` → nostr-tools), **zero React** (`qrcode.react` dropped),
->   app-side provider lockdown (**denylist**: excludes Meta/OpenAI/xAI, permits every
->   other provider/model — Anthropic, Google, Mistral, open-weights, local/Ollama).
-> - **Phase 2** — the **agentic vault scaffold**: deterministic topology, `hot.md`
->   anchor, load-bearing frontmatter, tiered memory, Spec Kit flow, Proposal-First Librarian.
-> - **Phase 3** — the **Alfred MCP server** ([`docs/mcp-server.md`](docs/mcp-server.md)):
->   exposes the vault as ground truth to any harness over stdio (spec 2025-11-25), with
->   strict, path-confined, traversal-proof tools.
-> - **Phase 4** — the **embedded goose harness** ([`docs/goose.md`](docs/goose.md)):
->   Alfred drives goose over ACP/stdio (`@agentclientprotocol/sdk` 1.0), reads the vault
->   via the MCP extension, runs recipes/subagents, and locks providers to the **denylist**
->   (excluded vendors present-in-binary but unreachable through Alfred — no fork).
->
-> Still ahead: observability + agent safety (Phase 5),
-> the AT Protocol pack (Phase 6), platform integration + i18n (Phase 7). See
-> [`docs/audit/`](docs/audit) for the per-phase record and [`CLAUDE.md`](CLAUDE.md) for
-> the standing context.
+Your notes are plain Markdown files on your own disk. Your keys stay in your OS
+credential store. Nothing syncs anywhere unless you choose to, and when it does it's
+encrypted with your keys first. You stay in control and informed at every step.
 
-## What it is today
+## Status
 
-Inherited from the Onyx base and preserved in Alfred:
+> **Phases 0–4 complete; Phase 5 (observability & agent safety) in progress** — built
+> on native Windows 11. See [`docs/audit/`](docs/audit) for the per-phase record and
+> [`CLAUDE.md`](CLAUDE.md) for the standing context.
 
-- **Markdown editor** with live preview, slash commands, wikilinks, backlinks, outline,
-  graph view, daily notes, templates, and a YAML frontmatter Properties panel.
-- **Local-first** vault — notes are plain `.md` files on disk and work offline.
-- **Nostr sync** — content is **NIP-44** encrypted with your keys before it ever
-  reaches a relay; only you can decrypt it.
-- **Secure storage** — private keys live in the OS credential store, never logged.
-- **Dual build target** — one codebase ships a **Tauri desktop app** and a
-  zero-backend **PWA** (`build:web`), behind a `src/platform/{tauri,web}` abstraction.
+- **Phase 0** — an independent AGPL repository with a clean dual build.
+- **Phase 1** — ethos hardening: removed the bundled vendor tooling, the
+  Soapbox-maintained Nostr stack (now [nostr-tools](https://github.com/nbd-wtf/nostr-tools)),
+  and React; added the app-side **provider denylist** (excludes only Meta, OpenAI, and
+  xAI — permits every other provider/model, including Anthropic, Google, Mistral,
+  open-weights, and local/Ollama).
+- **Phase 2** — the **agentic vault scaffold**: a deterministic note topology, a
+  `hot.md` current-state anchor, load-bearing frontmatter, tiered memory, a Spec Kit
+  flow, and a Proposal-First "Librarian" that suggests but never edits without approval.
+- **Phase 3** — the **Alfred MCP server** ([`docs/mcp-server.md`](docs/mcp-server.md)):
+  exposes the vault as ground truth to any AI harness over stdio, with strict,
+  path-confined, traversal-proof tools.
+- **Phase 4** — the **embedded goose harness** ([`docs/goose.md`](docs/goose.md)):
+  Alfred drives [goose](https://block.github.io/goose/) over ACP, reads the vault via
+  the MCP extension, and runs recipes and subagents — with the provider denylist
+  enforced so excluded vendors are unreachable through Alfred.
+- **Phase 5 (in progress)** — shipped so far: a **recipe safety scanner** that strips
+  invisible/deceptive Unicode and shows a pre-flight preview of every action before a
+  recipe runs; **tool-permission gating** (deny-by-default — read-only vault tools run
+  freely, every write and shell action asks first); and a **born-redacted telemetry
+  spine** (opt-in, off by default, local-only, with an honest wipe). Still ahead in
+  this phase: cross-stack traces, a latency–accuracy guardrail, context probes, and the
+  memory-poisoning + privacy controls.
+
+Phases 6–7 ahead: the AT Protocol domain pack, then platform integration and i18n.
+
+## What it does today
+
+**As a notes app:**
+
+- A **Markdown editor** with live preview, slash commands, `[[wikilinks]]`, backlinks,
+  an outline, a graph view, daily notes, templates, and a YAML frontmatter Properties panel.
+- **Local-first** — your vault is plain `.md` files on disk; everything works offline.
+- **Nostr sync** — content is **NIP-44** encrypted with your keys *before* it reaches a
+  relay; only you can decrypt it.
+- **Secure storage** — private keys live in the OS credential store and are never logged.
+- **One codebase, two builds** — a **Tauri desktop app** and a zero-backend **PWA**,
+  behind a `src/platform/{tauri,web}` abstraction.
+
+**As an external mind for agentic development:**
+
+- A **vault scaffold** that gives your project a durable structure for specs, decisions,
+  and memory — born compliant with the project's standards.
+- An **MCP server** that hands your AI tools the vault as ground truth, read-first and
+  write-confirmed, so an agent works from your decisions instead of guessing.
+- An **embedded goose harness** that runs agentic work against the vault, with the
+  provider denylist, the recipe safety scanner, and tool-permission gating all in the path.
+
+## Principles
+
+- **Sovereign & local-first** — you own the code, the data, and the keys; no dependence
+  on extractive AI platforms.
+- **Builder agency** — no silent moves. Before anything destructive or outward-facing,
+  Alfred tells you what and why, and leaves the final say with you.
+- **Deny-by-default** — excluded providers are unreachable; agent tools that write or run
+  commands ask first; telemetry is off until you opt in.
+- **Born-redacted & minimize-inference** — telemetry records only counts, durations, and
+  names — never note content, prompts, or secrets — and the core never calls a model
+  behind your back.
 
 ## Build target
 
 The first build is **native Windows 11** (no WSL2). See
-[`docs/research/windows-build-2026-06.md`](docs/research/windows-build-2026-06.md)
-for the authoritative Windows toolchain notes.
+[`docs/research/windows-build-2026-06.md`](docs/research/windows-build-2026-06.md) for the
+authoritative toolchain notes.
 
 ### Prerequisites (Windows 11)
 
@@ -77,21 +111,22 @@ npm run build:web
 npm run tauri build
 ```
 
-Code signing is a distribution step and is deferred until release (unsigned installers
-trigger SmartScreen but build and run locally).
+Code signing is a distribution step, deferred until release (unsigned installers trigger
+SmartScreen but build and run locally).
 
 ## How sync works
 
-Alfred uses custom Nostr event kinds for encrypted file sync:
+Alfred uses custom Nostr event kinds for encrypted file sync — your content is encrypted
+to your own keys before it leaves the machine:
 
-| Kind | Purpose | Encryption |
-|------|---------|------------|
-| 30800 | File content | NIP-44 (self) |
-| 30801 | Vault index | NIP-44 (self) |
-| 30802 | Shared documents | NIP-44 (recipient) |
-| 30023 | Published articles | None (public) |
-| 30024 | Draft articles | None (public) |
-| 10000 | Mute list | NIP-44 (self, optional) |
+| Kind  | Purpose            | Encryption            |
+|-------|--------------------|-----------------------|
+| 30800 | File content       | NIP-44 (self)         |
+| 30801 | Vault index        | NIP-44 (self)         |
+| 30802 | Shared documents   | NIP-44 (recipient)    |
+| 30023 | Published articles | None (public)         |
+| 30024 | Draft articles     | None (public)         |
+| 10000 | Mute list          | NIP-44 (self, optional) |
 
 ## Tech stack
 
@@ -100,8 +135,10 @@ Alfred uses custom Nostr event kinds for encrypted file sync:
 - [CodeMirror 6](https://codemirror.net/) + [Milkdown 7](https://milkdown.dev/) — editor
 - [nostr-tools](https://github.com/nbd-wtf/nostr-tools) — Nostr protocol library
 
-## License
+## Provenance & License
 
-**AGPL-3.0-or-later** — see [`LICENSE`](LICENSE). The upstream Onyx MIT notice is
-preserved in [`LICENSE.onyx`](LICENSE.onyx); see [`NOTICE`](NOTICE) and
-[`ATTRIBUTION.md`](ATTRIBUTION.md).
+Alfred is **AGPL-3.0-or-later** — see [`LICENSE`](LICENSE). It originated from the
+MIT-licensed [`derekross/onyx`](https://github.com/derekross/onyx) codebase; the upstream
+MIT notice is preserved verbatim in [`LICENSE.onyx`](LICENSE.onyx), with full provenance
+and the security back-port cadence in [`ATTRIBUTION.md`](ATTRIBUTION.md),
+[`UPSTREAM.md`](UPSTREAM.md), and [`NOTICE`](NOTICE).
