@@ -137,7 +137,7 @@ to your own keys before it leaves the machine:
 
 ## Provenance & License
 
-Alfred is **AGPL-3.0-or-later** — see [`LICENSE`](LICENSE). It originated from the
+Alfred is **AGPL-3.0-or-later** — see [`LICENSE`](LICENSE). It is an evolution from the
 MIT-licensed [`derekross/onyx`](https://github.com/derekross/onyx) codebase; the upstream
 MIT notice is preserved verbatim in [`LICENSE.onyx`](LICENSE.onyx), with full provenance
 and the security back-port cadence in [`ATTRIBUTION.md`](ATTRIBUTION.md),
