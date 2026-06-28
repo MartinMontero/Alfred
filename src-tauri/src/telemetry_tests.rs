@@ -58,6 +58,8 @@ fn drive_all_kinds(conn: &Connection, settings_json: &str) {
             duration_ms: 1200,
             ok: true,
             error_type: None,
+            input_tokens: None,
+            output_tokens: None,
             trace_id: None,
             span_id: None,
         },
@@ -243,6 +245,7 @@ fn events_correlate_by_trace_id_into_one_chain() {
         // Three events of one session — Alfred's turn, the model call, a tool call.
         record(&conn, &TelemetryEvent::AgentTurn {
             turn_id: "t1".into(), duration_ms: 1000, ok: true, error_type: None,
+            input_tokens: None, output_tokens: None,
             trace_id: Some(trace.clone()), span_id: Some("aaaaaaaaaaaaaaaa".into()),
         }).unwrap();
         record(&conn, &TelemetryEvent::LlmRequest {
@@ -268,6 +271,39 @@ fn events_correlate_by_trace_id_into_one_chain() {
         let json = serde_json::to_string(&chain).unwrap();
         assert_eq!(json.matches(&trace).count(), 3);
         assert!(json.contains("\"traceId\""));
+    }
+    cleanup(&db);
+}
+
+#[test]
+fn tap_wire_shape_deserializes_and_chains() {
+    // The EXACT JSON the TS session-tap emits (events.ts shape: tag `kind`, camelCase,
+    // trace-tagged, no content field). Proves the live tap's wire contract deserializes
+    // into the Rust event and that a session's events chain by trace id.
+    let db = temp_db("tapwire");
+    let trace = "4bf92f3577b34da6a3ce929d0e0e4736";
+    let tool = format!(
+        r#"{{"kind":"tool_call","tool":"read","durationMs":30,"ok":true,"traceId":"{trace}","spanId":"1111111111111111"}}"#
+    );
+    // agent_turn WITH per-turn usage (Step-3b): real token counts ride the event.
+    let turn = format!(
+        r#"{{"kind":"agent_turn","turnId":"turn-1","durationMs":100,"ok":true,"inputTokens":80,"outputTokens":20,"traceId":"{trace}","spanId":"2222222222222222"}}"#
+    );
+    {
+        let conn = open_store(&db).unwrap();
+        for j in [&tool, &turn] {
+            let ev: TelemetryEvent =
+                serde_json::from_str(j).expect("tap JSON deserializes into the typed event");
+            record(&conn, &ev).unwrap();
+        }
+        let chain = query_by_trace(&conn, trace).unwrap();
+        assert_eq!(chain.len(), 2, "the live session's two events chain by trace id");
+        let json = serde_json::to_string(&chain).unwrap();
+        assert!(json.contains("\"tool\":\"read\""));
+        // the turn's token counts survive the TS -> Rust seam and the store round-trip
+        assert!(json.contains("\"inputTokens\":80"));
+        assert!(json.contains("\"outputTokens\":20"));
+        assert_eq!(json.matches(trace).count(), 2);
     }
     cleanup(&db);
 }

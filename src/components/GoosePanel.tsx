@@ -29,6 +29,9 @@ import {
   type RecipePreview,
 } from '../lib/goose';
 import ActionPreview from './ActionPreview';
+import { invoke } from '@tauri-apps/api/core';
+import { createSessionTap, type SessionTap } from '../lib/telemetry/session-tap';
+import { generateTraceContext } from '../lib/telemetry/trace';
 import type {
   SessionNotification,
   RequestPermissionRequest,
@@ -74,6 +77,8 @@ const GoosePanel: Component<GoosePanelProps> = (props) => {
   } | null>(null);
 
   let session: GooseSession | null = null;
+  // Live telemetry tap — inert unless telemetry is opted in (no trace context).
+  let tap: SessionTap | undefined;
   let recipeRun: RecipeRun | null = null;
   let termEl: HTMLDivElement | undefined;
   // xterm is loaded lazily so the web bundle never pulls it in.
@@ -173,12 +178,33 @@ const GoosePanel: Component<GoosePanelProps> = (props) => {
       // Write Alfred's isolated, locked-down goose distribution (config + env).
       const dist = await prepareGooseDistribution({ creds, vaultPath: props.vaultPath });
 
+      // Telemetry opt-in — the SAME setting the Rust writer gates on (load_settings).
+      // On => mint a trace context (drives _meta injection) and arm the live emission
+      // tap. Off => no trace context, an inert tap, no _meta: one switch, both doors.
+      const telemetryOn = await invoke<{ telemetry_enabled?: boolean }>('load_settings')
+        .then((s) => s?.telemetry_enabled === true)
+        .catch(() => false);
+      const traceContext = telemetryOn ? generateTraceContext() : undefined;
+      // The single writer: every event goes to the telemetry_record command, which
+      // re-gates on opt-in server-side. Errors are swallowed — telemetry never breaks
+      // a session.
+      tap = createSessionTap({
+        traceContext,
+        record: (event) => {
+          void invoke('telemetry_record', { event }).catch(() => {});
+        },
+      });
+
       session = await startGooseSession({
         creds,
         cwd: props.vaultPath,
         pathRoot: dist.pathRoot,
+        traceContext,
         handlers: {
-          onSessionUpdate,
+          onSessionUpdate: (note) => {
+            tap?.onSessionUpdate(note);
+            onSessionUpdate(note);
+          },
           onRequestPermission,
           onStderr: (t) => termWrite(t),
           onClosed: () => {
@@ -202,12 +228,15 @@ const GoosePanel: Component<GoosePanelProps> = (props) => {
     setInput('');
     append('user', text);
     setBusy(true);
+    tap?.startTurn();
     try {
       const res = await session.prompt(text);
+      tap?.endTurn(res);
       if (res.stopReason && res.stopReason !== 'end_turn') {
         append('system', `(stopped: ${res.stopReason})`);
       }
     } catch (e) {
+      tap?.failTurn(e);
       setError(e instanceof Error ? e.message : String(e));
     } finally {
       setBusy(false);

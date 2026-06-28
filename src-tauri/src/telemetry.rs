@@ -32,6 +32,12 @@ pub enum TelemetryEvent {
         ok: bool,
         #[serde(skip_serializing_if = "Option::is_none")]
         error_type: Option<String>,
+        // Per-turn token usage (Step-3b addendum) — populated ONLY when ACP reports
+        // PromptResponse.usage; omitted (NULL) otherwise. Counts, never content.
+        #[serde(skip_serializing_if = "Option::is_none")]
+        input_tokens: Option<i64>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        output_tokens: Option<i64>,
         // W3C trace correlation (Step 4) — correlation ids only, never content.
         #[serde(skip_serializing_if = "Option::is_none")]
         trace_id: Option<String>,
@@ -188,10 +194,12 @@ fn ensure_column(conn: &Connection, col: &str) -> rusqlite::Result<()> {
 pub fn record(conn: &Connection, ev: &TelemetryEvent) -> rusqlite::Result<()> {
     let ts = now_ms();
     match ev {
-        TelemetryEvent::AgentTurn { turn_id, duration_ms, ok, error_type, trace_id, span_id } => conn.execute(
-            "INSERT INTO events (ts,kind,turn_id,duration_ms,ok,error_type,trace_id,span_id)
-             VALUES (?1,'agent_turn',?2,?3,?4,?5,?6,?7)",
-            params![ts, turn_id, duration_ms, *ok as i64, error_type, trace_id, span_id],
+        TelemetryEvent::AgentTurn {
+            turn_id, duration_ms, ok, error_type, input_tokens, output_tokens, trace_id, span_id,
+        } => conn.execute(
+            "INSERT INTO events (ts,kind,turn_id,duration_ms,ok,error_type,input_tokens,output_tokens,trace_id,span_id)
+             VALUES (?1,'agent_turn',?2,?3,?4,?5,?6,?7,?8,?9)",
+            params![ts, turn_id, duration_ms, *ok as i64, error_type, input_tokens, output_tokens, trace_id, span_id],
         )?,
         TelemetryEvent::LlmRequest {
             model, provider, input_tokens, output_tokens, duration_ms, finish_reason, error_type, trace_id, span_id,
@@ -313,6 +321,8 @@ fn map_row(r: &rusqlite::Row) -> rusqlite::Result<StoredEvent> {
             duration_ms: duration_ms.unwrap_or(0),
             ok: ok.unwrap_or(0) != 0,
             error_type,
+            input_tokens: r.get(8)?,
+            output_tokens: r.get(9)?,
             trace_id,
             span_id,
         },
