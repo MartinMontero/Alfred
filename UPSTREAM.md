@@ -20,9 +20,9 @@ came from and how security fixes are tracked.
 
 > **Note on the upstream LICENSE file:** upstream `derekross/onyx` declares MIT
 > in its package metadata but does **not** ship a standalone `LICENSE` file at
-> the pinned commit. To honour the MIT terms, `LICENSE.onyx` reproduces the
-> canonical MIT license text attributed to Derek Ross and the Onyx contributors.
-> See `ATTRIBUTION.md`.
+> the pinned commit. To honour the MIT terms, `THIRD-PARTY-NOTICES/onyx-MIT.txt`
+> reproduces the canonical MIT license text attributed to Derek Ross and the Onyx
+> contributors. See `ATTRIBUTION.md`.
 
 ## Why clone, not fork
 

@@ -137,8 +137,10 @@ to your own keys before it leaves the machine:
 
 ## Provenance & License
 
-Alfred is **AGPL-3.0-or-later** — see [`LICENSE`](LICENSE). It is an evolution from the
-MIT-licensed [`derekross/onyx`](https://github.com/derekross/onyx) codebase; the upstream
-MIT notice is preserved verbatim in [`LICENSE.onyx`](LICENSE.onyx), with full provenance
+Alfred is **AGPL-3.0-or-later** — that is its only license; see [`LICENSE`](LICENSE).
+It is an evolution from the MIT-licensed [`derekross/onyx`](https://github.com/derekross/onyx)
+codebase; the upstream MIT notice — required attribution for *that* code, not a license
+over Alfred — is preserved verbatim in
+[`THIRD-PARTY-NOTICES/onyx-MIT.txt`](THIRD-PARTY-NOTICES/onyx-MIT.txt), with full provenance
 and the security back-port cadence in [`ATTRIBUTION.md`](ATTRIBUTION.md),
 [`UPSTREAM.md`](UPSTREAM.md), and [`NOTICE`](NOTICE).

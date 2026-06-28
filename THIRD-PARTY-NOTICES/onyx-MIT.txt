@@ -1,3 +1,13 @@
+==============================================================================
+THIRD-PARTY NOTICE — upstream attribution. This is NOT a license for Alfred.
+
+Alfred is licensed solely under AGPL-3.0-or-later (see the top-level LICENSE
+file). The text below is the MIT license notice of the upstream project Onyx
+(https://github.com/derekross/onyx), from which Alfred is derived. It is
+retained here only to satisfy MIT's notice requirement and to credit the
+original authors; it grants no rights over Alfred itself.
+==============================================================================
+
 MIT License
 
 Copyright (c) Derek Ross and the Onyx contributors

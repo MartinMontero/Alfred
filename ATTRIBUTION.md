@@ -17,8 +17,9 @@ Alfred is built on, and is a derivative work of, the open-source project
 The upstream project declares the MIT license in its package metadata
 (`package.json`, `src-tauri/Cargo.toml`, `zapstore.yaml`) but ships no standalone
 `LICENSE` file at the imported commit. The MIT terms are preserved verbatim in
-[`LICENSE.onyx`](LICENSE.onyx), attributed to Derek Ross and the Onyx
-contributors, as required by the MIT license's notice clause.
+[`THIRD-PARTY-NOTICES/onyx-MIT.txt`](THIRD-PARTY-NOTICES/onyx-MIT.txt), attributed to
+Derek Ross and the Onyx contributors, as required by the MIT license's notice clause.
+This is upstream attribution only; Alfred itself is licensed solely under AGPL-3.0-or-later.
 
 ## This derivative
 
@@ -33,8 +34,8 @@ contributors, as required by the MIT license's notice clause.
 
 - Severed upstream git history; started a fresh, independent history (clone, not fork).
 - Relicensed the derivative to **AGPL-3.0-or-later**; preserved the upstream MIT
-  notice in `LICENSE.onyx`; added `NOTICE` and `UPSTREAM.md` (pinned source SHA +
-  security cherry-pick cadence).
+  notice in `THIRD-PARTY-NOTICES/onyx-MIT.txt`; added `NOTICE` and `UPSTREAM.md`
+  (pinned source SHA + security cherry-pick cadence).
 - Re-identified the application from **Onyx** to **Alfred**: app/product name,
   package and crate names, Tauri bundle identifier (`com.onyxnotes.dev` →
   `dev.wecanjustbuildthings.alfred`), deep-link scheme (`onyx://` → `alfred://`),

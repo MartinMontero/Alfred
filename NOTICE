@@ -14,10 +14,12 @@ which is made available under the MIT License.
 
   Upstream:        https://github.com/derekross/onyx
   Imported commit: 62d6d58d2af7a57f9a5954c611de47f252cb27bd
-  Upstream license: MIT (preserved in LICENSE.onyx)
+  Upstream license: MIT (preserved in THIRD-PARTY-NOTICES/onyx-MIT.txt)
 
-The MIT license notice for the upstream work is retained in LICENSE.onyx and is
-required to be included in all copies or substantial portions of that work.
+The MIT license notice for the upstream work is retained in
+THIRD-PARTY-NOTICES/onyx-MIT.txt and is required to be included in all copies or
+substantial portions of that work. It is upstream attribution only and does not
+license Alfred, which is AGPL-3.0-or-later.
 
 See ATTRIBUTION.md and UPSTREAM.md for full provenance and the security
 back-port cadence.
