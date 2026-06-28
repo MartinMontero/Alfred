@@ -102,13 +102,22 @@ export function selectAllowOption(options: PermissionOption[]): PermissionDecisi
 export const DENY: PermissionDecision = { outcome: { outcome: 'cancelled' } };
 
 /** Build the curated permission.yaml: always_allow read-only vault tools, ask
- *  before every vault write and the shell/command surface. */
+ *  before every vault write and the shell/command surface.
+ *
+ *  goose 1.39.0's `PermissionConfig` deserializes THREE required lists
+ *  (always_allow, ask_before, never_allow) — omitting any one makes goose reject
+ *  the file ("Corrupted permission config") and panic on startup, so the whole
+ *  session never launches. `never_allow` is intentionally empty: deny-by-default
+ *  is carried by ask_before + the Alfred-side classifyToolCall gate, not a
+ *  goose-side blocklist — the empty list satisfies goose's schema without
+ *  changing the allow/ask semantics. */
 export function buildPermissionYaml(extensionName: string = ALFRED_VAULT_EXTENSION): string {
   const ns = (t: string) => `${extensionName}__${t}`;
   const doc = {
     user: {
       always_allow: VAULT_READ_TOOLS.map(ns),
       ask_before: [...VAULT_WRITE_TOOLS.map(ns), GOOSE_SHELL_TOOL],
+      never_allow: [] as string[],
     },
   };
   return stringifyYaml(doc);

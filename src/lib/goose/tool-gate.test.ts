@@ -88,6 +88,20 @@ describe('buildPermissionYaml', () => {
     // No write is ever in always_allow.
     for (const w of VAULT_WRITE_TOOLS) expect(yaml.user.always_allow).not.toContain(`alfred-vault__${w}`);
   });
+
+  // SECONDARY (cheap) regression guard: goose 1.39.0's PermissionConfig requires
+  // all THREE lists — omitting never_allow makes goose panic on startup. This shape
+  // check is necessary but NOT sufficient (it would pass even if goose rejected the
+  // file); the definitive proof is the goose-start test in permission-startup.test.ts.
+  it('emits all three lists goose requires (always_allow, ask_before, never_allow)', () => {
+    const yaml = parseYaml(buildPermissionYaml()) as {
+      user: { always_allow: string[]; ask_before: string[]; never_allow: string[] };
+    };
+    expect(Array.isArray(yaml.user.always_allow)).toBe(true);
+    expect(Array.isArray(yaml.user.ask_before)).toBe(true);
+    expect(Array.isArray(yaml.user.never_allow)).toBe(true);
+    expect(yaml.user.never_allow).toEqual([]); // empty: deny-by-default lives elsewhere
+  });
 });
 
 describe('goosePermissionPath', () => {
