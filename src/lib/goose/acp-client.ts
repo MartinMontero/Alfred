@@ -30,6 +30,7 @@ import {
 } from '@agentclientprotocol/sdk';
 import type { GooseProviderCreds } from './provider-lockdown';
 import { buildGooseEnv } from './provider-lockdown';
+import { optionalTraceMeta, type TraceContext } from '../telemetry/trace';
 
 /** Stem of the sidecar declared in tauri.conf.json `externalBin`. */
 export const GOOSE_SIDECAR = 'binaries/goose';
@@ -94,10 +95,15 @@ export interface GooseSessionOptions {
   /** Session permission mode. Default 'approve' (deterministic gate). NEVER 'auto'
    *  (bypasses the gate) or 'smart_approve' (adds an LLM inference step). */
   mode?: string;
+  /** W3C trace context for the session (SEP-414). When present, its traceparent is
+   *  injected into ACP newSession/prompt _meta. Omit to disable tracing (opt-in). */
+  traceContext?: TraceContext;
 }
 
 export interface GooseSession {
   readonly sessionId: string;
+  /** The session's W3C trace id, if tracing is enabled — tag telemetry events with this. */
+  readonly traceId?: string;
   readonly initialize: InitializeResponse;
   prompt(text: string): Promise<PromptResponse>;
   cancel(): Promise<void>;
@@ -213,8 +219,17 @@ export async function startGooseSession(opts: GooseSessionOptions): Promise<Goos
       'goose initialize',
     );
 
+    // SEP-414 cross-stack correlation: carry the session's W3C trace context in the
+    // ACP _meta of newSession/prompt, so goose receives the same trace id. The gate
+    // is optionalTraceMeta — no trace context, no _meta injected (opt-in inert).
+    const traceMetaObj = optionalTraceMeta(opts.traceContext);
+
     const session = await Promise.resolve(
-      conn.newSession({ cwd: opts.cwd, mcpServers: opts.mcpServers ?? [] }),
+      conn.newSession({
+        cwd: opts.cwd,
+        mcpServers: opts.mcpServers ?? [],
+        ...(traceMetaObj ? { _meta: traceMetaObj } : {}),
+      }),
     );
 
     // Take the session OFF goose's default 'auto' mode so every write/shell tool
@@ -226,10 +241,15 @@ export async function startGooseSession(opts: GooseSessionOptions): Promise<Goos
 
     return {
       sessionId: session.sessionId,
+      traceId: opts.traceContext?.traceId,
       initialize,
       prompt: (text: string) =>
         Promise.resolve(
-          conn.prompt({ sessionId: session.sessionId, prompt: [{ type: 'text', text }] }),
+          conn.prompt({
+            sessionId: session.sessionId,
+            prompt: [{ type: 'text', text }],
+            ...(traceMetaObj ? { _meta: traceMetaObj } : {}),
+          }),
         ),
       cancel: () => Promise.resolve(conn.cancel({ sessionId: session.sessionId })),
       kill,

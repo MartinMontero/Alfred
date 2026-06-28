@@ -58,6 +58,8 @@ fn drive_all_kinds(conn: &Connection, settings_json: &str) {
             duration_ms: 1200,
             ok: true,
             error_type: None,
+            trace_id: None,
+            span_id: None,
         },
         TelemetryEvent::LlmRequest {
             model: "claude-sonnet-4-6".into(),
@@ -67,6 +69,8 @@ fn drive_all_kinds(conn: &Connection, settings_json: &str) {
             duration_ms: 1500,
             finish_reason: "end_turn".into(),
             error_type: Some("rate_limit".into()),
+            trace_id: None,
+            span_id: None,
         },
         TelemetryEvent::ToolCall {
             tool: "vault_read".into(),
@@ -74,6 +78,8 @@ fn drive_all_kinds(conn: &Connection, settings_json: &str) {
             ok: true,
             error_type: None,
             mcp_method: Some("tools/call".into()),
+            trace_id: None,
+            span_id: None,
         },
         TelemetryEvent::SchemaValidation {
             schema: "note.frontmatter".into(),
@@ -164,6 +170,8 @@ fn wipe_removes_rows_and_seeded_records_from_bytes() {
             ok: true,
             error_type: None,
             mcp_method: None,
+            trace_id: None,
+            span_id: None,
         })
         .unwrap();
         assert!(row_count(&conn).unwrap() >= 6);
@@ -221,6 +229,45 @@ fn metrics_and_export_emit_only_typed_fields() {
         // Export carries allowlisted values, never a free-text column.
         assert!(json.contains("claude-sonnet-4-6"));
         assert!(!json.contains("\"body\"") && !json.contains("\"content\""));
+    }
+    cleanup(&db);
+}
+
+#[test]
+fn events_correlate_by_trace_id_into_one_chain() {
+    let db = temp_db("trace");
+    let trace = "4bf92f3577b34da6a3ce929d0e0e4736".to_string(); // a session's W3C trace id
+    let other = "00000000000000000000000000000099".to_string();
+    {
+        let conn = open_store(&db).unwrap();
+        // Three events of one session — Alfred's turn, the model call, a tool call.
+        record(&conn, &TelemetryEvent::AgentTurn {
+            turn_id: "t1".into(), duration_ms: 1000, ok: true, error_type: None,
+            trace_id: Some(trace.clone()), span_id: Some("aaaaaaaaaaaaaaaa".into()),
+        }).unwrap();
+        record(&conn, &TelemetryEvent::LlmRequest {
+            model: "claude-sonnet-4-6".into(), provider: "anthropic".into(),
+            input_tokens: Some(10), output_tokens: Some(5), duration_ms: 800,
+            finish_reason: "end_turn".into(), error_type: None,
+            trace_id: Some(trace.clone()), span_id: Some("bbbbbbbbbbbbbbbb".into()),
+        }).unwrap();
+        record(&conn, &TelemetryEvent::ToolCall {
+            tool: "vault_read".into(), duration_ms: 20, ok: true, error_type: None, mcp_method: None,
+            trace_id: Some(trace.clone()), span_id: Some("cccccccccccccccc".into()),
+        }).unwrap();
+        // Noise: an event from a different session, and an untraced event.
+        record(&conn, &TelemetryEvent::ToolCall {
+            tool: "vault_search".into(), duration_ms: 5, ok: true, error_type: None, mcp_method: None,
+            trace_id: Some(other), span_id: None,
+        }).unwrap();
+        record(&conn, &TelemetryEvent::Reflection { outcome: "ok".into(), duration_ms: 3 }).unwrap();
+
+        let chain = query_by_trace(&conn, &trace).unwrap();
+        assert_eq!(chain.len(), 3, "the session's three events query back as one chain");
+        // Every event in the chain carries the session's trace id (serialized, camelCase).
+        let json = serde_json::to_string(&chain).unwrap();
+        assert_eq!(json.matches(&trace).count(), 3);
+        assert!(json.contains("\"traceId\""));
     }
     cleanup(&db);
 }

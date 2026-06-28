@@ -32,6 +32,11 @@ pub enum TelemetryEvent {
         ok: bool,
         #[serde(skip_serializing_if = "Option::is_none")]
         error_type: Option<String>,
+        // W3C trace correlation (Step 4) — correlation ids only, never content.
+        #[serde(skip_serializing_if = "Option::is_none")]
+        trace_id: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        span_id: Option<String>,
     },
     #[serde(rename_all = "camelCase")]
     LlmRequest {
@@ -46,6 +51,10 @@ pub enum TelemetryEvent {
         finish_reason: String,
         #[serde(skip_serializing_if = "Option::is_none")]
         error_type: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        trace_id: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        span_id: Option<String>,
     },
     #[serde(rename_all = "camelCase")]
     ToolCall {
@@ -56,6 +65,10 @@ pub enum TelemetryEvent {
         error_type: Option<String>,
         #[serde(skip_serializing_if = "Option::is_none")]
         mcp_method: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        trace_id: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        span_id: Option<String>,
     },
     #[serde(rename_all = "camelCase")]
     SchemaValidation {
@@ -146,10 +159,28 @@ pub fn open_store(path: &Path) -> rusqlite::Result<Connection> {
             mcp_method    TEXT,
             schema        TEXT,
             rule          TEXT,
-            outcome       TEXT
+            outcome       TEXT,
+            trace_id      TEXT,
+            span_id       TEXT
         );",
     )?;
+    // Migrate older dbs (created before Step 4) to add the correlation columns.
+    ensure_column(&conn, "trace_id")?;
+    ensure_column(&conn, "span_id")?;
     Ok(conn)
+}
+
+/// Idempotently add a TEXT column to `events` if it does not already exist.
+fn ensure_column(conn: &Connection, col: &str) -> rusqlite::Result<()> {
+    let exists: i64 = conn.query_row(
+        "SELECT count(*) FROM pragma_table_info('events') WHERE name = ?1",
+        params![col],
+        |r| r.get(0),
+    )?;
+    if exists == 0 {
+        conn.execute_batch(&format!("ALTER TABLE events ADD COLUMN {col} TEXT;"))?;
+    }
+    Ok(())
 }
 
 /// Insert one event — the only write path. Maps the typed event to ONLY the
@@ -157,22 +188,22 @@ pub fn open_store(path: &Path) -> rusqlite::Result<Connection> {
 pub fn record(conn: &Connection, ev: &TelemetryEvent) -> rusqlite::Result<()> {
     let ts = now_ms();
     match ev {
-        TelemetryEvent::AgentTurn { turn_id, duration_ms, ok, error_type } => conn.execute(
-            "INSERT INTO events (ts,kind,turn_id,duration_ms,ok,error_type)
-             VALUES (?1,'agent_turn',?2,?3,?4,?5)",
-            params![ts, turn_id, duration_ms, *ok as i64, error_type],
+        TelemetryEvent::AgentTurn { turn_id, duration_ms, ok, error_type, trace_id, span_id } => conn.execute(
+            "INSERT INTO events (ts,kind,turn_id,duration_ms,ok,error_type,trace_id,span_id)
+             VALUES (?1,'agent_turn',?2,?3,?4,?5,?6,?7)",
+            params![ts, turn_id, duration_ms, *ok as i64, error_type, trace_id, span_id],
         )?,
         TelemetryEvent::LlmRequest {
-            model, provider, input_tokens, output_tokens, duration_ms, finish_reason, error_type,
+            model, provider, input_tokens, output_tokens, duration_ms, finish_reason, error_type, trace_id, span_id,
         } => conn.execute(
-            "INSERT INTO events (ts,kind,model,provider,input_tokens,output_tokens,duration_ms,finish_reason,error_type)
-             VALUES (?1,'llm_request',?2,?3,?4,?5,?6,?7,?8)",
-            params![ts, model, provider, input_tokens, output_tokens, duration_ms, finish_reason, error_type],
+            "INSERT INTO events (ts,kind,model,provider,input_tokens,output_tokens,duration_ms,finish_reason,error_type,trace_id,span_id)
+             VALUES (?1,'llm_request',?2,?3,?4,?5,?6,?7,?8,?9,?10)",
+            params![ts, model, provider, input_tokens, output_tokens, duration_ms, finish_reason, error_type, trace_id, span_id],
         )?,
-        TelemetryEvent::ToolCall { tool, duration_ms, ok, error_type, mcp_method } => conn.execute(
-            "INSERT INTO events (ts,kind,tool,duration_ms,ok,error_type,mcp_method)
-             VALUES (?1,'tool_call',?2,?3,?4,?5,?6)",
-            params![ts, tool, duration_ms, *ok as i64, error_type, mcp_method],
+        TelemetryEvent::ToolCall { tool, duration_ms, ok, error_type, mcp_method, trace_id, span_id } => conn.execute(
+            "INSERT INTO events (ts,kind,tool,duration_ms,ok,error_type,mcp_method,trace_id,span_id)
+             VALUES (?1,'tool_call',?2,?3,?4,?5,?6,?7,?8)",
+            params![ts, tool, duration_ms, *ok as i64, error_type, mcp_method, trace_id, span_id],
         )?,
         TelemetryEvent::SchemaValidation { schema, rule, ok } => conn.execute(
             "INSERT INTO events (ts,kind,schema,rule,ok) VALUES (?1,'schema_validation',?2,?3,?4)",
@@ -265,54 +296,76 @@ pub fn metrics(conn: &Connection) -> rusqlite::Result<Metrics> {
     Ok(Metrics { total_events, input_tokens, output_tokens, by_kind, errors })
 }
 
+const SELECT_COLS: &str = "ts,kind,turn_id,duration_ms,ok,error_type,model,provider,input_tokens,output_tokens,finish_reason,tool,mcp_method,schema,rule,outcome,trace_id,span_id";
+
+/// Reconstruct a StoredEvent from a row selected with SELECT_COLS.
+fn map_row(r: &rusqlite::Row) -> rusqlite::Result<StoredEvent> {
+    let ts: i64 = r.get(0)?;
+    let kind: String = r.get(1)?;
+    let duration_ms: Option<i64> = r.get(3)?;
+    let ok: Option<i64> = r.get(4)?;
+    let error_type: Option<String> = r.get(5)?;
+    let trace_id: Option<String> = r.get(16)?;
+    let span_id: Option<String> = r.get(17)?;
+    let event = match kind.as_str() {
+        "agent_turn" => TelemetryEvent::AgentTurn {
+            turn_id: r.get::<_, Option<String>>(2)?.unwrap_or_default(),
+            duration_ms: duration_ms.unwrap_or(0),
+            ok: ok.unwrap_or(0) != 0,
+            error_type,
+            trace_id,
+            span_id,
+        },
+        "llm_request" => TelemetryEvent::LlmRequest {
+            model: r.get::<_, Option<String>>(6)?.unwrap_or_default(),
+            provider: r.get::<_, Option<String>>(7)?.unwrap_or_default(),
+            input_tokens: r.get(8)?,
+            output_tokens: r.get(9)?,
+            duration_ms: duration_ms.unwrap_or(0),
+            finish_reason: r.get::<_, Option<String>>(10)?.unwrap_or_default(),
+            error_type,
+            trace_id,
+            span_id,
+        },
+        "tool_call" => TelemetryEvent::ToolCall {
+            tool: r.get::<_, Option<String>>(11)?.unwrap_or_default(),
+            duration_ms: duration_ms.unwrap_or(0),
+            ok: ok.unwrap_or(0) != 0,
+            error_type,
+            mcp_method: r.get(12)?,
+            trace_id,
+            span_id,
+        },
+        "schema_validation" => TelemetryEvent::SchemaValidation {
+            schema: r.get::<_, Option<String>>(13)?.unwrap_or_default(),
+            rule: r.get::<_, Option<String>>(14)?.unwrap_or_default(),
+            ok: ok.unwrap_or(0) != 0,
+        },
+        _ => TelemetryEvent::Reflection {
+            outcome: r.get::<_, Option<String>>(15)?.unwrap_or_else(|| "noop".into()),
+            duration_ms: duration_ms.unwrap_or(0),
+        },
+    };
+    Ok(StoredEvent { ts, event })
+}
+
 /// Reconstruct stored events (with timestamp) for export. Emits ONLY typed events
 /// — it cannot reach any raw vault data.
 pub fn export_rows(conn: &Connection) -> rusqlite::Result<Vec<StoredEvent>> {
-    let mut stmt = conn.prepare(
-        "SELECT ts,kind,turn_id,duration_ms,ok,error_type,model,provider,input_tokens,output_tokens,finish_reason,tool,mcp_method,schema,rule,outcome
-         FROM events ORDER BY ts ASC, id ASC",
-    )?;
-    let rows = stmt.query_map([], |r| {
-        let ts: i64 = r.get(0)?;
-        let kind: String = r.get(1)?;
-        let duration_ms: Option<i64> = r.get(3)?;
-        let ok: Option<i64> = r.get(4)?;
-        let error_type: Option<String> = r.get(5)?;
-        let event = match kind.as_str() {
-            "agent_turn" => TelemetryEvent::AgentTurn {
-                turn_id: r.get::<_, Option<String>>(2)?.unwrap_or_default(),
-                duration_ms: duration_ms.unwrap_or(0),
-                ok: ok.unwrap_or(0) != 0,
-                error_type,
-            },
-            "llm_request" => TelemetryEvent::LlmRequest {
-                model: r.get::<_, Option<String>>(6)?.unwrap_or_default(),
-                provider: r.get::<_, Option<String>>(7)?.unwrap_or_default(),
-                input_tokens: r.get(8)?,
-                output_tokens: r.get(9)?,
-                duration_ms: duration_ms.unwrap_or(0),
-                finish_reason: r.get::<_, Option<String>>(10)?.unwrap_or_default(),
-                error_type,
-            },
-            "tool_call" => TelemetryEvent::ToolCall {
-                tool: r.get::<_, Option<String>>(11)?.unwrap_or_default(),
-                duration_ms: duration_ms.unwrap_or(0),
-                ok: ok.unwrap_or(0) != 0,
-                error_type,
-                mcp_method: r.get(12)?,
-            },
-            "schema_validation" => TelemetryEvent::SchemaValidation {
-                schema: r.get::<_, Option<String>>(13)?.unwrap_or_default(),
-                rule: r.get::<_, Option<String>>(14)?.unwrap_or_default(),
-                ok: ok.unwrap_or(0) != 0,
-            },
-            _ => TelemetryEvent::Reflection {
-                outcome: r.get::<_, Option<String>>(15)?.unwrap_or_else(|| "noop".into()),
-                duration_ms: duration_ms.unwrap_or(0),
-            },
-        };
-        Ok(StoredEvent { ts, event })
-    })?;
+    let mut stmt = conn.prepare(&format!("SELECT {SELECT_COLS} FROM events ORDER BY ts ASC, id ASC"))?;
+    let rows = stmt.query_map([], map_row)?;
+    let mut out = Vec::new();
+    for row in rows {
+        out.push(row?);
+    }
+    Ok(out)
+}
+
+/// All events sharing one trace id, in order — a session's correlated chain.
+pub fn query_by_trace(conn: &Connection, trace_id: &str) -> rusqlite::Result<Vec<StoredEvent>> {
+    let mut stmt =
+        conn.prepare(&format!("SELECT {SELECT_COLS} FROM events WHERE trace_id = ?1 ORDER BY ts ASC, id ASC"))?;
+    let rows = stmt.query_map(params![trace_id], map_row)?;
     let mut out = Vec::new();
     for row in rows {
         out.push(row?);

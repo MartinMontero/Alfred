@@ -6,8 +6,12 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
-import { createAlfredMcpServer } from './server';
+import { createAlfredMcpServer, traceparentFromMeta } from './server';
 import { buildScaffoldPlan } from '../src/lib/agentic/topology';
+import { generateTraceContext, traceMeta, parseTraceparent } from '../src/lib/telemetry/trace';
+
+const TRACEPARENT = '00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01';
+const TRACEPARENT_B = '00-11111111111111111111111111111111-2222222222222222-01';
 
 let root: string;
 let client: Client;
@@ -59,6 +63,56 @@ describe('Alfred MCP server — a harness connects over stdio (in-memory) and re
       'hot_read', 'spec_read',
     ]) {
       expect(names).toContain(expected);
+    }
+  });
+
+  it('extracts the SEP-414 traceparent from inbound _meta, and only that key', () => {
+    expect(traceparentFromMeta({ traceparent: TRACEPARENT })).toBe(TRACEPARENT);
+    expect(traceparentFromMeta({ traceparent: 'bad' })).toBeUndefined();
+    expect(traceparentFromMeta({ baggage: 'note=secret' })).toBeUndefined();
+    expect(traceparentFromMeta(undefined)).toBeUndefined();
+  });
+
+  it('correlates: a tool call carrying a trace id in _meta echoes the same id back', async () => {
+    const res = (await client.callTool({
+      name: 'hot_read',
+      arguments: {},
+      _meta: { traceparent: TRACEPARENT },
+    })) as { _meta?: Record<string, string> };
+    expect(res._meta?.traceparent).toBe(TRACEPARENT);
+  });
+
+  it('inbound-origin: the echo TRACKS the inbound id (a DIFFERENT id in -> that id out, not a constant)', async () => {
+    const res = (await client.callTool({
+      name: 'hot_read',
+      arguments: {},
+      _meta: { traceparent: TRACEPARENT_B },
+    })) as { _meta?: Record<string, string> };
+    expect(res._meta?.traceparent).toBe(TRACEPARENT_B);
+    expect(res._meta?.traceparent).not.toBe(TRACEPARENT); // not echoing a hardcoded value
+  });
+
+  it('cross-carrier IDENTITY: one session id rides the ACP carrier AND returns from the MCP server, same value', async () => {
+    const ctx = generateTraceContext(); // ONE session, one id
+    const acpCarrier = traceMeta(ctx); // exactly what acp-client injects into ACP _meta
+    expect(parseTraceparent(acpCarrier.traceparent)?.traceId).toBe(ctx.traceId);
+    // Send that SAME carrier value across the (real) MCP request boundary:
+    const res = (await client.callTool({
+      name: 'hot_read',
+      arguments: {},
+      _meta: { traceparent: acpCarrier.traceparent },
+    })) as { _meta?: Record<string, string> };
+    // The MCP server returns the SAME id value — identity, not a lookalike:
+    expect(res._meta?.traceparent).toBe(acpCarrier.traceparent);
+    expect(parseTraceparent(res._meta?.traceparent ?? '')?.traceId).toBe(ctx.traceId);
+  });
+
+  it('OPT-IN INERT (the MCP door): no inbound trace -> NONE of the reserved keys echoed', async () => {
+    const res = (await client.callTool({ name: 'hot_read', arguments: {} })) as {
+      _meta?: Record<string, string>;
+    };
+    for (const k of ['traceparent', 'tracestate', 'baggage']) {
+      expect(res._meta?.[k]).toBeUndefined();
     }
   });
 

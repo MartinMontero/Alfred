@@ -27,11 +27,29 @@ export const SERVER_NAME = 'alfred-vault';
 export const SERVER_VERSION = '0.1.0';
 export const PROTOCOL_VERSION = '2025-11-25';
 
-// W3C Trace Context key names — adopted now for forward-compat with the
-// 2026-07-28 spec / SEP-414 (full correlation wiring lands in Phase 5).
+// W3C Trace Context key names carried in request _meta (SEP-414). Wired in Phase 5
+// Step 4: the server reads the inbound traceparent so a session correlates across
+// Alfred -> goose -> this MCP process by one trace id.
 export const TRACE_CONTEXT_KEYS = ['traceparent', 'tracestate', 'baggage'] as const;
 
-type ToolResult = { content: { type: 'text'; text: string }[]; isError?: boolean };
+const TRACEPARENT_RE = /^00-[0-9a-f]{32}-[0-9a-f]{16}-[0-9a-f]{2}$/;
+
+/** Read + validate the W3C traceparent from an inbound request `_meta` (SEP-414).
+ *  Correlation id only — never reads any other key. */
+export function traceparentFromMeta(meta: unknown): string | undefined {
+  if (!meta || typeof meta !== 'object') return undefined;
+  const tp = (meta as Record<string, unknown>)[TRACE_CONTEXT_KEYS[0]];
+  return typeof tp === 'string' && TRACEPARENT_RE.test(tp) ? tp : undefined;
+}
+
+/** Build a result `_meta` that echoes the inbound trace context, so the response
+ *  carries the same trace id (correlation only). Empty when no trace is present. */
+function traceEcho(extra: { _meta?: unknown } | undefined): { _meta: Record<string, string> } | Record<string, never> {
+  const tp = traceparentFromMeta(extra?._meta);
+  return tp ? { _meta: { [TRACE_CONTEXT_KEYS[0]]: tp } } : {};
+}
+
+type ToolResult = { content: { type: 'text'; text: string }[]; isError?: boolean; _meta?: Record<string, string> };
 const ok = (text: string): ToolResult => ({ content: [{ type: 'text', text }] });
 const fail = (text: string): ToolResult => ({ content: [{ type: 'text', text }], isError: true });
 
@@ -241,8 +259,10 @@ export function createAlfredMcpServer(vaultRoot: string): { server: McpServer; v
     title: 'Read hot.md',
     description: 'Read the vault hot.md anchor (the recommended first read).',
     inputSchema: z.strictObject({}),
-  }, async () => {
-    try { return ok(await vault.read('hot.md')); } catch (e) { return toToolError(e); }
+  }, async (_args, extra) => {
+    // Consume the inbound SEP-414 trace context and echo it on the response so the
+    // session's trace id correlates across the MCP boundary.
+    try { return { ...ok(await vault.read('hot.md')), ...traceEcho(extra) }; } catch (e) { return toToolError(e); }
   });
 
   server.registerTool('spec_read', {

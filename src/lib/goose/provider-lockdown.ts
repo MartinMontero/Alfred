@@ -106,6 +106,10 @@ export interface GooseEnvOptions {
   pathRoot?: string;
   /** Extra env to merge last (e.g. PATH tweaks). Excluded keys are still blanked. */
   extra?: Record<string, string>;
+  /** OPT-IN OTLP export of goose's own spans to a local/external collector. When
+   *  omitted (the default), goose's OTel is disabled — local-first, no external
+   *  dependency. When set, goose exports spans that can join the session trace. */
+  otelEndpoint?: string;
 }
 
 /**
@@ -131,6 +135,17 @@ export function buildGooseEnv(creds: GooseProviderCreds, options: GooseEnvOption
     GOOSE_TELEMETRY_ENABLED: 'false',
   };
   if (options.pathRoot) env.GOOSE_PATH_ROOT = options.pathRoot;
+
+  // Local-first default: goose's own OTel is OFF unless the builder opts in with a
+  // collector endpoint. Opt-in joins goose's spans to the session trace; default
+  // never attempts external export.
+  if (options.otelEndpoint) {
+    env.OTEL_SDK_DISABLED = 'false';
+    env.OTEL_EXPORTER_OTLP_ENDPOINT = options.otelEndpoint;
+    env.OTEL_SERVICE_NAME = 'alfred-goose';
+  } else {
+    env.OTEL_SDK_DISABLED = 'true';
+  }
 
   if (creds.apiKey) {
     const keyVar = PROVIDER_KEY_ENV[creds.provider] ?? 'GOOSE_PROVIDER__API_KEY';
