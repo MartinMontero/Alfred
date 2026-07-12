@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Martin Montero and the Alfred contributors
 import { Component, createSignal, createEffect, createMemo, onCleanup, For, Show, untrack } from 'solid-js';
+import type { Cell, CellFormulaValue } from 'exceljs';
 import { platform } from '@platform';
 
 interface XlsxViewerProps {
@@ -12,6 +13,38 @@ interface SheetData {
   name: string;
   headers: string[];
   rows: string[][];
+}
+
+type HfCell = string | number | boolean | null;
+
+function coerceFormulaResult(result: CellFormulaValue['result']): HfCell {
+  if (result === null || result === undefined) return null;
+  if (result instanceof Date) return result.toISOString();
+  if (typeof result === 'object') return result.error;
+  return result;
+}
+
+/**
+ * Map an exceljs cell onto HyperFormula's raw-content model: formula text when
+ * the file carries one, otherwise the stored value. Dates become ISO strings
+ * (HyperFormula receives them as text, matching the old serial-number fidelity).
+ */
+function toHyperFormulaCell(cell: Cell): HfCell {
+  const value = cell.value;
+  if (value === null || value === undefined) return null;
+  if (typeof value === 'number' || typeof value === 'string' || typeof value === 'boolean') return value;
+  if (value instanceof Date) return value.toISOString();
+  if ('formula' in value || 'sharedFormula' in value) {
+    // cell.formula is translated for shared-formula slaves; when no formula
+    // text is recoverable, fall back to the file's cached result.
+    const formulaText = cell.formula;
+    if (typeof formulaText === 'string' && formulaText.length > 0) return '=' + formulaText;
+    return coerceFormulaResult(value.result);
+  }
+  if ('richText' in value) return value.richText.map((part) => part.text).join('');
+  if ('hyperlink' in value) return value.text;
+  if ('error' in value) return value.error;
+  return null;
 }
 
 /** Rows rendered above/below the visible window to avoid blanking while scrolling. */
@@ -49,52 +82,46 @@ const XlsxViewer: Component<XlsxViewerProps> = (props) => {
         const arrayBuffer = await platform.vault.readBinary(filePath, props.vaultPath ?? '');
         if (cancelled) return;
 
-        // Lazy-load xlsx and HyperFormula
-        const [XLSX, { HyperFormula }] = await Promise.all([
-          import('xlsx'),
+        // Lazy-load exceljs (registry-published; replaced the CDN-distributed
+        // SheetJS build) and HyperFormula
+        const [excelJsModule, { HyperFormula }] = await Promise.all([
+          import('exceljs'),
           import('hyperformula'),
         ]);
         if (cancelled) return;
+        // exceljs ships CJS/UMD; depending on bundler interop the API may sit on `default`
+        const ExcelJS = excelJsModule.default ?? excelJsModule;
 
-        // Parse workbook with formulas preserved
-        const workbook = XLSX.read(arrayBuffer, { type: 'array', cellFormula: true, sheetStubs: true });
+        // Parse workbook with formulas preserved. exceljs types demand a Node
+        // Buffer, but its loader accepts any binary view at runtime.
+        const workbook = new ExcelJS.Workbook();
+        await workbook.xlsx.load(arrayBuffer as unknown as Parameters<typeof workbook.xlsx.load>[0]);
+        if (cancelled) return;
 
         // Build sheet data for HyperFormula: array of arrays per sheet
-        const sheetData: Record<string, (string | number | boolean | null)[][]> = {};
+        const sheetData: Record<string, HfCell[][]> = {};
         const sheetNames: string[] = [];
 
-        for (const sheetName of workbook.SheetNames) {
-          sheetNames.push(sheetName);
-          const worksheet = workbook.Sheets[sheetName];
-          const ref = worksheet['!ref'];
-          if (!ref) {
-            sheetData[sheetName] = [[]];
+        for (const worksheet of workbook.worksheets) {
+          sheetNames.push(worksheet.name);
+          const rowCount = worksheet.rowCount;
+          const colCount = worksheet.columnCount;
+          if (rowCount === 0 || colCount === 0) {
+            sheetData[worksheet.name] = [[]];
             continue;
           }
 
-          const range = XLSX.utils.decode_range(ref);
-          const rows: (string | number | boolean | null)[][] = [];
-
-          for (let r = range.s.r; r <= range.e.r; r++) {
-            const row: (string | number | boolean | null)[] = [];
-            for (let c = range.s.c; c <= range.e.c; c++) {
-              const cellRef = XLSX.utils.encode_cell({ r, c });
-              const cell = worksheet[cellRef];
-              if (!cell) {
-                row.push(null);
-              } else if (cell.f) {
-                // Cell has a formula - pass it to HyperFormula for evaluation
-                row.push('=' + cell.f);
-              } else if (cell.v !== undefined && cell.v !== null) {
-                row.push(cell.v);
-              } else {
-                row.push(null);
-              }
+          const rows: HfCell[][] = [];
+          for (let r = 1; r <= rowCount; r++) {
+            const sheetRow = worksheet.getRow(r);
+            const row: HfCell[] = [];
+            for (let c = 1; c <= colCount; c++) {
+              row.push(toHyperFormulaCell(sheetRow.getCell(c)));
             }
             rows.push(row);
           }
 
-          sheetData[sheetName] = rows.length > 0 ? rows : [[]];
+          sheetData[worksheet.name] = rows;
         }
 
         // Build HyperFormula instance with all sheets for cross-sheet references
