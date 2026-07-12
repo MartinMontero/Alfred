@@ -33,7 +33,7 @@ encrypted with your keys first. You stay in control and informed at every step.
   exposes the vault as ground truth to any AI harness over stdio, with strict,
   path-confined, traversal-proof tools.
 - **Phase 4** — the **embedded goose harness** ([`docs/goose.md`](docs/goose.md)):
-  Alfred drives [goose](https://block.github.io/goose/) over ACP, reads the vault via
+  Alfred drives [goose](https://goose-docs.ai/) over ACP, reads the vault via
   the MCP extension, and runs recipes and subagents — with the provider denylist
   enforced so excluded vendors are unreachable through Alfred.
 - **Phase 5 (in progress)** — shipped so far: a **recipe safety scanner** that strips
