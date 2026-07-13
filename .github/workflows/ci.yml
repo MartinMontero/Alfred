@@ -127,13 +127,31 @@ jobs:
         run: cargo test --manifest-path src-tauri/Cargo.toml
 
       # Alfred's Cargo.lock lives under src-tauri/ (Tauri app), not the repo root,
-      # so run cargo-audit directly against it — the root-assuming action can't find
-      # it. cargo-audit checks the live RustSec DB and exits non-zero on an advisory
-      # (the gate); a documented allowlist goes in a deny.toml / --ignore if needed.
+      # so run cargo-audit directly against it. It checks the live RustSec DB and
+      # exits non-zero on any advisory (the gate).
+      #
+      # DOCUMENTED ALLOWLIST (constitution: block real vulns; allowlist known
+      # transitive advisories with justification). Every id below is a transitive
+      # dependency, non-exploitable in Alfred, tracked for an upstream fix. A NEW
+      # advisory not listed here still FAILS the gate:
+      #   RUSTSEC-2024-0429  glib 0.18.5 unsound — Tauri's LINUX GTK stack; Alfred
+      #                      ships on Windows (WebView2), where glib is not present.
+      #   RUSTSEC-2026-0097  rand unsound — only with a custom logger calling
+      #                      rand::rng(); not Alfred's usage.
+      #   RUSTSEC-2026-0190  anyhow Error::downcast_mut unsound — ubiquitous
+      #                      transitive dep; no fixed release yet.
+      #   RUSTSEC-2025-0080/0098/0100  unic-* unmaintained — informational
+      #                      (unmaintained), not a vulnerability.
       - name: cargo audit (RustSec advisories)
         run: |
           cargo install cargo-audit --locked
-          cargo audit --file src-tauri/Cargo.lock
+          cargo audit --file src-tauri/Cargo.lock \
+            --ignore RUSTSEC-2024-0429 \
+            --ignore RUSTSEC-2026-0097 \
+            --ignore RUSTSEC-2026-0190 \
+            --ignore RUSTSEC-2025-0080 \
+            --ignore RUSTSEC-2025-0098 \
+            --ignore RUSTSEC-2025-0100
 
   # ---- supply chain: OSV, gitleaks, Syft SBOM + Grype ------------------------
   supply-chain:
