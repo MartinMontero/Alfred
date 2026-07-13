@@ -29,12 +29,16 @@ open. It will be superseded by a completion section when the phase closes.
   never_allow list); the startup-panic regression is proven ONLY by
   `src/lib/goose/permission-startup.test.ts`, which spawns real `goose acp` against the generated
   file (LIVE-GATED: win32 + staged sidecar).
-- **Known defect (recorded 2026-07-12, threat model §ACP):** the Alfred-side
-  `classifyToolCall` auto-allow path keys on ACP `title`/`kind` — agent-authored display metadata —
-  and is used to answer `requestPermission` (GoosePanel.tsx:141). Title-keyed enforcement is
-  spoofable. Fix direction is a Gate-A decision; until then no further gating work.
-  The goose-side permission.yaml layer keys on stable `(extension__tool_name)` ids and is not
-  affected. The no-handler default remains deny (acp-client.ts:190-191).
+- **Defect found and FIXED (2026-07-12, threat model §3; builder decision: option (a)):** the
+  Alfred-side `classifyToolCall` auto-allow path keyed on ACP `title`/`kind` — agent-authored
+  display metadata — and answered `requestPermission` with it (spoofable). Fix (Stage B cycle 1):
+  the auto-allow branch is removed from GoosePanel — every permission request goose sends is now
+  answered by the human; the helper is re-scoped to `describeToolCallHint` (display-only, returns
+  no decision type).
+  **Proven by test:** `src/lib/goose/tool-gate.test.ts` ("enforcement is never title-keyed" pin:
+  no `classifyToolCall` export + a src/-wide source scan; planted-canary fired and removed
+  2026-07-12). The goose-side permission.yaml layer (id-keyed) is unchanged; the no-handler
+  default remains deny (acp-client.ts:190-191).
 
 ### Step 3 — born-redacted telemetry spine (commit ddbc85f)
 - `src-tauri/src/telemetry.rs`: typed-allowlist events (counts, durations, bounded enums,
@@ -80,11 +84,46 @@ about goose behavior requires all three EXECUTED on a Windows machine with the p
 the run cited. Last known full execution: Martin's machine, REPORTED 2026-06-28 (phase-4 audit).
 
 ## Open (remaining Phase-5 work)
-- Step 5: latency–accuracy guardrail (Option B, deterministic read-side; the live activation
-  capture is a paid provider turn = Rule-9 spend item).
-- Step 6: context-probe harness (recall / artifact / continuation) — the CLAUDE.md "three context
-  probes" gate item is currently vacuously green (no probe tests exist in the tree).
-- Step 7: memory-poisoning review gate + privacy/consent controls.
-- Reading UI: telemetry opt-in toggle / wipe / export / metrics in Settings (commands exist and are
-  registered; no UI caller — opt-in currently requires hand-editing settings.json).
-- This audit's completion section + phase-close verify:all with the live trio executed.
+- Step 5: latency–accuracy guardrail — **LANDED (deterministic core, zero-spend)** (Stage B).
+  `src/lib/telemetry/guardrail.ts`: Option B — a born-redacted signal combining
+  `agent_turn.durationMs` with a grounding boolean (did a read-kind tool run — ToolKind 'read'
+  only, never a title/path/arg; observability heuristic, never a gate) → 'ok' | 'slow' |
+  'ungrounded' | 'slow-ungrounded' (the accuracy-risk shape). Wired live through `session-tap.ts`
+  (per-turn grounding, reset each turn, fired via an optional `onGuardrail` observer — NOT
+  persisted) and consumed in GoosePanel as a spot-check nudge.
+  **Proven by test:** `src/lib/telemetry/guardrail.test.ts` (zero-spend smoke: all four signals,
+  threshold inclusivity, failed-turn exclusion, summary counts) + `session-tap.test.ts` guardrail
+  cases (grounding detection + per-turn reset + content-free readout).
+  **BLOCKED (Rule-9 spend, routed to Martin):** the LIVE activation capture — confirming a real
+  goose turn's latency + grounding populate the signal — requires one paid provider turn on
+  Windows with the sidecar. And a *persisted* guardrail metric (vs the current live-only observer)
+  is a Rust telemetry-schema addition, compiled/tested on Windows — deferred, noted here.
+  Note: the guardrail only fires when telemetry is opted in (the tap is inert otherwise) — it is
+  part of the observability opt-in, by design.
+- Step 6: context-probe harness — **LANDED** (Stage B). `src/lib/agentic/context-probes.ts`:
+  recall / artifact / continuation probes over Alfred's assembled context substrate (hot.md +
+  pulled files), deterministic string-presence checks (no live-LLM spend), each reporting exactly
+  what is missing on failure. Source of the three probes: docs/research/atproto-case-study.md.
+  **Proven by test:** `src/lib/agentic/context-probes.test.ts` — runs over real `generateHotMd`
+  output; includes must-fail cases (absent fact, unreferenced file, no-substring-false-match) and
+  a planted-failure canary was fired + reverted 2026-07-13. This retires the previously vacuously
+  green CLAUDE.md "three context probes" gate item.
+- Step 7: memory-poisoning review gate + privacy/consent — **LANDED** (Stage B).
+  `src/lib/agentic/memory-review.ts`: agent-authored durable facts are never auto-promoted (queue
+  for human review); obfuscation-character or policy-tamper (relax-a-security-control) writes are
+  REJECTED outright. Enforced at the real chokepoint: `mcp/server.ts` `memory_bank_update` refuses
+  a rejected write before it touches the vault (clean facts still provenance-stamped "review
+  before trusting").
+  **Proven by test:** `src/lib/agentic/memory-review.test.ts` + `mcp/server.test.ts` poisoning
+  refusal cases (policy-tamper + obfuscation; planted-failure canary fired + reverted 2026-07-13).
+  Honest boundary: cannot catch a false fact stated in plain visible language — that is what the
+  review queue (human) is for.
+- Reading UI — **LANDED** (Stage B): a desktop-only "Privacy & Telemetry" Settings section —
+  plain-language opt-in toggle, Export (JSON), Erase (confirm-gated wipe), and a metrics view —
+  wired to the existing registered commands (load/save_settings, telemetry_metrics/wipe/export).
+  Retires "opt-in requires hand-editing settings.json." Live opt-in→record→wipe journey (J5) is a
+  Windows-execution item (the Rust store isn't cargo-testable in this container; command behavior
+  already proven by telemetry_tests.rs).
+- Remaining to CLOSE the phase: the completion section + phase-close `verify:all` with the
+  live-goose trio + cargo telemetry canary EXECUTED on Windows; the B1 paid activation turn; and
+  Martin's Gate-B decision on the `engines` field (node >=22.12).
