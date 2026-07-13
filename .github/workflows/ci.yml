@@ -126,10 +126,14 @@ jobs:
       - name: cargo test (telemetry byte-scan canary, etc.)
         run: cargo test --manifest-path src-tauri/Cargo.toml
 
+      # Alfred's Cargo.lock lives under src-tauri/ (Tauri app), not the repo root,
+      # so run cargo-audit directly against it — the root-assuming action can't find
+      # it. cargo-audit checks the live RustSec DB and exits non-zero on an advisory
+      # (the gate); a documented allowlist goes in a deny.toml / --ignore if needed.
       - name: cargo audit (RustSec advisories)
-        uses: rustsec/audit-check@69366f33c96575abad1ee0dba8212993eecbe998 # v2.0.0
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cargo install cargo-audit --locked
+          cargo audit --file src-tauri/Cargo.lock
 
   # ---- supply chain: OSV, gitleaks, Syft SBOM + Grype ------------------------
   supply-chain:
