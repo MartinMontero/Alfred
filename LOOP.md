@@ -83,6 +83,36 @@ failed) then restored byte-clean.
 Docs: docs/threat-model.md Surface 4 updated; ADR-0003 marked Implemented.
 **GATE C decisions owed:** commit plan approval (per-unit); nothing committed yet.
 
+## STAGE D EVIDENCE (2026-07-13) — CI gate authored + driven on live GitHub Actions
+Files: `.github/workflows/ci.yml` (verify / rust / supply-chain / quality; Node 22; all actions
+SHA-pinned; no Trivy), rewritten `release.yml` (Windows, staged goose 1.41, live trio in the
+release lane), `renovate.json` (digest-pinned actions), `.grype.yaml`, `lighthouserc.json`.
+Committed + pushed (Martin authorized commit+push+iterate-to-green for Stage D).
+**Live-run results (iterated over 7 rounds, each fixing a distinct real CI issue, not a defect in
+Alfred):**
+- **D6 canary PROVEN:** round-1 canary branch `claude/ci-fail-canary` — its `verify` job went RED
+  on a deliberately-failing test. The gate blocks bad code. (Branch undeletable via the git proxy;
+  Martin to remove via GitHub UI.)
+- **verify GREEN:** typecheck app+mcp, Vitest, exclusion L1+L2+L3 (clones the sibling platform repo
+  in-workflow), zero-Soapbox dep gate, both builds.
+- **supply-chain GREEN:** OSV (subpath action, report-only), gitleaks, Syft SBOM, Grype (blocking
+  high/critical).
+- **quality:** axe-core + Lighthouse GREEN; lychee fixed (was scanning node_modules, then bot-blocked
+  research citations → scoped to operational docs, `docs/research/` excluded, accept 429).
+- **rust:** `cargo test` + born-redacted byte-scan canary GREEN on Linux (placeholder sidecar for the
+  build-script check). `cargo audit` reworked to fail only on real vulnerabilities (informational
+  unmaintained/unsound reported, non-blocking = constitution's block-high/critical).
+**BLOCKED — GATE D decision owed (real security finding, stop-and-ask):** cargo-audit caught 9
+transitive vulnerabilities. `cargo update` fixed 2 in-constraint (bytes→1.12.1 RUSTSEC-2026-0007;
+time→0.3.53 RUSTSEC-2026-0009). **5 remain, needing a Tauri/reqwest bump (outside current
+constraints):** quick-xml RUSTSEC-2026-0194 + 0195 (parser DoS; Alfred parses no untrusted XML),
+rustls-webpki RUSTSEC-2026-0098 + 0099 (name-constraint validation) + 0104 (CRL-parse panic) — all
+transitive, mostly moderate, on the old rustls-webpki 0.101.7 in the tree. Options for Martin:
+(A) bump Tauri/reqwest to pull patched versions (real scope, needs Windows compile-verify);
+(B) time-boxed DOCUMENTED allowlist of these 5 with severity justification, tracked for the Stage-E
+Tauri bump (a documented-allowlist per constitution, but suppressing an advisory = stop-and-ask →
+his word required). NOT allowlisted autonomously.
+
 ## PRIOR: STAGE B POINTER (kept for history)
 Stage order: A ✓ (committed b5c1a98..d1d96e3, pushed 2026-07-12) → B (now) → C three locks
 (ADR-0003 Accepted — authorized after B) → D CI gate → E release → F PWA deploy → G launch gate.
