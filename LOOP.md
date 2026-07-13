@@ -29,9 +29,39 @@ This session runs in the **Linux remote container** (`/home/user/Alfred`), not
   announce).
 
 ## STAGE POINTER
-**Current: STAGE C (three skills locks) — CODE COMPLETE, awaiting GATE C review.**
-Stages A ✓, B ✓ (committed+pushed, Windows-verified 2026-07-13), C ✓ (this). Next after GATE C:
-Stage D (CI gate).
+**Current: STAGE D (CI gate) — CODE COMPLETE, awaiting GATE D review.**
+Stages A ✓, B ✓ (Windows-verified), C ✓ (committed+pushed 8d38b3e). Next after GATE D: Stage E
+(release pipeline).
+
+## STAGE D EVIDENCE (2026-07-13)
+- **.github/workflows/ci.yml** — NEW. push + PR, Linux, Node 22. Jobs: `verify` (typecheck app+mcp,
+  vitest, vendor-exclusion L1+L2 blocking + L3 advisory via a cloned sibling platform repo,
+  zero-Soapbox DEPENDENCY-manifest gate [not a source grep — constitution text names Soapbox
+  legitimately], build + build:web), `rust` (apt webkit deps + cargo test [byte-scan canary] +
+  cargo-audit), `supply-chain` (OSV-Scanner, gitleaks, Syft SBOM + Grype fail-on-high/critical),
+  `quality` (axe-core 0 serious/critical, Lighthouse a11y≥95/perf≥90/LCP≤2.5s/CLS≤0.1, lychee).
+  **D2 honest skip surfacing:** a job-summary note that the live-goose trio is NOT exercised on
+  Linux CI; Windows verify:all is the source of truth.
+- **.github/workflows/release.yml** — REWRITTEN. Windows-only (Mac/Linux/Android deferred per SCOPE
+  OUT), Node 22, all actions SHA-pinned. Downloads pinned goose 1.41.0 + stages it (--require
+  hard-fail), runs `npm run test` (the live-goose trio EXECUTES here — Windows runner), builds via
+  tauri-action (unsigned when signing secrets absent), draft release. **This closes part of D4:**
+  goose behavior is now exercised in the release lane, not just Linux-skipped.
+- **renovate.json** (D5) — pinDigests for github-actions (keeps SHA pins, bumps them), grouped dev
+  toolchains, security labels.
+- **.grype.yaml** — empty documented allowlist (no silent silencing). **lighthouserc.json** — the
+  four thresholds against staticDistDir dist-web.
+- **ALL 14 actions SHA-pinned** (real SHAs fetched via git ls-remote from each public repo;
+  verified: no floating tags). No Trivy (CVE-2026-33634). Node 22 (was 20).
+EXECUTED here: YAML/JSON parse valid; SHA-pin audit clean; no-Trivy-usage; Node-22 confirmed.
+CANNOT execute here (GATE-D validation is a real run): the actual CI on GitHub's runners.
+**GATE D decisions owed:** commit plan; then the go-ahead items are (a) PUSH the workflows (a real
+CI run is the validation), and (b) the D6 CI-fail canary — push a branch with a deliberately failing
+check to prove the gate blocks, then delete. First real run WILL surface any third-party action
+input-name mismatches (OSV/anchore/axe/lighthouse) + a11y/perf threshold calibration — expected,
+that's what the live run is for.
+
+## PRIOR: STAGE C POINTER (kept for history)
 
 ## STAGE C EVIDENCE (2026-07-13, ADR-0003 Accepted → Implemented)
 Built as pure, tested security primitives (Skillsmith auto-install stays OUT per ADR-0003; the
