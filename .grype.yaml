@@ -1,0 +1,7 @@
+# Grype vulnerability allowlist (used by the CI supply-chain job).
+#
+# EMPTY BY DEFAULT — a green scan means no high/critical findings, not a silenced
+# one. Every ignore entry is a DOCUMENTED exception: it must carry a reason and a
+# review date, and be re-evaluated when Renovate bumps the dependency. Do not add
+# an entry to make CI pass; fix or upgrade the dependency instead.
+ignore: []
