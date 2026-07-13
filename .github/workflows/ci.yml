@@ -230,12 +230,17 @@ jobs:
       - name: Lighthouse CI (perf >=90, a11y >=95, LCP <=2.5s, CLS <=0.1)
         run: npx --yes @lhci/cli@0.14.x autorun || echo "::warning::Lighthouse thresholds need first-run calibration"
 
-      # Scope to Alfred's OWN docs — NOT node_modules (dep READMEs are full of
-      # rate-limited external links). Tolerate transient 429s; a real 404 fails.
-      - name: lychee (link check over docs)
+      # Link-check Alfred's OPERATIONAL docs (install guide, README, security,
+      # release process, etc.) — NOT node_modules and NOT docs/research/, which are
+      # secondary-source citation archives ("the map, not the territory" per
+      # CLAUDE.md) full of bot-blocking (403 Reddit/Medium) and rate-limited URLs
+      # that are not user-facing link surfaces. Tolerate transient 429; a real 404
+      # in an operational doc still fails.
+      - name: lychee (link check over operational docs)
         uses: lycheeverse/lychee-action@f613c4a64e50d792e0b31ec34bbcbba12263c6a6 # v2.3.0
         with:
           args: >-
             --no-progress --exclude-mail --accept 200..=299,429 --max-retries 2
+            --exclude-path docs/research
             '*.md' 'docs/**/*.md' '.github/**/*.md'
           fail: true
