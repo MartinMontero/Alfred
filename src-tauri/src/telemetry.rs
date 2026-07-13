@@ -372,6 +372,10 @@ pub fn export_rows(conn: &Connection) -> rusqlite::Result<Vec<StoredEvent>> {
 }
 
 /// All events sharing one trace id, in order — a session's correlated chain.
+/// Exercised by telemetry_tests (trace-correlation) and reserved for the
+/// trace-query surface; `allow(dead_code)` keeps the non-test lib build clean
+/// until a caller wires it in.
+#[allow(dead_code)]
 pub fn query_by_trace(conn: &Connection, trace_id: &str) -> rusqlite::Result<Vec<StoredEvent>> {
     let mut stmt =
         conn.prepare(&format!("SELECT {SELECT_COLS} FROM events WHERE trace_id = ?1 ORDER BY ts ASC, id ASC"))?;

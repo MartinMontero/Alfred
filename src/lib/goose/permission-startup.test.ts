@@ -11,10 +11,11 @@
  * regressing the permission-config schema.
  *
  * COVERAGE BOUNDARY (honest): the goose sidecar is gitignored (staged locally via
- * scripts/stage-goose-sidecar.mjs), a 248 MB Windows .exe. So this test runs in the
+ * scripts/stage-goose-sidecar.mjs), a large Windows .exe. So this test runs in the
  * builder's LOCAL verify:all (the real app environment) and is SKIPPED in CI (no
  * binary / Linux runners). The definitive check is therefore local; the cheap
  * always-on regression guard is the three-list shape assertion in tool-gate.test.ts.
+ * EXECUTED against the staged goose 1.41.0 sidecar on Windows 2026-07-13 — passed.
  */
 import { describe, it, expect } from 'vitest';
 import { spawn } from 'node:child_process';
@@ -52,7 +53,7 @@ describe('goose ingests the generated permission.yaml without panicking', () => 
   }
 
   it(
-    'starts goose 1.39.0 against the REAL buildPermissionYaml() output (ACP initialize, no panic)',
+    'starts the staged goose sidecar against the REAL buildPermissionYaml() output (ACP initialize, no panic)',
     async () => {
       const root = mkdtempSync(join(tmpdir(), 'alfred-perm-start-'));
       // cwd is a throwaway dir we DON'T delete, so goose's working directory never
