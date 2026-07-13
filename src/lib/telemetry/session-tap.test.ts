@@ -159,3 +159,64 @@ describe('session-tap — live emission of typed, trace-tagged events', () => {
     expect(JSON.stringify(noUsage)).not.toContain('outputTokens');
   });
 });
+
+// Phase 5 Step 5 — the latency/grounding guardrail wired through the live tap.
+// Still zero-spend: synthetic ACP notifications drive it; no provider turn.
+describe('session-tap — latency/grounding guardrail (born-redacted)', () => {
+  function guardedHarness() {
+    const events: TelemetryEvent[] = [];
+    const guardrails: import('./session-tap').TurnGuardrail[] = [];
+    let clock = 1000;
+    const ctx = generateTraceContext();
+    const tap = createSessionTap({
+      traceContext: ctx,
+      record: (e) => {
+        events.push(e);
+      },
+      onGuardrail: (g) => {
+        guardrails.push(g);
+      },
+      now: () => clock,
+    });
+    return { tap, guardrails, set: (ms: number) => (clock = ms) };
+  }
+
+  it('flags a slow, ungrounded turn as the accuracy-risk shape', () => {
+    const h = guardedHarness();
+    h.set(1000);
+    h.tap.startTurn();
+    h.set(1000 + 31_000); // slow, and no read tool ran => ungrounded
+    h.tap.endTurn(endTurn);
+    expect(h.guardrails).toHaveLength(1);
+    expect(h.guardrails[0]).toMatchObject({ grounded: false, signal: 'slow-ungrounded' });
+    expect(h.guardrails[0].durationMs).toBe(31_000);
+  });
+
+  it('marks a turn grounded when a read-kind tool ran, and resets per turn', () => {
+    const h = guardedHarness();
+    // Turn 1: a read tool ran and it was fast => ok, grounded.
+    h.set(1000);
+    h.tap.startTurn();
+    h.tap.onSessionUpdate(toolCall('r1', 'read', 'in_progress'));
+    h.tap.onSessionUpdate(toolUpdate('r1', 'completed'));
+    h.set(1500);
+    h.tap.endTurn(endTurn);
+    // Turn 2: no read tool, slow => the grounding flag must have RESET to false.
+    h.set(5000);
+    h.tap.startTurn();
+    h.set(5000 + 40_000);
+    h.tap.endTurn(endTurn);
+    expect(h.guardrails.map((g) => g.signal)).toEqual(['ok', 'slow-ungrounded']);
+    expect(h.guardrails.map((g) => g.grounded)).toEqual([true, false]);
+  });
+
+  it('the guardrail readout carries no content — only turnId, duration, boolean, signal', () => {
+    const h = guardedHarness();
+    h.tap.startTurn();
+    h.tap.onSessionUpdate(toolCall('r1', 'read', 'in_progress'));
+    h.tap.onSessionUpdate(toolUpdate('r1', 'completed'));
+    h.tap.endTurn(endTurn);
+    const keys = Object.keys(h.guardrails[0]).sort();
+    expect(keys).toEqual(['durationMs', 'grounded', 'signal', 'turnId']);
+  });
+});
