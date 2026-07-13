@@ -30,7 +30,8 @@ import {
   setCustomProviderApiKey as persistCustomProviderApiKey,
   clearCustomProviderApiKey,
 } from '../lib/ai-credentials';
-import { usePlatformInfo, isMobile } from '../lib/platform';
+import { usePlatformInfo, isMobile, isDesktop } from '../lib/platform';
+import { invoke } from '@tauri-apps/api/core';
 import { authenticateWithBiometric } from '../lib/biometric';
 import {
   loadDailyNotesConfig,
@@ -45,7 +46,7 @@ import {
   type TemplatesConfig,
 } from '../lib/templates';
 
-type SettingsSection = 'general' | 'editor' | 'files' | 'appearance' | 'hotkeys' | 'customprovider' | 'sync' | 'nostr' | 'about';
+type SettingsSection = 'general' | 'editor' | 'files' | 'appearance' | 'hotkeys' | 'customprovider' | 'sync' | 'nostr' | 'privacy' | 'about';
 type LoginTab = 'generate' | 'import';
 
 interface SettingsProps {
@@ -77,6 +78,7 @@ const sections: SettingsSectionItem[] = [
   { id: 'customprovider', label: 'Custom Provider', icon: 'M12 2L2 7l10 5 10-5-10-5z M2 17l10 5 10-5 M2 12l10 5 10-5' },
   { id: 'sync', label: 'Sync', icon: 'M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8 M21 3v5h-5' },
   { id: 'nostr', label: 'Nostr', icon: 'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z' },
+  { id: 'privacy', label: 'Privacy & Telemetry', icon: 'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z M9 12l2 2 4-4' },
   { id: 'about', label: 'About', icon: 'M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z M12 16v-4 M12 8h.01' },
 ];
 
@@ -90,12 +92,18 @@ const Settings: Component<SettingsProps> = (props) => {
     return info?.platform === 'android' || info?.platform === 'ios';
   };
 
-  // Filter sections based on platform - hide Custom Provider and Hotkeys on mobile
+  // Filter sections based on platform - hide Custom Provider and Hotkeys on mobile;
+  // Privacy & Telemetry is desktop-only (the born-redacted telemetry store is a Tauri
+  // command surface that does not exist in the web build).
   const filteredSections = () => {
+    let list = sections;
     if (isMobileApp()) {
-      return sections.filter(s => s.id !== 'customprovider' && s.id !== 'hotkeys');
+      list = list.filter(s => s.id !== 'customprovider' && s.id !== 'hotkeys');
     }
-    return sections;
+    if (!isDesktop()) {
+      list = list.filter(s => s.id !== 'privacy');
+    }
+    return list;
   };
 
   // Login state
@@ -125,6 +133,90 @@ const Settings: Component<SettingsProps> = (props) => {
   const [blockedUsers, setBlockedUsers] = createSignal<Array<{ pubkey: string; name?: string; picture?: string }>>([]);
   const [loadingBlocked, setLoadingBlocked] = createSignal(false);
   const [unblockingUser, setUnblockingUser] = createSignal<string | null>(null);
+
+  // Privacy / telemetry state (desktop-only; opt-in, off by default).
+  interface TelemetryMetrics {
+    total_events: number;
+    input_tokens: number;
+    output_tokens: number;
+    by_kind: { kind: string; count: number; avg_duration_ms: number }[];
+    errors: { error_type: string; count: number }[];
+  }
+  const [telemetryEnabled, setTelemetryEnabled] = createSignal(false);
+  const [telemetryBusy, setTelemetryBusy] = createSignal(false);
+  const [telemetryMetrics, setTelemetryMetrics] = createSignal<TelemetryMetrics | null>(null);
+  const [telemetryNotice, setTelemetryNotice] = createSignal<string | null>(null);
+
+  async function refreshTelemetryMetrics() {
+    if (!isDesktop()) return;
+    try {
+      setTelemetryMetrics(await invoke<TelemetryMetrics>('telemetry_metrics'));
+    } catch (e) {
+      console.warn('telemetry_metrics failed:', e);
+    }
+  }
+
+  async function handleTelemetryToggle(enabled: boolean) {
+    setTelemetryBusy(true);
+    setTelemetryNotice(null);
+    try {
+      // Read-modify-write so we never clobber other settings (e.g. vault_path).
+      // save_settings overwrites the whole file, so if the load fails we ABORT
+      // rather than write a partial object that would null out vault_path.
+      const current = await invoke<{ vault_path?: string | null; telemetry_enabled?: boolean | null }>(
+        'load_settings',
+      );
+      await invoke('save_settings', { settings: { ...current, telemetry_enabled: enabled } });
+      setTelemetryEnabled(enabled);
+      setTelemetryNotice(
+        enabled
+          ? 'Telemetry on. Anonymous usage counts and timings only — never your notes, prompts, or keys.'
+          : 'Telemetry off. No new data is recorded. Use “Erase collected data” to remove anything already stored.',
+      );
+      if (enabled) await refreshTelemetryMetrics();
+    } catch (e) {
+      setTelemetryNotice(`Could not change the setting: ${e instanceof Error ? e.message : String(e)}`);
+    } finally {
+      setTelemetryBusy(false);
+    }
+  }
+
+  async function handleTelemetryWipe() {
+    if (!confirm('Erase all locally collected telemetry? This cannot be undone. Your notes are never affected.')) {
+      return;
+    }
+    setTelemetryBusy(true);
+    setTelemetryNotice(null);
+    try {
+      const r = await invoke<{ rows_before: number; rows_after: number; file_bytes: number }>('telemetry_wipe');
+      setTelemetryNotice(`Erased ${r.rows_before} record${r.rows_before === 1 ? '' : 's'}; ${r.rows_after} remain.`);
+      await refreshTelemetryMetrics();
+    } catch (e) {
+      setTelemetryNotice(`Wipe failed: ${e instanceof Error ? e.message : String(e)}`);
+    } finally {
+      setTelemetryBusy(false);
+    }
+  }
+
+  async function handleTelemetryExport() {
+    setTelemetryBusy(true);
+    setTelemetryNotice(null);
+    try {
+      const rows = await invoke<unknown[]>('telemetry_export');
+      const blob = new Blob([JSON.stringify(rows, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'alfred-telemetry-export.json';
+      a.click();
+      URL.revokeObjectURL(url);
+      setTelemetryNotice(`Exported ${rows.length} record${rows.length === 1 ? '' : 's'} to alfred-telemetry-export.json.`);
+    } catch (e) {
+      setTelemetryNotice(`Export failed: ${e instanceof Error ? e.message : String(e)}`);
+    } finally {
+      setTelemetryBusy(false);
+    }
+  }
 
   // Sync state
   const [syncEnabled, setSyncEnabled] = createSignal(false);
@@ -371,6 +463,18 @@ const Settings: Component<SettingsProps> = (props) => {
   onMount(async () => {
     // Get app version
     platform.app.getVersion().then(setAppVersion).catch(() => setAppVersion('unknown'));
+
+    // Load the telemetry opt-in state (desktop only). Off by default; a locked or
+    // missing settings file simply reads as off.
+    if (isDesktop()) {
+      invoke<{ telemetry_enabled?: boolean | null }>('load_settings')
+        .then((s) => {
+          const on = s?.telemetry_enabled === true;
+          setTelemetryEnabled(on);
+          if (on) void refreshTelemetryMetrics();
+        })
+        .catch(() => setTelemetryEnabled(false));
+    }
 
     // Load AI credentials from the platform secret store (migrates any
     // legacy plaintext localStorage copies on first read)
@@ -2564,6 +2668,84 @@ const Settings: Component<SettingsProps> = (props) => {
               </div>
             </Show>
 
+            {/* Privacy & Telemetry (desktop-only) */}
+            <Show when={activeSection() === 'privacy'}>
+              <div class="settings-section privacy">
+                <div class="settings-section-title">Privacy &amp; Telemetry</div>
+
+                <div class="settings-notice">
+                  <p>
+                    Alfred can record <strong>anonymous usage counts and timings</strong> — how many
+                    agent turns ran, how long tools took, how often a schema check passed — to help
+                    improve it. It <strong>never</strong> records your notes, your prompts, your
+                    keys, or anything you type. Everything stays on this machine; nothing is sent
+                    anywhere. It is <strong>off</strong> until you turn it on, and you can erase what
+                    was collected at any time.
+                  </p>
+                </div>
+
+                <div class="setting-item">
+                  <div class="setting-info">
+                    <div class="setting-name">Share anonymous usage counts</div>
+                    <div class="setting-description">Never your notes, prompts, or keys — counts and timings only, stored locally.</div>
+                  </div>
+                  <label class="setting-toggle">
+                    <input
+                      type="checkbox"
+                      checked={telemetryEnabled()}
+                      disabled={telemetryBusy()}
+                      onChange={(e) => handleTelemetryToggle(e.currentTarget.checked)}
+                    />
+                    <span class="toggle-slider"></span>
+                  </label>
+                </div>
+
+                <Show when={telemetryNotice()}>
+                  <div class="settings-notice">
+                    <p>{telemetryNotice()}</p>
+                  </div>
+                </Show>
+
+                <div class="settings-section-title">Your data, your control</div>
+
+                <div class="setting-item">
+                  <div class="setting-info">
+                    <div class="setting-name">Export collected data</div>
+                    <div class="setting-description">Download everything stored locally as JSON, so you can see exactly what was recorded.</div>
+                  </div>
+                  <button class="setting-button secondary" disabled={telemetryBusy()} onClick={handleTelemetryExport}>Export</button>
+                </div>
+
+                <div class="setting-item">
+                  <div class="setting-info">
+                    <div class="setting-name">Erase collected data</div>
+                    <div class="setting-description">Permanently delete all locally stored telemetry. Your notes are never affected.</div>
+                  </div>
+                  <button class="setting-button danger" disabled={telemetryBusy()} onClick={handleTelemetryWipe}>Erase</button>
+                </div>
+
+                <Show when={telemetryMetrics()} fallback={
+                  <p class="setting-description">No usage data collected yet.</p>
+                }>
+                  {(m) => (
+                    <div class="telemetry-metrics">
+                      <div class="settings-section-title">What has been recorded</div>
+                      <p class="setting-description">{m().total_events} event{m().total_events === 1 ? '' : 's'} recorded.</p>
+                      <Show when={m().by_kind.length > 0}>
+                        <ul class="telemetry-kind-list">
+                          <For each={m().by_kind}>
+                            {(k) => (
+                              <li>{k.kind}: {k.count} (avg {Math.round(k.avg_duration_ms)} ms)</li>
+                            )}
+                          </For>
+                        </ul>
+                      </Show>
+                    </div>
+                  )}
+                </Show>
+              </div>
+            </Show>
+
             {/* About */}
             <Show when={activeSection() === 'about'}>
               <div class="settings-section about">
@@ -2621,7 +2803,6 @@ const Settings: Component<SettingsProps> = (props) => {
                   <h3>Links</h3>
                   <div class="about-links">
                     <a href="https://github.com/MartinMontero/Alfred" target="_blank" class="about-link">GitHub Repository</a>
-                    <a href="https://github.com/derekross/onyx-skills" target="_blank" class="about-link">AI Skills Repository</a>
                     <a href="https://github.com/MartinMontero/Alfred/issues" target="_blank" class="about-link">Report an Issue</a>
                   </div>
                 </div>

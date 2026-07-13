@@ -12,12 +12,15 @@
  *
  * This is **not** an allowlist of three. The enforcement point is vendor
  * identity: a provider name, endpoint host, or model id is refused only when it
- * resolves to Meta/OpenAI/xAI. Note that Meta's Llama models (llama, codellama)
- * resolve to Meta the vendor and are therefore excluded, even on a local
- * endpoint; but the local endpoint itself, running any non-excluded model, is
- * fine. A model routed through a permitted aggregator (e.g. OpenRouter) that
- * still resolves to an excluded vendor (e.g. `openai/gpt-4o`) is refused on the
- * model id even though the host is permitted.
+ * resolves to Meta/OpenAI/xAI. Llama-family **model ids** (llama, codellama) on
+ * permitted infrastructure (local Ollama, Groq, Together, …) are ALLOWED — open
+ * weights served by a non-Meta host pay Meta-the-vendor nothing (see the
+ * deliberate absence of a Meta model-id rule below and the false-positive
+ * suite). Meta stays excluded via its hosts and provider tokens
+ * (meta.com/meta.ai/llama-api.com, metaai/metallama). A model routed through a
+ * permitted aggregator (e.g. OpenRouter) that still resolves to an excluded
+ * vendor (e.g. `openai/gpt-4o`) is refused on the model id even though the
+ * host is permitted.
  *
  * This module is pure and dependency-free so it is unit-testable in isolation and
  * can be enforced from any layer. The goose-side lockdown (Phase 4) routes

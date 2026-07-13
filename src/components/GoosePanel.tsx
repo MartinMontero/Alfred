@@ -19,7 +19,6 @@ import {
   scanRecipeFile,
   buildRecipePreview,
   filterGooseProviderOptions,
-  classifyToolCall,
   selectAllowOption,
   DENY,
   type GooseSession,
@@ -75,6 +74,13 @@ const GoosePanel: Component<GoosePanelProps> = (props) => {
     req: RequestPermissionRequest;
     resolve: (r: RequestPermissionResponse) => void;
   } | null>(null);
+  // B5 startup-scan warnings (threat-model §5): excluded-vendor references found
+  // in goose config — surfaced, never hidden, never silently rewritten.
+  const [configWarnings, setConfigWarnings] = createSignal<string[]>([]);
+  // Born-redacted latency/grounding guardrail (Phase 5 Step 5): count of
+  // accuracy-risk turns (slow AND ungrounded) this session — a live nudge to
+  // spot-check, never a block. Not persisted.
+  const [riskTurns, setRiskTurns] = createSignal(0);
 
   let session: GooseSession | null = null;
   // Live telemetry tap — inert unless telemetry is opted in (no trace context).
@@ -135,12 +141,12 @@ const GoosePanel: Component<GoosePanelProps> = (props) => {
     }
   }
 
-  // Deterministic gate: read-only vault tools auto-allow; every write/shell/unknown
-  // routes through the ActionPreview ack surface. Default-deny on no acknowledgement.
+  // Every permission request goose sends is answered by the human through the
+  // ActionPreview ack surface — no Alfred-side auto-allow. ACP title/kind are
+  // agent-authored and spoofable (docs/threat-model.md §3); reads normally never
+  // reach here because goose's id-keyed always_allow short-circuits first.
+  // Default-deny on no acknowledgement.
   function onRequestPermission(req: RequestPermissionRequest): Promise<RequestPermissionResponse> {
-    if (classifyToolCall(req.toolCall) === 'auto-allow') {
-      return Promise.resolve(selectAllowOption(req.options));
-    }
     return new Promise<RequestPermissionResponse>((resolve) => {
       // A previous pending request (if any) is denied before showing the new one.
       pendingPermission()?.resolve(DENY);
@@ -177,6 +183,7 @@ const GoosePanel: Component<GoosePanelProps> = (props) => {
 
       // Write Alfred's isolated, locked-down goose distribution (config + env).
       const dist = await prepareGooseDistribution({ creds, vaultPath: props.vaultPath });
+      setConfigWarnings(dist.warnings);
 
       // Telemetry opt-in — the SAME setting the Rust writer gates on (load_settings).
       // On => mint a trace context (drives _meta injection) and arm the live emission
@@ -192,6 +199,9 @@ const GoosePanel: Component<GoosePanelProps> = (props) => {
         traceContext,
         record: (event) => {
           void invoke('telemetry_record', { event }).catch(() => {});
+        },
+        onGuardrail: (g) => {
+          if (g.signal === 'slow-ungrounded') setRiskTurns((n) => n + 1);
         },
       });
 
@@ -389,6 +399,18 @@ const GoosePanel: Component<GoosePanelProps> = (props) => {
         )}
       </Show>
 
+      <Show when={configWarnings().length > 0}>
+        <div class="goose-panel__warnings" style={{ color: 'var(--warning, #a60)', padding: '4px 8px' }}>
+          {configWarnings().map((w) => (
+            <div>{w}</div>
+          ))}
+        </div>
+      </Show>
+      <Show when={riskTurns() > 0}>
+        <div class="goose-panel__guardrail" style={{ color: 'var(--warning, #a60)', padding: '4px 8px', 'font-size': '0.85em' }}>
+          {riskTurns()} turn{riskTurns() === 1 ? '' : 's'} this session answered slowly without consulting your vault — worth a spot-check.
+        </div>
+      </Show>
       <Show when={error()}>
         <div class="goose-panel__error" style={{ color: 'var(--error, #c00)', padding: '4px 8px' }}>{error()}</div>
       </Show>

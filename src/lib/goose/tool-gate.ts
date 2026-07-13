@@ -4,13 +4,16 @@
  * Deterministic tool-permission gate (Phase 5 Step 2) — closes the Auto-mode
  * bypass. **Zero LLM inference** (goose `approve` mode, never `smart_approve`).
  *
- * In approve mode goose asks the client (`requestPermission`) before any tool
- * that is not `always_allow`-listed. Two layers, deny-by-default:
- *   1) a curated `permission.yaml` (goose-side) that `always_allow`s only the
- *      read-only vault tools — so safe reads don't prompt-fatigue; and
- *   2) this gate (Alfred-side): auto-allow ONLY a positively-identified read-only
- *      vault tool; **everything else — writes, shell/command, unknown — must be
- *      explicitly acknowledged.** A write/shell can never be auto-allowed.
+ * ENFORCEMENT model (post title-keying fix, 2026-07-12 — docs/threat-model.md §3):
+ *   1) the curated `permission.yaml` (goose-side) is the ONLY automatic layer;
+ *      it keys on stable namespaced `(extension__tool_name)` ids: `always_allow`
+ *      for the read-only vault tools (so safe reads don't prompt-fatigue),
+ *      `ask_before` for every write and the shell surface; and
+ *   2) every `requestPermission` that reaches Alfred is answered by a HUMAN.
+ *      There is no Alfred-side auto-allow: ACP `title`/`kind` are agent-authored
+ *      display metadata and MUST NEVER answer a permission request. The hint
+ *      helper below is observability-only (badge text), spoofable by design,
+ *      and returns no decision type.
  */
 
 import { stringify as stringifyYaml } from 'yaml';
@@ -64,7 +67,8 @@ const READ_TOOL_TITLES = new Set<string>([
 
 const MUTATING_KINDS = new Set<ToolKind>(['edit', 'delete', 'move', 'execute', 'switch_mode']);
 
-export type GateDecision = 'auto-allow' | 'ask';
+/** Observability hint — NEVER a permission decision (see header). */
+export type ToolCallHint = 'vault-read-like' | 'unknown';
 
 export interface GatedToolCall {
   title?: string | null;
@@ -72,17 +76,21 @@ export interface GatedToolCall {
 }
 
 /**
- * Classify a tool call — deny-by-default. Returns `auto-allow` ONLY for an EXACT
- * match to a known read-only vault tool id/title with a non-mutating kind.
- * **Everything else — writes, shell, unknown, unlisted, look-alike names — returns
- * `ask`.** No inference, no substring matching.
+ * Describe a tool call for DISPLAY purposes only: "vault-read-like" when the
+ * agent-authored title/kind exactly matches a known read-only vault tool shape.
+ * The input is spoofable by construction (title and kind are authored by the
+ * agent/tool side of ACP), so this value may badge a prompt — it must never
+ * answer one. There is deliberately no function in this module that converts a
+ * title into an allow.
  */
-export function classifyToolCall(tc: GatedToolCall | undefined): GateDecision {
-  if (!tc) return 'ask';
-  if (tc.kind != null && MUTATING_KINDS.has(tc.kind)) return 'ask';
+export function describeToolCallHint(tc: GatedToolCall | undefined): ToolCallHint {
+  if (!tc) return 'unknown';
+  if (tc.kind != null && MUTATING_KINDS.has(tc.kind)) return 'unknown';
   const title = (tc.title ?? '').trim();
-  if (READ_TOOL_IDS.has(title) || READ_TOOL_TITLES.has(title.toLowerCase())) return 'auto-allow';
-  return 'ask';
+  if (READ_TOOL_IDS.has(title) || READ_TOOL_TITLES.has(title.toLowerCase())) {
+    return 'vault-read-like';
+  }
+  return 'unknown';
 }
 
 export type PermissionDecision =
@@ -108,9 +116,9 @@ export const DENY: PermissionDecision = { outcome: { outcome: 'cancelled' } };
  *  (always_allow, ask_before, never_allow) — omitting any one makes goose reject
  *  the file ("Corrupted permission config") and panic on startup, so the whole
  *  session never launches. `never_allow` is intentionally empty: deny-by-default
- *  is carried by ask_before + the Alfred-side classifyToolCall gate, not a
- *  goose-side blocklist — the empty list satisfies goose's schema without
- *  changing the allow/ask semantics. */
+ *  is carried by ask_before plus the human acknowledgement surface in
+ *  GoosePanel — never by title, never by a goose-side blocklist — and the empty
+ *  list satisfies goose's schema without changing the allow/ask semantics. */
 export function buildPermissionYaml(extensionName: string = ALFRED_VAULT_EXTENSION): string {
   const ns = (t: string) => `${extensionName}__${t}`;
   const doc = {

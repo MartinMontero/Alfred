@@ -14,8 +14,13 @@
  */
 
 import { appConfigDir, join } from '@tauri-apps/api/path';
-import { mkdir, writeTextFile, exists } from '@tauri-apps/plugin-fs';
-import { buildGooseConfigYaml, buildGooseEnv, type GooseProviderCreds } from './provider-lockdown';
+import { mkdir, writeTextFile, readTextFile, exists } from '@tauri-apps/plugin-fs';
+import {
+  buildGooseConfigYaml,
+  buildGooseEnv,
+  scanGooseConfigText,
+  type GooseProviderCreds,
+} from './provider-lockdown';
 import { buildPermissionYaml, goosePermissionPath } from './tool-gate';
 
 export interface GooseDistribution {
@@ -27,6 +32,8 @@ export interface GooseDistribution {
   permissionPath: string;
   /** The locked-down spawn env (provider pinned, keyring off, excluded keys blanked). */
   env: Record<string, string>;
+  /** Excluded-vendor warnings from the B5 startup scan (threat-model §5) — surface, never hide. */
+  warnings: string[];
 }
 
 export interface PrepareGooseOptions {
@@ -51,6 +58,20 @@ export async function prepareGooseDistribution(opts: PrepareGooseOptions): Promi
 
   if (!(await exists(configDir))) await mkdir(configDir, { recursive: true });
 
+  // B5 startup scan (threat-model §5): the denylist is default-safe, not
+  // tamper-proof. Warn on a pre-existing (possibly hand-edited) config before it
+  // is regenerated — never silently rewrite without saying so.
+  const warnings: string[] = [];
+  if (await exists(configPath)) {
+    const previous = await readTextFile(configPath).catch(() => '');
+    for (const f of scanGooseConfigText(previous)) {
+      warnings.push(
+        `Existing goose config line ${f.line} references an excluded vendor (${f.vendor}): "${f.excerpt}". ` +
+          `Alfred regenerates this file each session; the entry was NOT carried over.`,
+      );
+    }
+  }
+
   const yaml = buildGooseConfigYaml({
     creds: opts.creds,
     vaultPath: opts.vaultPath,
@@ -58,6 +79,14 @@ export async function prepareGooseDistribution(opts: PrepareGooseOptions): Promi
     mcpCommand: opts.mcpCommand,
     mcpArgs: opts.mcpArgs,
   });
+  // Writer-regression tripwire: Alfred's own output must never mention an
+  // excluded host (an mcpCommand/arg override could smuggle one in).
+  for (const f of scanGooseConfigText(yaml)) {
+    warnings.push(
+      `Generated goose config line ${f.line} references an excluded vendor (${f.vendor}): "${f.excerpt}". ` +
+        `This should be impossible — refusing to treat it as normal; check the caller's overrides.`,
+    );
+  }
   await writeTextFile(configPath, yaml);
 
   // Curated permission.yaml in the SAME isolated config dir: read-only vault tools
@@ -65,5 +94,5 @@ export async function prepareGooseDistribution(opts: PrepareGooseOptions): Promi
   const permissionPath = goosePermissionPath(pathRoot);
   await writeTextFile(permissionPath, buildPermissionYaml());
 
-  return { pathRoot, configPath, permissionPath, env: buildGooseEnv(opts.creds, { pathRoot }) };
+  return { pathRoot, configPath, permissionPath, env: buildGooseEnv(opts.creds, { pathRoot }), warnings };
 }

@@ -24,6 +24,30 @@ const REQUIRE = process.argv.includes('--require');
 const IS_WIN = platform() === 'win32';
 const EXE = IS_WIN ? '.exe' : '';
 
+// The goose version Alfred targets. A SHA-256 pin is Stage-E (E4) work; for now
+// this is a SOFT check — a mismatch warns (so a re-stage against the wrong
+// version is visible) but never blocks. Bump this constant when the harness
+// version decision changes, and re-run the live-goose trio on Windows.
+const EXPECTED_GOOSE_VERSION = '1.41.0';
+
+function checkGooseVersion(bin) {
+  try {
+    const out = execFileSync(bin, ['--version'], { encoding: 'utf8' }).trim();
+    const m = out.match(/(\d+\.\d+\.\d+)/);
+    const found = m ? m[1] : out;
+    if (found !== EXPECTED_GOOSE_VERSION) {
+      console.warn(
+        `[stage-goose] WARNING: staged goose is ${found}, Alfred targets ${EXPECTED_GOOSE_VERSION}. ` +
+          'Re-run the live-goose tests (permission-startup, acp-handshake, recipes.live) after any version change.',
+      );
+    } else {
+      console.log(`[stage-goose] goose ${found} matches the target.`);
+    }
+  } catch {
+    console.warn('[stage-goose] could not read goose --version (staging anyway).');
+  }
+}
+
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const binariesDir = join(root, 'src-tauri', 'binaries');
 
@@ -77,6 +101,8 @@ if (!triple) fail('could not determine the Rust host triple (is rustc installed?
 
 const source = findGoose();
 if (!source) fail('could not find the goose binary (set GOOSE_BIN, or install to ~/.local/bin).');
+
+checkGooseVersion(source);
 
 const target = join(binariesDir, `goose-${triple}${EXE}`);
 mkdirSync(binariesDir, { recursive: true });

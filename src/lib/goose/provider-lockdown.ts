@@ -28,9 +28,50 @@
 
 import {
   resolveExcludedVendor,
+  checkProviderEndpoint,
   ProviderNotAllowedError,
   type ExcludedVendor,
 } from '../provider-policy';
+
+/** One excluded-vendor hit found while scanning goose config text (B5). */
+export interface ConfigScanFinding {
+  /** 1-indexed line number in the scanned text. */
+  line: number;
+  /** Trimmed line content (bounded) for display — never logged elsewhere. */
+  excerpt: string;
+  vendor: ExcludedVendor;
+}
+
+/**
+ * Startup scan of goose config text for excluded-vendor hosts (threat-model §5).
+ * Warn-only by design: the denylist is default-safe, not tamper-proof — a user
+ * can hand-edit the isolated config between sessions, and goose accepts custom
+ * OpenAI-compatible providers with arbitrary base_url. Alfred surfaces what it
+ * finds and never silently rewrites; it also runs this over its OWN generated
+ * config as a writer-regression tripwire. URL and bare-host candidates are both
+ * screened through the shared endpoint denylist so this can never diverge from
+ * the policy module.
+ */
+export function scanGooseConfigText(text: string): ConfigScanFinding[] {
+  const findings: ConfigScanFinding[] = [];
+  const urlRe = /https?:\/\/[^\s"'#]+/gi;
+  const hostRe = /\b(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}\b/gi;
+  const lines = text.split(/\r?\n/);
+  for (let i = 0; i < lines.length; i++) {
+    const raw = lines[i];
+    const candidates = new Set<string>();
+    for (const m of raw.matchAll(urlRe)) candidates.add(m[0]);
+    for (const m of raw.matchAll(hostRe)) candidates.add(`https://${m[0]}`);
+    for (const candidate of candidates) {
+      const res = checkProviderEndpoint(candidate);
+      if (!res.allowed && res.vendor) {
+        findings.push({ line: i + 1, excerpt: raw.trim().slice(0, 160), vendor: res.vendor });
+        break; // one finding per line is enough to warn
+      }
+    }
+  }
+  return findings;
+}
 
 /** A provider option as advertised by goose over ACP (`configOptions[provider].options`). */
 export interface GooseProviderOption {

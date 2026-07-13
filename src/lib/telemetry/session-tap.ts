@@ -28,6 +28,16 @@
 import type { SessionNotification, PromptResponse, ToolKind } from '@agentclientprotocol/sdk';
 import { childSpan, type TraceContext } from './trace';
 import type { TelemetryEvent, RecordTelemetry } from './events';
+import { evaluateTurnGuardrail, type GuardrailSignal } from './guardrail';
+
+/** A born-redacted latency/grounding guardrail readout for one completed turn
+ *  (Phase 5 Step 5). Counts + a bounded signal only — never content. */
+export interface TurnGuardrail {
+  turnId: string;
+  durationMs: number;
+  grounded: boolean;
+  signal: GuardrailSignal;
+}
 
 export interface SessionTapOptions {
   /** The session's W3C trace context. ABSENT => telemetry off => the tap is inert. */
@@ -35,6 +45,10 @@ export interface SessionTapOptions {
   /** The single-writer sink — the caller wires this to the telemetry_record command.
    *  The tap stays a pure signal->event mapper with no Tauri dependency of its own. */
   record: RecordTelemetry;
+  /** Optional read-side guardrail observer. Receives a born-redacted
+   *  latency/grounding readout per completed turn. NOT persisted — this is a live
+   *  observability signal (a persisted metric is a later, Rust-schema change). */
+  onGuardrail?: (g: TurnGuardrail) => void;
   /** Monotonic clock in ms (injectable for tests). */
   now?: () => number;
 }
@@ -74,6 +88,9 @@ export function createSessionTap(opts: SessionTapOptions): SessionTap {
   let turnStart: number | undefined;
   let turnSeq = 0;
   let turnId = '';
+  // Grounding heuristic (born-redacted): did a read-kind tool run this turn?
+  // ToolKind 'read' only — never a title/path/arg. Reset at each startTurn.
+  let turnGrounded = false;
 
   // Fire-and-forget; telemetry must never throw into a live session. record() is
   // called synchronously (so a sync test sink captures immediately) and any
@@ -96,13 +113,30 @@ export function createSessionTap(opts: SessionTapOptions): SessionTap {
     return { traceId: c.traceId, spanId: c.spanId };
   }
 
+  // Born-redacted guardrail readout for a completed turn — counts + a bounded
+  // signal, never content. Fire-and-forget; never throws into the session.
+  function emitGuardrail(durationMs: number, ok: boolean): void {
+    if (!enabled || !opts.onGuardrail) return;
+    const signal = evaluateTurnGuardrail({ durationMs, grounded: turnGrounded, ok });
+    try {
+      opts.onGuardrail({ turnId, durationMs, grounded: turnGrounded, signal });
+    } catch {
+      /* an observer failure never affects the session */
+    }
+  }
+
   function startTool(id: string, kind: ToolKind | null | undefined): void {
     if (!toolInfo.has(id)) toolInfo.set(id, { start: now(), kind: kind ?? 'other' });
+    // Grounding: a read-kind tool consulted a source this turn (born-redacted).
+    if (kind === 'read') turnGrounded = true;
   }
 
   function finishTool(id: string, kind: ToolKind | null | undefined, status: 'completed' | 'failed'): void {
     const info = toolInfo.get(id);
     toolInfo.delete(id);
+    // Grounding may first be observable on the terminal signal (a tool that
+    // arrived already-completed) — catch the read kind here too.
+    if ((kind ?? info?.kind) === 'read') turnGrounded = true;
     const durationMs = info ? now() - info.start : 0;
     emit({
       kind: 'tool_call',
@@ -143,6 +177,7 @@ export function createSessionTap(opts: SessionTapOptions): SessionTap {
       if (!enabled) return;
       turnStart = now();
       turnId = `turn-${++turnSeq}`; // a sequence id, never the prompt text
+      turnGrounded = false; // reset the per-turn grounding heuristic
     },
 
     endTurn(res: PromptResponse): void {
@@ -167,6 +202,7 @@ export function createSessionTap(opts: SessionTapOptions): SessionTap {
         ...tokens,
         ...tag(),
       });
+      emitGuardrail(durationMs, ok);
     },
 
     failTurn(err: unknown): void {
@@ -181,6 +217,7 @@ export function createSessionTap(opts: SessionTapOptions): SessionTap {
         errorType: errorClass(err), // bounded class, never err.message
         ...tag(),
       });
+      emitGuardrail(durationMs, false);
     },
   };
 }
