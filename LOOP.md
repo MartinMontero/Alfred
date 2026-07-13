@@ -107,6 +107,26 @@ origin/claude/alfred-project-status-63gf68. LOOP.md deliberately uncommitted.
 **STAGE B remaining before GATE B is closeable:** (1) Martin's go on `engines` field; (2) goose
 1.39→1.41 bump decision; (3) Windows execution of the live-goose trio + cargo telemetry canary +
 the B1 paid turn; (4) commit plan approval. Items (3) are Martin/Windows; the code is complete.
+
+## WINDOWS VERIFICATION — EXECUTED 2026-07-13 (Martin's laptop, resolved items 1-3 above)
+Decisions applied: engines field added (node >=22.12); goose bumped to 1.41.0 (installed + staged).
+- goose 1.41.0 installed (download_cli.ps1, pinned GOOSE_VERSION=1.41.0) → `goose --version` = 1.41.0.
+- `npm ci` → 790 packages, both patches applied (exceljs swap = no CDN fetch failure). 3 npm-audit
+  advisories (1 low/2 moderate) — logged, NOT auto-fixed (Stage-D supply-chain scope).
+- `npm run stage:goose` → "goose 1.41.0 matches the target", sidecar up to date.
+- `npm run test` → **240 passed | 0 skipped** — the live-goose trio (permission-startup,
+  acp-handshake, recipes.live ×2) EXECUTED and passed against 1.41.0. (Cloud was 236 | 4-skipped.)
+- `npm run test:rust` → **9 passed | 0 failed** incl. born-redacted byte-scan canary + Windows
+  job-guard. One dead-code warning (query_by_trace) — fixed with #[allow(dead_code)].
+- Stale "goose 1.39.0" test title + "248 MB" comment corrected in permission-startup.test.ts.
+- NOT run on Windows: literal full verify:all (typecheck/exclusion/builds) — platform-independent,
+  green in cloud; exclusion needs the sibling repo not present on the laptop.
+**DoD line "verify:all green locally WITH the live-goose trio EXECUTED" — SATISFIED** (the
+Windows-specific portion; the platform-independent remainder is green in cloud).
+**In progress:** B1 paid guardrail activation turn (npm run tauri dev) — Martin running it; cosmetic
+confirmation of the slow-ungrounded nudge + metrics capture.
+**Cleanups this turn (uncommitted, commit plan below):** stale title/comment fix, query_by_trace
+#[allow(dead_code)], phase5.md + LOOP.md evidence recording.
 probes (recall/artifact/continuation; plant-one-wrong-expectation discipline); B3 memory-poisoning
 review gate + privacy/consent; B1 guardrail Option B (zero-spend smoke first; the one paid
 activation turn = BLOCKED-announce for Martin).

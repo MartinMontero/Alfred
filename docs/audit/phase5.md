@@ -81,7 +81,26 @@ Three tests are LIVE-GATED and **skip by design off-Windows / without the staged
    recipes pass `goose recipe validate`.
 A green CI/vitest run **without** these is green-by-skip for goose behavior. Any release-gate claim
 about goose behavior requires all three EXECUTED on a Windows machine with the pinned sidecar and
-the run cited. Last known full execution: Martin's machine, REPORTED 2026-06-28 (phase-4 audit).
+the run cited.
+
+**EXECUTED on Windows 11, 2026-07-13 (Martin's machine, goose 1.41.0 staged):**
+- `npm run test` → **240 passed | 0 skipped** (26 files). The four previously-skipped live-goose
+  cases all ran: `permission-startup.test.ts` (goose ingests the real permission.yaml, ACP
+  initialize, no panic), `acp-handshake.test.ts` (handshake + provider list denylist-filtered),
+  `recipes.live.test.ts` ×2 (`goose recipe validate` on the shipped recipes).
+- `npm run test:rust` → **9 passed | 0 failed**, including
+  `born_redacted_canary_no_secret_or_note_body_on_disk` (byte-scan of the real DB — no note body
+  or secret on disk) and `job_guard_tests::closing_job_handle_kills_member_process` (Windows Job
+  Object orphan-guard — only provable on Windows).
+- `npm run stage:goose` → `goose 1.41.0 matches the target`, sidecar `up to date` — confirming the
+  binary the live trio exercised is 1.41.0 (the test's old "1.39.0" title was stale text, since
+  corrected).
+- Provider denylist vitest table: OpenAI/xAI/Meta blocked, Llama-on-permitted-infra allowed,
+  `MUST-STAY-BLOCKED failures: 0`, `MUST-BE-ALLOWED false positives: 0`.
+NOT run on Windows this session (platform-independent, green in cloud): the literal full
+`verify:all` chain — typecheck, `check:exclusion` (needs the sibling platform repo), and the two
+builds. The Windows-specific verification (the live trio + the Rust canary + the job-guard) is
+complete.
 
 ## Open (remaining Phase-5 work)
 - Step 5: latency–accuracy guardrail — **LANDED (deterministic core, zero-spend)** (Stage B).
