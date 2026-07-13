@@ -29,9 +29,31 @@ This session runs in the **Linux remote container** (`/home/user/Alfred`), not
   announce).
 
 ## STAGE POINTER
-**Current: STAGE B (Phase-5 completion) — CODE COMPLETE (cycles 1-6), awaiting GATE B review.**
-Next gate: GATE B (verify:all + skip report; live trio + cargo need Windows; commit plan per-unit;
-engines-field + goose-bump decisions).
+**Current: STAGE C (three skills locks) — CODE COMPLETE, awaiting GATE C review.**
+Stages A ✓, B ✓ (committed+pushed, Windows-verified 2026-07-13), C ✓ (this). Next after GATE C:
+Stage D (CI gate).
+
+## STAGE C EVIDENCE (2026-07-13, ADR-0003 Accepted → Implemented)
+Built as pure, tested security primitives (Skillsmith auto-install stays OUT per ADR-0003; the
+locks are the gate any future install must pass — no live install path wired yet, by design).
+- **Lock 1** `src/lib/skills/skill-scan.ts` — SKILL.md scan reusing the invisible-char sanitizer
+  (Tags block / zero-width / bidi / supplementary variation selectors) + `scanEncodedPayloads`
+  decode-before-match (base64/hex, flagged only when decoded content carries hidden chars — no FP
+  on legit assets) + frontmatter-identity requirement.
+- **Lock 2** `buildSkillConsent` + `src/components/SkillConsent.tsx` — install consent via the
+  shared ActionPreview ack gate (declared surface, trust tier, sanitized body excerpt, per-warning
+  acknowledgement; never silent).
+- **Lock 3** `src/lib/skills/skill-registry.ts` — SHA-256 content pin, `diffSkillSets`,
+  `rescanActiveSkills` session-start re-scan (rug-pull defense: flags out-of-band edits / now-warns
+  / missing).
+EXECUTED: typecheck + typecheck:mcp PASS; full vitest **254 passed | 4 skipped** (+18 skill tests);
+exclusion L1+L2 clean; build PASS (SkillConsent compiles into bundle). C4 planted-failure canaries
+FIRED (neutered Tags-detection → Tags canary failed; neutered hash-compare → rug-pull canary
+failed) then restored byte-clean.
+Docs: docs/threat-model.md Surface 4 updated; ADR-0003 marked Implemented.
+**GATE C decisions owed:** commit plan approval (per-unit); nothing committed yet.
+
+## PRIOR: STAGE B POINTER (kept for history)
 Stage order: A ✓ (committed b5c1a98..d1d96e3, pushed 2026-07-12) → B (now) → C three locks
 (ADR-0003 Accepted — authorized after B) → D CI gate → E release → F PWA deploy → G launch gate.
 

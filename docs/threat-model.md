@@ -64,10 +64,23 @@ the safety model). A6 the user's machine (shell reachable via goose developer__s
 
 ## Surface 4 — Skills/recipes channel
 Recipes: guarded (sanitizer + AST scan + preview + clean-tree staging; Phase 5 Step 1).
-Skills: **no ingestion path exists in the tree today**; ADR-0003 defines the three locks required
-before one may exist (scan incl. Tags block + decode-before-match, install consent, active-skill
-visibility + session-start re-scan). Honesty boundary: scanning cannot catch semantic injection —
-locks close the obfuscated/silent channels only; consent + tool gate carry the rest.
+Skills: the three locks (ADR-0003) are **BUILT and tested** (Stage C):
+- **Lock 1** `src/lib/skills/skill-scan.ts` — sanitize-before-anything (Tags block, zero-width,
+  bidi, supplementary variation selectors) PLUS `scanEncodedPayloads` decode-before-match
+  (base64/hex blobs decoded and re-scanned; flagged only when the decoded form carries a
+  high-severity hidden char, so legit assets don't false-positive); frontmatter identity required.
+- **Lock 2** `buildSkillConsent` + `src/components/SkillConsent.tsx` — install-time consent through
+  the shared ActionPreview ack gate: declared surface, trust tier, sanitized body excerpt, every
+  warning acknowledged; never silent.
+- **Lock 3** `src/lib/skills/skill-registry.ts` — SHA-256 content pin at install, `diffSkillSets`
+  (added/removed/mutated since last session), and `rescanActiveSkills` (session-start re-scan
+  flagging out-of-band edits = the rug-pull, or a file that now warns/vanished).
+Proven by `skill-scan.test.ts` + `skill-registry.test.ts`, incl. planted-failure canaries (Tags
+payload, base64-hidden payload, post-install mutation) fired and reverted 2026-07-13.
+**Still OUT by design (ADR-0003):** no live skill-install path is wired yet — the locks are the
+gate any future install MUST pass; Skillsmith auto-install stays out until wired + Martin's word.
+Honesty boundary: scanning cannot catch semantic injection in plain visible language — locks close
+the obfuscated/encoded/silent channels only; consent + the tool-permission gate carry the rest.
 
 ## Surface 5 — Provider denylist (Meta/OpenAI/xAI)
 **Stated honestly: default-safe, not tamper-proof.** The denylist is enforced at Alfred's own
