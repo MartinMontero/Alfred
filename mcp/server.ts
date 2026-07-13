@@ -22,6 +22,7 @@ import { appendUnderHeading, replaceUnderHeading } from './markdown';
 import { isNaddr, decodeNaddr, resolveIdentifierToPath } from './naddr';
 import { parseFrontmatter, setProperty } from '../src/lib/frontmatter';
 import { extractWikilinks } from '../src/lib/agentic/frontmatter-schema';
+import { reviewMemory } from '../src/lib/agentic/memory-review';
 
 export const SERVER_NAME = 'alfred-vault';
 export const SERVER_VERSION = '0.1.0';
@@ -246,6 +247,15 @@ export function createAlfredMcpServer(vaultRoot: string): { server: McpServer; v
     inputSchema: z.strictObject({ file: z.string(), heading: z.string(), content: z.string() }),
   }, async (args) => {
     try {
+      // Poisoning chokepoint (Phase 5 Step 7): an MCP write is agent-authored and
+      // untrusted. Refuse OUTRIGHT a durable write that carries invisible/
+      // obfuscation characters or tries to relax a security control; clean facts
+      // are still written but provenance-stamped "review before trusting" (the
+      // human-review discipline — never silently trusted).
+      const review = reviewMemory({ text: args.content }, 'agent');
+      if (review.verdict === 'reject') {
+        return fail(`Refused: durable memory write blocked (${review.reasons.join(', ')}). Not recorded.`);
+      }
       const rel = args.file.startsWith('memory-bank/') ? args.file : `memory-bank/${args.file}`;
       const existing = (await vault.exists(rel)) ? await vault.read(rel) : '';
       const stamp = `<!-- provenance: mcp · ${new Date().toISOString()} · review before trusting -->`;
