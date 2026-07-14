@@ -29,8 +29,10 @@ This session runs in the **Linux remote container** (`/home/user/Alfred`), not
   announce).
 
 ## STAGE POINTER
-**Current: BETA SHIP ORDERS — W0 ✓ (all steps; step 2 landed 907bef2) · W1 LANDED (G1 replicated
-here; G2 routed to the Windows leg) · next: laptop pull + G2 matrix, then W2 (epistemic landing).**
+**Current: BETA SHIP ORDERS — W0 ✓ · W1 LANDED (G2 in flight on the laptop) · W2 ✓ (epistemic
+canon landed 78f6da1, hashes verified; audit: docs/audit/epistemic-canon-landing.md; stage-d
+execution addendum appended 95377cd on builder's word) · next: W1 Windows-leg tails, then W3
+(operator rulings batch — see operator card).**
 W1 evidence: docs/audit/study-instrument-landing.md. Gate (a) RATIFIED (ADR-0005 Accepted
 2026-07-14, draft date disclosed); gate (b) LOOP-DESIGN.md committed. Commits 271cbbc / 90cc7da /
 008a14b; vitest 254|4 → 265|4 (+1 file/+11 tests exactly, skips unchanged); contrast all-AA; both
