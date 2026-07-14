@@ -1,5 +1,11 @@
 # Dependency vulnerability allowlist
 
+**Adjudication record (the ruling of record):** `docs/audit/stage-d-vulnerability-decision.md`
+(2026-07-13) — full reachability adjudication of every finding at `224e624`, rulings table,
+corrections log. THIS file is the operational allowlist that implements those rulings: live
+entries, triggers, review dates. One source, one pointer — the ID list lives in these two
+documents only (adjudication + operational); scanner configs reference, never re-argue.
+
 **Policy.** The default state of this file is EMPTY. Every entry here is a documented exception
 carrying three mandatory parts: **proof** (why the vulnerable code path is unreachable or the
 impact class is acceptable), **triggers** (concrete events that force re-evaluation before the
