@@ -133,10 +133,21 @@ jobs:
       # Tauri deps here (glib is Linux-GTK; Alfred ships Windows/WebView2; the
       # unic-*/rustls-pemfile crates are unmaintained-not-vulnerable); they are
       # reported but do not block. A real vulnerability still fails the gate.
+      #
+      # The two --ignore flags are the DOCUMENTED ALLOWLIST (builder-authorized
+      # Gate D, 2026-07-14): quick-xml RUSTSEC-2026-0194/0195, DoS-only, parse-side
+      # flaws on write-only/not-shipped usages. Per-finding proof, triggers, and
+      # the 2026-10-14 review date: docs/security/dependency-allowlist.md.
+      # These two IDs (plus npm-side GHSA-w5hq-g745-h8pq, which no cargo gate sees)
+      # are the ENTIRE allowlist. rustls-webpki RUSTSEC-2026-0098/0099/0104 were
+      # FIXED by ruling A (reqwest 0.11->0.12, patched rustls stack) — never
+      # ignored, so any regression to a vulnerable version turns this job red.
       - name: cargo audit (fail only on real vulnerabilities)
         run: |
           cargo install cargo-audit --locked
-          cargo audit --file src-tauri/Cargo.lock --json > audit.json || true
+          cargo audit --file src-tauri/Cargo.lock --json \
+            --ignore RUSTSEC-2026-0194 --ignore RUSTSEC-2026-0195 \
+            > audit.json || true
           python3 - <<'PY'
           import json, sys
           try:

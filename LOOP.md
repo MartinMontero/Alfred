@@ -113,6 +113,39 @@ transitive, mostly moderate, on the old rustls-webpki 0.101.7 in the tree. Optio
 Tauri bump (a documented-allowlist per constitution, but suppressing an advisory = stop-and-ask →
 his word required). NOT allowlisted autonomously.
 
+## GATE D VERDICT (2026-07-14, builder's words) + EXECUTION
+Verdict: "Option B (documented allowlist) for quick-xml ×2 and uuid — with per-finding proof and
+triggers. Take the safe fix for @babel/core. Confirm-then-close rustls-webpki (likely already
+patched at 224e624). Log-and-move the 23 unmaintained/unsound warnings. No Tauri bump."
+Executed (working tree, uncommitted, at 224e624):
+- **Allowlist LANDED:** `docs/security/dependency-allowlist.md` — per-finding proof + triggers +
+  review date 2026-10-14 for quick-xml RUSTSEC-2026-0194/0195 ×2 copies (0.37.5 = winrt toast
+  WRITER in the Windows artifact, parse-side flaws unreachable; 0.38.4 = Linux-Wayland subtree,
+  not compiled into the shipped .exe) and npm uuid GHSA-w5hq-g745-h8pq via exceljs (v4-only,
+  zero-arg, write-path-only; Alfred is read-only viewer). ci.yml cargo-audit now carries the two
+  --ignore flags; verified locally: vuln count 7→3. `.grype.yaml` stays empty (no GHSA aliases
+  for quick-xml; uuid is moderate < high cutoff).
+- **@babel/core FIXED:** npm audit fix → 7.29.7 (GHSA-4x5r-pxfx-6jf8 cleared); lockfile-only;
+  tsc + Vitest 254/254 (4 honest Linux skips) green after.
+- **CORRECTION — rustls-webpki confirm-then-close FAILED confirmation:** fresh cargo-audit
+  (DB 2026-07-14) still flags 0098/0099/0104 at 0.101.7; patched ranges start 0.103.12/13.
+  Also corrected: the fix path is NOT a Tauri bump — reqwest 0.11 is Alfred's own direct dep
+  (lib.rs custom-provider TLS commands). Real fix = reqwest 0.11.27→0.12.28 (rustls 0.23 +
+  webpki 0.103.13; also clears the rustls-pemfile unmaintained warning). NOT ignored in CI —
+  rust job deliberately red pending the builder's word. STOP-AND-ASK reissued → RESOLVED below.
+- **FINAL RULING (2026-07-14, builder's words):** Decision 1 = **A** — "Bump reqwest 0.11.27 →
+  0.12.28 (your locally verified line wins over the 0.13 in the planning docs — the proof
+  standard decides, not the version number)." Decision 2 = commit and push after three
+  corrections: (1) no webpki ignore anywhere — ruling A means FIXED, never ignored (an ignore on
+  a fixed item masks regressions); (2) the allowlist is exactly three IDs — RUSTSEC-2026-0194,
+  RUSTSEC-2026-0195, GHSA-w5hq-g745-h8pq — each with reason + pointer to this decision record;
+  (3) the Gate-D records state ruling A, not B. Then the bump as its own commit; proof standard:
+  before/after `cargo tree -i rustls-webpki` (after = ONLY ≥0.103.13), `cargo tree -i rustls`
+  (no 0.21.x), cargo test 9/9, cargo-audit 0 vulns, npm test at machine baseline; never
+  `npm audit fix --force`.
+- **23 informational warnings logged** (18 unmaintained incl. Linux-GTK family; 5 unsound) in the
+  allowlist doc; non-blocking per constitution; monthly-cadence review.
+
 ## PRIOR: STAGE B POINTER (kept for history)
 Stage order: A ✓ (committed b5c1a98..d1d96e3, pushed 2026-07-12) → B (now) → C three locks
 (ADR-0003 Accepted — authorized after B) → D CI gate → E release → F PWA deploy → G launch gate.
