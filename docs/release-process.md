@@ -35,8 +35,14 @@ checklist Martin executes manually.
 
 ## Real-goose release gate
 
+**Update (Stage D):** `.github/workflows/release.yml` now downloads the pinned goose 1.41.0 CLI on
+the Windows runner, stages it, and runs `npm run test` before building — so the live-goose trio
+**does execute in the release lane** (a Windows runner has what Linux CI cannot). `ci.yml` (Linux,
+every push) still cannot, and says so in its job summary. The manual checklist below remains the
+belt-and-suspenders gate for a human-verified release and for the installed-app journeys.
+
 The three live-goose tests (permission-startup, acp-handshake, recipes.live) skip off-Windows/
-without the sidecar — hosted Linux CI can NEVER prove goose behavior. Options:
+without the sidecar — hosted **Linux** CI can NEVER prove goose behavior. Options:
 - **Preferred:** a self-hosted Windows runner (Martin's machine or dedicated) registered for a
   `release-gate` job that stages the pinned sidecar and runs the trio + `npm run verify:all`.
 - **Until that exists (the operative gate):** a manual checklist Martin executes per release, on

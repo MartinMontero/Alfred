@@ -1,8 +1,10 @@
 # 0003 — Skill/recipe format handling and the Skillsmith dependency (three locks)
 
-**Status:** Accepted (2026-07-12) — builder verdict: **build the three locks.** Stage C is
-authorized once Stage B closes; Skillsmith auto-install wiring stays out until all three locks are
-green by executed test and the builder separately says the word.
+**Status:** Accepted (2026-07-12); **Implemented (Stage C, 2026-07-13).** Builder verdict: build
+the three locks. All three are landed and proven by executed tests with planted-failure canaries
+(`src/lib/skills/skill-scan.ts` + `skill-registry.ts`, `src/components/SkillConsent.tsx`).
+Skillsmith auto-install wiring remains OUT until a skill-install path is built and the builder
+separately says the word — the locks are the gate that path must pass.
 **Decider:** builder (Martin Montero).
 **Phase:** drafted in the open-beta loop, Stage A. No lock code lands until Accepted.
 

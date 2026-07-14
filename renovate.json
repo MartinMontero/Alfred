@@ -1,0 +1,24 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    "helpers:pinGitHubActionDigests",
+    ":semanticCommits"
+  ],
+  "labels": ["dependencies"],
+  "packageRules": [
+    {
+      "description": "Keep GitHub Actions pinned to a commit digest (constitution rule); Renovate bumps the digest, never floats to a tag.",
+      "matchManagers": ["github-actions"],
+      "pinDigests": true
+    },
+    {
+      "description": "Group the noisy dev toolchains so PRs stay reviewable.",
+      "matchPackagePatterns": ["^@tauri-apps/", "^@milkdown/", "^@codemirror/", "^@xterm/"],
+      "groupName": "editor + tauri toolchain"
+    }
+  ],
+  "vulnerabilityAlerts": {
+    "labels": ["security"]
+  }
+}

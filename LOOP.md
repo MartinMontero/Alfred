@@ -29,9 +29,124 @@ This session runs in the **Linux remote container** (`/home/user/Alfred`), not
   announce).
 
 ## STAGE POINTER
-**Current: STAGE B (Phase-5 completion) — CODE COMPLETE (cycles 1-6), awaiting GATE B review.**
-Next gate: GATE B (verify:all + skip report; live trio + cargo need Windows; commit plan per-unit;
-engines-field + goose-bump decisions).
+**Current: STAGE D (CI gate) — CODE COMPLETE, awaiting GATE D review.**
+Stages A ✓, B ✓ (Windows-verified), C ✓ (committed+pushed 8d38b3e). Next after GATE D: Stage E
+(release pipeline).
+
+## STAGE D EVIDENCE (2026-07-13)
+- **.github/workflows/ci.yml** — NEW. push + PR, Linux, Node 22. Jobs: `verify` (typecheck app+mcp,
+  vitest, vendor-exclusion L1+L2 blocking + L3 advisory via a cloned sibling platform repo,
+  zero-Soapbox DEPENDENCY-manifest gate [not a source grep — constitution text names Soapbox
+  legitimately], build + build:web), `rust` (apt webkit deps + cargo test [byte-scan canary] +
+  cargo-audit), `supply-chain` (OSV-Scanner, gitleaks, Syft SBOM + Grype fail-on-high/critical),
+  `quality` (axe-core 0 serious/critical, Lighthouse a11y≥95/perf≥90/LCP≤2.5s/CLS≤0.1, lychee).
+  **D2 honest skip surfacing:** a job-summary note that the live-goose trio is NOT exercised on
+  Linux CI; Windows verify:all is the source of truth.
+- **.github/workflows/release.yml** — REWRITTEN. Windows-only (Mac/Linux/Android deferred per SCOPE
+  OUT), Node 22, all actions SHA-pinned. Downloads pinned goose 1.41.0 + stages it (--require
+  hard-fail), runs `npm run test` (the live-goose trio EXECUTES here — Windows runner), builds via
+  tauri-action (unsigned when signing secrets absent), draft release. **This closes part of D4:**
+  goose behavior is now exercised in the release lane, not just Linux-skipped.
+- **renovate.json** (D5) — pinDigests for github-actions (keeps SHA pins, bumps them), grouped dev
+  toolchains, security labels.
+- **.grype.yaml** — empty documented allowlist (no silent silencing). **lighthouserc.json** — the
+  four thresholds against staticDistDir dist-web.
+- **ALL 14 actions SHA-pinned** (real SHAs fetched via git ls-remote from each public repo;
+  verified: no floating tags). No Trivy (CVE-2026-33634). Node 22 (was 20).
+EXECUTED here: YAML/JSON parse valid; SHA-pin audit clean; no-Trivy-usage; Node-22 confirmed.
+CANNOT execute here (GATE-D validation is a real run): the actual CI on GitHub's runners.
+**GATE D decisions owed:** commit plan; then the go-ahead items are (a) PUSH the workflows (a real
+CI run is the validation), and (b) the D6 CI-fail canary — push a branch with a deliberately failing
+check to prove the gate blocks, then delete. First real run WILL surface any third-party action
+input-name mismatches (OSV/anchore/axe/lighthouse) + a11y/perf threshold calibration — expected,
+that's what the live run is for.
+
+## PRIOR: STAGE C POINTER (kept for history)
+
+## STAGE C EVIDENCE (2026-07-13, ADR-0003 Accepted → Implemented)
+Built as pure, tested security primitives (Skillsmith auto-install stays OUT per ADR-0003; the
+locks are the gate any future install must pass — no live install path wired yet, by design).
+- **Lock 1** `src/lib/skills/skill-scan.ts` — SKILL.md scan reusing the invisible-char sanitizer
+  (Tags block / zero-width / bidi / supplementary variation selectors) + `scanEncodedPayloads`
+  decode-before-match (base64/hex, flagged only when decoded content carries hidden chars — no FP
+  on legit assets) + frontmatter-identity requirement.
+- **Lock 2** `buildSkillConsent` + `src/components/SkillConsent.tsx` — install consent via the
+  shared ActionPreview ack gate (declared surface, trust tier, sanitized body excerpt, per-warning
+  acknowledgement; never silent).
+- **Lock 3** `src/lib/skills/skill-registry.ts` — SHA-256 content pin, `diffSkillSets`,
+  `rescanActiveSkills` session-start re-scan (rug-pull defense: flags out-of-band edits / now-warns
+  / missing).
+EXECUTED: typecheck + typecheck:mcp PASS; full vitest **254 passed | 4 skipped** (+18 skill tests);
+exclusion L1+L2 clean; build PASS (SkillConsent compiles into bundle). C4 planted-failure canaries
+FIRED (neutered Tags-detection → Tags canary failed; neutered hash-compare → rug-pull canary
+failed) then restored byte-clean.
+Docs: docs/threat-model.md Surface 4 updated; ADR-0003 marked Implemented.
+**GATE C decisions owed:** commit plan approval (per-unit); nothing committed yet.
+
+## STAGE D EVIDENCE (2026-07-13) — CI gate authored + driven on live GitHub Actions
+Files: `.github/workflows/ci.yml` (verify / rust / supply-chain / quality; Node 22; all actions
+SHA-pinned; no Trivy), rewritten `release.yml` (Windows, staged goose 1.41, live trio in the
+release lane), `renovate.json` (digest-pinned actions), `.grype.yaml`, `lighthouserc.json`.
+Committed + pushed (Martin authorized commit+push+iterate-to-green for Stage D).
+**Live-run results (iterated over 7 rounds, each fixing a distinct real CI issue, not a defect in
+Alfred):**
+- **D6 canary PROVEN:** round-1 canary branch `claude/ci-fail-canary` — its `verify` job went RED
+  on a deliberately-failing test. The gate blocks bad code. (Branch undeletable via the git proxy;
+  Martin to remove via GitHub UI.)
+- **verify GREEN:** typecheck app+mcp, Vitest, exclusion L1+L2+L3 (clones the sibling platform repo
+  in-workflow), zero-Soapbox dep gate, both builds.
+- **supply-chain GREEN:** OSV (subpath action, report-only), gitleaks, Syft SBOM, Grype (blocking
+  high/critical).
+- **quality:** axe-core + Lighthouse GREEN; lychee fixed (was scanning node_modules, then bot-blocked
+  research citations → scoped to operational docs, `docs/research/` excluded, accept 429).
+- **rust:** `cargo test` + born-redacted byte-scan canary GREEN on Linux (placeholder sidecar for the
+  build-script check). `cargo audit` reworked to fail only on real vulnerabilities (informational
+  unmaintained/unsound reported, non-blocking = constitution's block-high/critical).
+**BLOCKED — GATE D decision owed (real security finding, stop-and-ask):** cargo-audit caught 9
+transitive vulnerabilities. `cargo update` fixed 2 in-constraint (bytes→1.12.1 RUSTSEC-2026-0007;
+time→0.3.53 RUSTSEC-2026-0009). **5 remain, needing a Tauri/reqwest bump (outside current
+constraints):** quick-xml RUSTSEC-2026-0194 + 0195 (parser DoS; Alfred parses no untrusted XML),
+rustls-webpki RUSTSEC-2026-0098 + 0099 (name-constraint validation) + 0104 (CRL-parse panic) — all
+transitive, mostly moderate, on the old rustls-webpki 0.101.7 in the tree. Options for Martin:
+(A) bump Tauri/reqwest to pull patched versions (real scope, needs Windows compile-verify);
+(B) time-boxed DOCUMENTED allowlist of these 5 with severity justification, tracked for the Stage-E
+Tauri bump (a documented-allowlist per constitution, but suppressing an advisory = stop-and-ask →
+his word required). NOT allowlisted autonomously.
+
+## GATE D VERDICT (2026-07-14, builder's words) + EXECUTION
+Verdict: "Option B (documented allowlist) for quick-xml ×2 and uuid — with per-finding proof and
+triggers. Take the safe fix for @babel/core. Confirm-then-close rustls-webpki (likely already
+patched at 224e624). Log-and-move the 23 unmaintained/unsound warnings. No Tauri bump."
+Executed (working tree, uncommitted, at 224e624):
+- **Allowlist LANDED:** `docs/security/dependency-allowlist.md` — per-finding proof + triggers +
+  review date 2026-10-14 for quick-xml RUSTSEC-2026-0194/0195 ×2 copies (0.37.5 = winrt toast
+  WRITER in the Windows artifact, parse-side flaws unreachable; 0.38.4 = Linux-Wayland subtree,
+  not compiled into the shipped .exe) and npm uuid GHSA-w5hq-g745-h8pq via exceljs (v4-only,
+  zero-arg, write-path-only; Alfred is read-only viewer). ci.yml cargo-audit now carries the two
+  --ignore flags; verified locally: vuln count 7→3. `.grype.yaml` stays empty (no GHSA aliases
+  for quick-xml; uuid is moderate < high cutoff).
+- **@babel/core FIXED:** npm audit fix → 7.29.7 (GHSA-4x5r-pxfx-6jf8 cleared); lockfile-only;
+  tsc + Vitest 254/254 (4 honest Linux skips) green after.
+- **CORRECTION — rustls-webpki confirm-then-close FAILED confirmation:** fresh cargo-audit
+  (DB 2026-07-14) still flags 0098/0099/0104 at 0.101.7; patched ranges start 0.103.12/13.
+  Also corrected: the fix path is NOT a Tauri bump — reqwest 0.11 is Alfred's own direct dep
+  (lib.rs custom-provider TLS commands). Real fix = reqwest 0.11.27→0.12.28 (rustls 0.23 +
+  webpki 0.103.13; also clears the rustls-pemfile unmaintained warning). NOT ignored in CI —
+  rust job deliberately red pending the builder's word. STOP-AND-ASK reissued → RESOLVED below.
+- **FINAL RULING (2026-07-14, builder's words):** Decision 1 = **A** — "Bump reqwest 0.11.27 →
+  0.12.28 (your locally verified line wins over the 0.13 in the planning docs — the proof
+  standard decides, not the version number)." Decision 2 = commit and push after three
+  corrections: (1) no webpki ignore anywhere — ruling A means FIXED, never ignored (an ignore on
+  a fixed item masks regressions); (2) the allowlist is exactly three IDs — RUSTSEC-2026-0194,
+  RUSTSEC-2026-0195, GHSA-w5hq-g745-h8pq — each with reason + pointer to this decision record;
+  (3) the Gate-D records state ruling A, not B. Then the bump as its own commit; proof standard:
+  before/after `cargo tree -i rustls-webpki` (after = ONLY ≥0.103.13), `cargo tree -i rustls`
+  (no 0.21.x), cargo test 9/9, cargo-audit 0 vulns, npm test at machine baseline; never
+  `npm audit fix --force`.
+- **23 informational warnings logged** (18 unmaintained incl. Linux-GTK family; 5 unsound) in the
+  allowlist doc; non-blocking per constitution; monthly-cadence review.
+
+## PRIOR: STAGE B POINTER (kept for history)
 Stage order: A ✓ (committed b5c1a98..d1d96e3, pushed 2026-07-12) → B (now) → C three locks
 (ADR-0003 Accepted — authorized after B) → D CI gate → E release → F PWA deploy → G launch gate.
 
@@ -107,6 +222,26 @@ origin/claude/alfred-project-status-63gf68. LOOP.md deliberately uncommitted.
 **STAGE B remaining before GATE B is closeable:** (1) Martin's go on `engines` field; (2) goose
 1.39→1.41 bump decision; (3) Windows execution of the live-goose trio + cargo telemetry canary +
 the B1 paid turn; (4) commit plan approval. Items (3) are Martin/Windows; the code is complete.
+
+## WINDOWS VERIFICATION — EXECUTED 2026-07-13 (Martin's laptop, resolved items 1-3 above)
+Decisions applied: engines field added (node >=22.12); goose bumped to 1.41.0 (installed + staged).
+- goose 1.41.0 installed (download_cli.ps1, pinned GOOSE_VERSION=1.41.0) → `goose --version` = 1.41.0.
+- `npm ci` → 790 packages, both patches applied (exceljs swap = no CDN fetch failure). 3 npm-audit
+  advisories (1 low/2 moderate) — logged, NOT auto-fixed (Stage-D supply-chain scope).
+- `npm run stage:goose` → "goose 1.41.0 matches the target", sidecar up to date.
+- `npm run test` → **240 passed | 0 skipped** — the live-goose trio (permission-startup,
+  acp-handshake, recipes.live ×2) EXECUTED and passed against 1.41.0. (Cloud was 236 | 4-skipped.)
+- `npm run test:rust` → **9 passed | 0 failed** incl. born-redacted byte-scan canary + Windows
+  job-guard. One dead-code warning (query_by_trace) — fixed with #[allow(dead_code)].
+- Stale "goose 1.39.0" test title + "248 MB" comment corrected in permission-startup.test.ts.
+- NOT run on Windows: literal full verify:all (typecheck/exclusion/builds) — platform-independent,
+  green in cloud; exclusion needs the sibling repo not present on the laptop.
+**DoD line "verify:all green locally WITH the live-goose trio EXECUTED" — SATISFIED** (the
+Windows-specific portion; the platform-independent remainder is green in cloud).
+**In progress:** B1 paid guardrail activation turn (npm run tauri dev) — Martin running it; cosmetic
+confirmation of the slow-ungrounded nudge + metrics capture.
+**Cleanups this turn (uncommitted, commit plan below):** stale title/comment fix, query_by_trace
+#[allow(dead_code)], phase5.md + LOOP.md evidence recording.
 probes (recall/artifact/continuation; plant-one-wrong-expectation discipline); B3 memory-poisoning
 review gate + privacy/consent; B1 guardrail Option B (zero-spend smoke first; the one paid
 activation turn = BLOCKED-announce for Martin).

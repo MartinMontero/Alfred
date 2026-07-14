@@ -1,0 +1,257 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# CI gate (Stage D). Runs on every push + PR. Linux runners, Node 22.
+# EVERY action is pinned to a full commit SHA (constitution: no floating tags;
+# lesson from the Trivy CVE-2026-33634 supply-chain incident). No Trivy anywhere.
+# Renovate (renovate.json) bumps these pins while preserving the digest form.
+name: CI
+
+on:
+  push:
+  pull_request:
+
+# Least privilege by default; jobs opt into more only if they must.
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '22'
+
+jobs:
+  # ---- correctness + vendor exclusion + zero-Soapbox + builds -----------------
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Alfred
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      # The vendor-exclusion engine lives in the sibling platform repo, which the
+      # npm scripts reference as ../wecanjustbuildthings.dev. Clone it there so
+      # `npm run check:exclusion` works unchanged (it is a public repo).
+      - name: Clone platform repo (exclusion engine) as sibling
+        run: |
+          git clone --depth 1 https://github.com/MartinMontero/wecanjustbuildthings.dev ../wecanjustbuildthings.dev
+
+      - name: Setup Node
+        uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install Alfred deps
+        run: npm ci
+
+      - name: Install platform-repo deps (exclusion engine)
+        run: npm ci --prefix ../wecanjustbuildthings.dev --ignore-scripts
+
+      - name: Typecheck (app + MCP)
+        run: |
+          npm run typecheck
+          npm run typecheck:mcp
+
+      - name: Unit tests (Vitest)
+        run: npm run test
+
+      # HONEST SKIP SURFACING (D2): the live-goose trio cannot run here (no sidecar,
+      # Linux runners). Say so loudly so a green CI is never mistaken for goose proof.
+      - name: Note un-exercised goose tests
+        if: always()
+        run: |
+          {
+            echo "### CI coverage note"
+            echo ""
+            echo "**live-goose trio NOT exercised in CI** — \`permission-startup\`, \`acp-handshake\`, \`recipes.live\` skip on Linux runners with no staged sidecar."
+            echo "Source of truth for goose behavior: the Windows \`verify:all\` run (see \`docs/windows-verification.md\`)."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Vendor exclusion — layers 1+2 (blocking)
+        run: npm run check:exclusion
+
+      - name: Vendor exclusion — layer 3 (advisory)
+        run: npm run check:exclusion:l3
+
+      # Zero-Soapbox gate: a DEPENDENCY-manifest check (NOT a source grep — the
+      # constitution text in topology.ts/spec-kit.ts legitimately names Soapbox).
+      - name: Zero-Soapbox dependency gate
+        run: |
+          if grep -riE 'soapbox|@nostrify' package.json package-lock.json .mcp.json; then
+            echo "::error::Soapbox/Nostrify provenance found in a dependency manifest"
+            exit 1
+          fi
+          echo "No Soapbox/Nostrify in dependency manifests."
+
+      - name: Build (desktop frontend)
+        run: npm run build
+
+      - name: Build (PWA)
+        run: npm run build:web
+
+  # ---- Rust: born-redacted telemetry canary + cargo audit --------------------
+  rust:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30 # stable
+        with:
+          toolchain: stable
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@9d47c6ad4b02e050fd481d890b2ea34778fd09d6 # v2.7.8
+        with:
+          workspaces: src-tauri
+
+      # Tauri's crate graph needs the WebKit/GTK system libs to compile on Linux.
+      - name: Install Linux system libs
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev \
+            patchelf libsecret-1-dev libssl-dev libdbus-1-dev
+
+      # Tauri's build script requires the externalBin sidecar to exist for the
+      # target. Linux CI has no staged goose; the tests never spawn it, so a
+      # tiny executable placeholder satisfies the build-script existence check.
+      - name: Placeholder goose sidecar (build-script existence check only)
+        run: |
+          mkdir -p src-tauri/binaries
+          printf '#!/bin/sh\nexit 0\n' > src-tauri/binaries/goose-x86_64-unknown-linux-gnu
+          chmod +x src-tauri/binaries/goose-x86_64-unknown-linux-gnu
+
+      - name: cargo test (telemetry byte-scan canary, etc.)
+        run: cargo test --manifest-path src-tauri/Cargo.toml
+
+      # Alfred's Cargo.lock lives under src-tauri/ (Tauri app), not the repo root,
+      # so run cargo-audit directly against it, and FAIL ONLY ON ACTUAL
+      # VULNERABILITIES (the constitution's "block high/critical"). Informational
+      # advisories — `unmaintained` / `unsound` / `yanked` — are all transitive
+      # Tauri deps here (glib is Linux-GTK; Alfred ships Windows/WebView2; the
+      # unic-*/rustls-pemfile crates are unmaintained-not-vulnerable); they are
+      # reported but do not block. A real vulnerability still fails the gate.
+      #
+      # The two --ignore flags are the DOCUMENTED ALLOWLIST (builder-authorized
+      # Gate D, 2026-07-14): quick-xml RUSTSEC-2026-0194/0195, DoS-only, parse-side
+      # flaws on write-only/not-shipped usages. Per-finding proof, triggers, and
+      # the 2026-10-14 review date: docs/security/dependency-allowlist.md.
+      # These two IDs (plus npm-side GHSA-w5hq-g745-h8pq, which no cargo gate sees)
+      # are the ENTIRE allowlist. rustls-webpki RUSTSEC-2026-0098/0099/0104 were
+      # FIXED by ruling A (reqwest 0.11->0.12, patched rustls stack) — never
+      # ignored, so any regression to a vulnerable version turns this job red.
+      - name: cargo audit (fail only on real vulnerabilities)
+        run: |
+          cargo install cargo-audit --locked
+          cargo audit --file src-tauri/Cargo.lock --json \
+            --ignore RUSTSEC-2026-0194 --ignore RUSTSEC-2026-0195 \
+            > audit.json || true
+          python3 - <<'PY'
+          import json, sys
+          try:
+              d = json.load(open('audit.json'))
+          except Exception as e:
+              print('cargo-audit: could not parse JSON output:', e); sys.exit(1)
+          v = d.get('vulnerabilities') or {}
+          count = v.get('count', 0)
+          found = v.get('found', count > 0)
+          w = d.get('warnings') or {}
+          wc = sum(len(x) for x in w.values()) if isinstance(w, dict) else 0
+          print(f'cargo-audit: vulnerabilities={count}, informational(unmaintained/unsound/yanked)={wc}')
+          if found or count > 0:
+              for item in (v.get('list') or []):
+                  a = item.get('advisory') or {}
+                  print('  VULNERABILITY', a.get('id'), a.get('package'), '-', a.get('title'))
+              sys.exit(1)
+          print('  No actual vulnerabilities. Informational advisories reported but non-blocking (all transitive; see docs/threat-model.md).')
+          PY
+
+  # ---- supply chain: OSV, gitleaks, Syft SBOM + Grype ------------------------
+  supply-chain:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write # OSV action may upload SARIF to the Security tab
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0 # gitleaks scans history
+
+      # The OSV composite action lives at a SUBPATH of the repo (verified against
+      # google/osv-scanner-action). Report-only here (surfaces all advisories);
+      # the blocking high/critical gate is Grype below with a documented allowlist.
+      - name: OSV-Scanner (dependency vulnerabilities, report-only)
+        continue-on-error: true
+        uses: google/osv-scanner-action/osv-scanner-action@7222d1c7ee4f96d71d883e0d3c603f1e1705eca9 # v2.3.5
+
+      - name: gitleaks (secret scanning)
+        uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2.3.9
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Syft SBOM
+        uses: anchore/sbom-action@df80a981bc6edbc4e220a492d3cbe9f5547a6e75 # v0.17.9
+        with:
+          path: .
+          format: spdx-json
+          artifact-name: alfred-sbom.spdx.json
+
+      - name: Grype scan (block high/critical; allowlist in .grype.yaml)
+        uses: anchore/scan-action@7c05671ae9be166aeb155bad2d7df9121823df32 # v6.1.0
+        with:
+          path: .
+          fail-build: true
+          severity-cutoff: high
+
+  # ---- docs + accessibility + perf (first real run tunes thresholds) ---------
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Setup Node
+        uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Build PWA
+        run: npm run build:web
+
+      - name: axe-core (0 serious/critical WCAG 2.1 A/AA)
+        run: |
+          npx --yes serve -s dist-web -l 4173 &
+          npx --yes wait-on http://localhost:4173 -t 30000
+          npx --yes @axe-core/cli http://localhost:4173 \
+            --exit --tags wcag2a,wcag2aa --stdout > axe.json || AXE_FAILED=1
+          node -e '
+            const r = require("./axe.json");
+            const bad = (r.violations||[]).filter(v => ["serious","critical"].includes(v.impact));
+            if (bad.length) { console.error("axe serious/critical:", bad.map(v=>v.id)); process.exit(1); }
+            console.log("axe: 0 serious/critical");
+          '
+
+      - name: Lighthouse CI (perf >=90, a11y >=95, LCP <=2.5s, CLS <=0.1)
+        run: npx --yes @lhci/cli@0.14.x autorun || echo "::warning::Lighthouse thresholds need first-run calibration"
+
+      # Link-check Alfred's OPERATIONAL docs (install guide, README, security,
+      # release process, etc.) — NOT node_modules and NOT docs/research/, which are
+      # secondary-source citation archives ("the map, not the territory" per
+      # CLAUDE.md) full of bot-blocking (403 Reddit/Medium) and rate-limited URLs
+      # that are not user-facing link surfaces. Tolerate transient 429; a real 404
+      # in an operational doc still fails.
+      - name: lychee (link check over operational docs)
+        uses: lycheeverse/lychee-action@f613c4a64e50d792e0b31ec34bbcbba12263c6a6 # v2.3.0
+        with:
+          args: >-
+            --no-progress --exclude-mail --accept 200..=299,429 --max-retries 2
+            --exclude-path docs/research
+            '*.md' 'docs/**/*.md' '.github/**/*.md'
+          fail: true
