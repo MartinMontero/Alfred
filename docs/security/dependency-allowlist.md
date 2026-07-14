@@ -128,15 +128,16 @@ in any ignore list** — an ignore on a fixed item would mask a regression; if a
 webpki ever re-enters the lockfile, the cargo-audit gate goes red. Decision record: `LOOP.md` —
 "GATE D VERDICT (2026-07-14)".
 
-## Informational advisories — logged, non-blocking (23 at 2026-07-14)
+## Informational advisories — logged, non-blocking (22 after the reqwest bump, 2026-07-14)
 
 Reported by CI on every run; they do not block (constitution: block on real vulnerabilities,
 report the rest). Reviewed on the monthly upstream-security cadence (docs/release-process.md).
+Was 23 before ruling A; the reqwest 0.11→0.12 bump removed `rustls-pemfile 1.0.4`
+(RUSTSEC-2025-0134, unmaintained) from the tree entirely.
 
-- **unmaintained (18):** the GTK3 family `atk`, `atk-sys`, `gdk`, `gdk-sys`, `gdkwayland-sys`,
+- **unmaintained (17):** the GTK3 family `atk`, `atk-sys`, `gdk`, `gdk-sys`, `gdkwayland-sys`,
   `gdkx11`, `gdkx11-sys`, `gtk`, `gtk-sys`, `gtk3-macros` (all 0.18.2 — Linux-GTK subtree, not
   in the Windows artifact); `fxhash 0.2.1`; `proc-macro-error 1.0.4` (build-time);
-  `rustls-pemfile 1.0.4` (via reqwest 0.11 — disappears if the reqwest bump is taken);
   `unic-char-property`, `unic-char-range`, `unic-common`, `unic-ucd-ident`, `unic-ucd-version`
   (0.9.0).
 - **unsound (5):** `anyhow 1.0.100` (RUSTSEC-2026-0190); `glib 0.18.5` (RUSTSEC-2024-0429,
