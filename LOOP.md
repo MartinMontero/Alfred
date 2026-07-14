@@ -29,7 +29,13 @@ This session runs in the **Linux remote container** (`/home/user/Alfred`), not
   announce).
 
 ## STAGE POINTER
-**Current: BETA SHIP ORDERS, W0 (reconcile) — Stage D COMPLETE + MERGED TO MAIN.**
+**Current: BETA SHIP ORDERS — W0 ✓ (all steps; step 2 landed 907bef2) · W1 LANDED (G1 replicated
+here; G2 routed to the Windows leg) · next: laptop pull + G2 matrix, then W2 (epistemic landing).**
+W1 evidence: docs/audit/study-instrument-landing.md. Gate (a) RATIFIED (ADR-0005 Accepted
+2026-07-14, draft date disclosed); gate (b) LOOP-DESIGN.md committed. Commits 271cbbc / 90cc7da /
+008a14b; vitest 254|4 → 265|4 (+1 file/+11 tests exactly, skips unchanged); contrast all-AA; both
+builds green. W2 payloads transit-verified: map 5da35695 ✓, integration prompt 879ed992 ✓,
+triad-canon 3d9af2dc ✓ (stage-d refs recorded: 7cf828c6, ebae855b).
 Stages A ✓, B ✓ (Windows-verified), C ✓, D ✓ (CI live + green; Gate D verdict executed: allowlist
 = exactly 3 IDs, ruling A reqwest bump landed, run 29311241457 all 4 jobs green). PR #3 merged
 2026-07-14: main tip `70952f4` contains everything through `ebb843c`. Sequencing now follows
