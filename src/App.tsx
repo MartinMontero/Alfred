@@ -270,7 +270,7 @@ const App: Component = () => {
     }
 
     // Apply accent color
-    const accent = localStorage.getItem('accent_color') || '#8b5cf6';
+    const accent = localStorage.getItem('accent_color') || '#b8863d';
     root.style.setProperty('--accent', accent);
     // Calculate hover color (lighter version)
     const num = parseInt(accent.replace('#', ''), 16);

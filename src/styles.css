@@ -6,9 +6,9 @@
   --bg-tertiary: #2a2a2e;
   --text-primary: #e0e0e0;
   --text-secondary: #888888;
-  --accent: #8b5cf6;
-  --accent-hover: #a78bfa;
-  --accent-muted: rgba(139, 92, 246, 0.15);
+  --accent: #b8863d;
+  --accent-hover: #e9b76e;
+  --accent-muted: rgba(184, 134, 61, 0.15);
   --accent-text: #ffffff;
   --border: #3a3a3f;
   --sidebar-width: 260px;
@@ -882,29 +882,29 @@ body {
 
 /* Hashtags */
 .milkdown-editor .hashtag {
-  color: #a78bfa;
-  background: rgba(139, 92, 246, 0.15);
+  color: var(--accent);
+  background: var(--accent-muted);
   padding: 1px 4px;
   border-radius: 4px;
   cursor: pointer;
   transition: background 0.15s ease;
 }
 .milkdown-editor .hashtag:hover {
-  background: rgba(139, 92, 246, 0.25);
+  background: color-mix(in srgb, var(--accent) 25%, transparent);
   text-decoration: none;
 }
 
 /* Wikilinks */
 .milkdown-editor .wikilink {
-  color: #a78bfa;
+  color: var(--accent);
   cursor: pointer;
   text-decoration: underline;
-  text-decoration-color: rgba(139, 92, 246, 0.5);
+  text-decoration-color: color-mix(in srgb, var(--accent) 50%, transparent);
   text-underline-offset: 2px;
 }
 
 .milkdown-editor .wikilink:hover {
-  text-decoration-color: #a78bfa;
+  text-decoration-color: var(--accent);
 }
 
 /* Broken wikilink (note doesn't exist) */
@@ -957,8 +957,8 @@ body {
 
 /* Checked task state */
 .milkdown-editor li[data-item-type="task"][data-checked="true"]::before {
-  background: #a78bfa;
-  border-color: #a78bfa;
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
 }
 
 .milkdown-editor li[data-item-type="task"][data-checked="true"]::after {
@@ -1142,12 +1142,12 @@ body {
 }
 
 .graph-legend-mid {
-  background: #7b6b9e;
+  background: color-mix(in srgb, var(--accent) 55%, var(--bg-tertiary));
 }
 
 .graph-legend-high {
-  background: #a78bfa;
-  box-shadow: 0 0 4px rgba(167, 139, 250, 0.5);
+  background: var(--accent-hover);
+  box-shadow: 0 0 4px color-mix(in srgb, var(--accent-hover) 50%, transparent);
 }
 
 .graph-container {
@@ -2692,9 +2692,9 @@ body {
 }
 
 .chat-tool-call {
-  background: rgba(139, 92, 246, 0.1);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
   color: var(--accent);
-  border: 1px solid rgba(139, 92, 246, 0.2);
+  border: 1px solid color-mix(in srgb, var(--accent) 20%, transparent);
 }
 
 .chat-tool-result {
@@ -2768,8 +2768,8 @@ body {
   padding: 8px 12px;
   border-radius: 8px;
   font-size: 12px;
-  background: rgba(139, 92, 246, 0.1);
-  border: 1px solid rgba(139, 92, 246, 0.2);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 20%, transparent);
   color: var(--accent);
 }
 
@@ -2885,7 +2885,7 @@ body {
 }
 
 .chat-context-toggle.active:hover {
-  background: rgba(139, 92, 246, 0.25);
+  background: color-mix(in srgb, var(--accent) 25%, transparent);
 }
 
 .chat-model-indicator {
@@ -3166,7 +3166,7 @@ body {
 
 .mentioned-file-chip .remove-file-btn:hover {
   opacity: 1;
-  background: rgba(139, 92, 246, 0.2);
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
 }
 
 /* File picker dropdown */
@@ -3644,7 +3644,7 @@ body {
 
 /* Obsidian-style mention highlighting */
 .backlinks-highlight {
-  background: rgba(139, 92, 246, 0.15);
+  background: var(--accent-muted);
   color: var(--accent);
   padding: 0 2px;
   border-radius: 2px;
@@ -5028,8 +5028,8 @@ body {
 }
 
 .skill-badge.custom {
-  background: rgba(139, 92, 246, 0.2);
-  color: #a78bfa;
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+  color: var(--accent);
 }
 
 .skill-badge.deps {
@@ -8120,7 +8120,7 @@ body {
 }
 
 .post-nostr-section-icon.article {
-  background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(139, 92, 246, 0.1));
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 20%, transparent), color-mix(in srgb, var(--accent) 10%, transparent));
   color: var(--accent);
 }
 
@@ -8213,7 +8213,7 @@ body {
 .post-nostr-input:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 10%, transparent);
 }
 
 .post-nostr-input::placeholder {
@@ -8237,7 +8237,7 @@ body {
 .post-nostr-textarea:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 10%, transparent);
 }
 
 .post-nostr-textarea::placeholder {

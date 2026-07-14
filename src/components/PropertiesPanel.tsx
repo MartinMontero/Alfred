@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Martin Montero and the Alfred contributors
 import { Component, For, Show, createSignal, createEffect } from 'solid-js';
 import { parseFrontmatter, serializeFrontmatter, FrontmatterProperty } from '../lib/frontmatter';
+import EvidenceBadge from './EvidenceBadge';
 import { validateFrontmatterObject, propertiesToObject, generateStableId } from '../lib/agentic/frontmatter-schema';
 
 interface PropertiesPanelProps {
@@ -212,6 +213,7 @@ const PropertiesPanel: Component<PropertiesPanelProps> = (props) => {
     <div class="properties-panel">
       <div class="properties-header">
         <span class="properties-header-title">Properties</span>
+        <EvidenceBadge frontmatter={propertiesToObject(properties())} />
         <button class="properties-close" onClick={props.onClose} title="Close">×</button>
       </div>
 
