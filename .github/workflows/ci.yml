@@ -229,7 +229,12 @@ jobs:
         run: |
           npx --yes serve -s dist-web -l 4173 &
           npx --yes wait-on http://localhost:4173 -t 30000
+          # Use the runner's preinstalled chromedriver ($CHROMEWEBDRIVER) so the
+          # driver always matches the runner's Chrome. @axe-core/cli otherwise
+          # downloads the newest driver, which breaks on image-version skew
+          # (observed: driver 151 vs Chrome 150, run 29550550954).
           npx --yes @axe-core/cli http://localhost:4173 \
+            --chromedriver-path "$CHROMEWEBDRIVER/chromedriver" \
             --exit --tags wcag2a,wcag2aa --stdout > axe.json || AXE_FAILED=1
           node -e '
             const r = require("./axe.json");
