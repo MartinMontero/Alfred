@@ -29,12 +29,13 @@ This session runs in the **Linux remote container** (`/home/user/Alfred`), not
   announce).
 
 ## STAGE POINTER
-**Current: BETA SHIP ORDERS — W0 ✓ · W1 ✓ CLOSED (cargo 9/9; verify:all 269/0 at 2f72db1
-[VERIFIED provenance]; journey walk executed, produced findings #1–#3; badge sub-test SUPERSEDED
-by command decision) · W2 ✓ · FIX WAVE = RULING B accepted (#1+#3; #2 parked
-[UNVERIFIED — deferred to open beta], drafted into docs/beta/known-issues.md) · queue: fix wave
-→ W3 → W4 → W5 → W6 → W7 → W8, shortest path to a stable installed artifact + deploy. W6 manual
-gate on the installed artifact stays in force (install, launch, create vault, open note).**
+**Current: BETA SHIP ORDERS — W0 ✓ · W1 ✓ · W2 ✓ · FIX WAVE ✓ EXECUTED (#3 57f4ca7 red-first,
+#1 7270f33; race mechanism found in source and closed by the #3 wiring; audit:
+docs/audit/fix-wave-w1.md) · IDENTITY PASS art/icons ✓ 1853ac5 (copy drafts STAGED, awaiting
+word) · known-issues entry 2 promoted to "fixed in 57f4ca7" · A7/A8 CLOSED BY HISTORY (landed
+d1d96e3/7b2731c — ledger's "not committed" was stale; no word needed) · W3 remaining: PR merge
+(PR open, builder merges) + already-confirmed ADR-0003/0004/scope · then W4→W8. W6 manual gate
+on the installed artifact stays in force.**
 
 ## COMMAND DECISION (2026-07-14, builder's words) — ship-first
 "Badge protocol SUSPENDED; the three readings are not coming. RULING: B. Fix wave = #1 + #3 as

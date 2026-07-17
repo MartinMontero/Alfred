@@ -14,14 +14,16 @@ a controlled re-test was superseded by the ship decision. Parked as
 line is exactly `---` and see no badge in the Properties panel, that report is exactly the
 instrument we need — include the note's first 12 lines.
 
-## 2. Frontmatter can be corrupted by the editor round-trip (fix in progress, ship-blocking work)
+## 2. Frontmatter corruption by the editor round-trip — FIXED in `57f4ca7`
 
-Markdown treats `---` as both a frontmatter fence and a horizontal rule. Under conditions being
-fixed in the current wave, the editor's serializer can rewrite the fence (`***`), after which
-property edits stack duplicate frontmatter blocks instead of updating the original. The fix
-wave (docs/proposals/fix-wave-w1-journey-bugs.md) carries red-first regression tests: fence
-survives the round-trip; "Complete load-bearing fields" pressed twice yields one scaffold.
-If the beta still reproduces this, a copy of the corrupted note's top 12 lines is gold.
+Markdown treats `---` as both a frontmatter fence and a horizontal rule; the editor's
+serializer used to rewrite an unprotected fence (`***`), after which property edits stacked
+duplicate frontmatter blocks. Fixed in `57f4ca7`: frontmatter never enters the serializer
+(split-and-hold), displaced blocks surface a warning instead of stacking, and red-first
+regression tests pin the mechanism (fence survives the round-trip; property apply is
+idempotent; the clean badge fixture parses end-to-end). Notes corrupted BEFORE the fix are not
+auto-repaired — the Properties panel now tells you when a note needs its frontmatter moved back
+to the top. If the beta reproduces fresh corruption, the note's top 12 lines are gold.
 
 ## 3. Graph does not retint on live accent change
 
