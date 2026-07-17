@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Martin Montero and the Alfred contributors
 import { Component, For, Show, createSignal, createEffect } from 'solid-js';
-import { parseFrontmatter, serializeFrontmatter, FrontmatterProperty } from '../lib/frontmatter';
+import { parseFrontmatter, applyPropertiesToContent, FrontmatterProperty } from '../lib/frontmatter';
 import EvidenceBadge from './EvidenceBadge';
 import { validateFrontmatterObject, propertiesToObject, generateStableId } from '../lib/agentic/frontmatter-schema';
 
@@ -24,6 +24,7 @@ const typeIcons: Record<FrontmatterProperty['type'], string> = {
 const PropertiesPanel: Component<PropertiesPanelProps> = (props) => {
   const [properties, setProperties] = createSignal<FrontmatterProperty[]>([]);
   const [newPropertyKey, setNewPropertyKey] = createSignal('');
+  const [fenceDisplaced, setFenceDisplaced] = createSignal(false);
   const [editingKey, setEditingKey] = createSignal<string | null>(null);
   const [editingValue, setEditingValue] = createSignal<string>('');
 
@@ -32,10 +33,12 @@ const PropertiesPanel: Component<PropertiesPanelProps> = (props) => {
     const content = props.content;
     if (!content) {
       setProperties([]);
+      setFenceDisplaced(false);
       return;
     }
     const parsed = parseFrontmatter(content);
     setProperties(parsed?.properties || []);
+    setFenceDisplaced(false);
   });
 
   // Convert value to display string
@@ -134,37 +137,22 @@ const PropertiesPanel: Component<PropertiesPanelProps> = (props) => {
     setEditingValue('');
   };
 
-  // Apply changes to the document
+  // Apply changes to the document (merge logic lives in lib/frontmatter so it
+  // is unit-tested; see frontmatter-integrity.test.ts, W1 fix-wave #3).
   const applyChanges = (updatedProps: FrontmatterProperty[]) => {
     const content = props.content;
     if (!content) return;
-    
-    const parsed = parseFrontmatter(content);
-    const newFrontmatter = serializeFrontmatter(updatedProps);
-    
-    let newContent: string;
-    if (parsed) {
-      // Replace existing frontmatter
-      const lines = content.split('\n');
-      const afterFrontmatter = lines.slice(parsed.endLine + 1).join('\n');
-      
-      if (updatedProps.length === 0) {
-        // Remove frontmatter entirely
-        newContent = afterFrontmatter.replace(/^\n+/, '');
-      } else {
-        newContent = newFrontmatter + '\n' + afterFrontmatter;
-      }
-    } else {
-      // Add new frontmatter at the beginning
-      if (updatedProps.length === 0) {
-        newContent = content;
-      } else {
-        newContent = newFrontmatter + '\n\n' + content;
-      }
+
+    const result = applyPropertiesToContent(content, updatedProps);
+    if (result.fenceDisplaced) {
+      // A frontmatter block exists but not at the top of the note — writing
+      // would stack a duplicate block. Surface it; never restructure silently.
+      setFenceDisplaced(true);
+      return;
     }
-    
+    setFenceDisplaced(false);
     setProperties(updatedProps);
-    props.onUpdateContent(newContent);
+    props.onUpdateContent(result.content);
   };
 
   // Handle key press in new property input
@@ -216,6 +204,13 @@ const PropertiesPanel: Component<PropertiesPanelProps> = (props) => {
         <EvidenceBadge frontmatter={propertiesToObject(properties())} />
         <button class="properties-close" onClick={props.onClose} title="Close">×</button>
       </div>
+
+      <Show when={fenceDisplaced()}>
+        <div class="properties-warning">
+          Frontmatter is not at the top of this note. Fix the note text first — editing
+          properties now would create a duplicate frontmatter block.
+        </div>
+      </Show>
 
       <div class="properties-content">
         <Show when={props.content} fallback={<div class="properties-empty">No file open</div>}>
