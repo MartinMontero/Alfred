@@ -253,14 +253,14 @@ const Onboarding: Component<OnboardingProps> = (props) => {
         <img src={AlfredMark} alt="The Alfred mark" />
       </div>
       <h1 class="onboarding-headline">Welcome to Alfred</h1>
-      <p class="onboarding-subhead">Your AI-powered workspace for focused work and clear thinking.</p>
+      <p class="onboarding-subhead">Augmented intelligence for focused work — you lead, Alfred keeps the thread.</p>
       
       <div class="onboarding-benefits">
         <div class="onboarding-benefit-item">
           <span class="onboarding-benefit-text">Capture ideas, organize projects, and get more done</span>
         </div>
         <div class="onboarding-benefit-item">
-          <span class="onboarding-benefit-text">AI assistant helps you write, research, and brainstorm</span>
+          <span class="onboarding-benefit-text">Write, research, and brainstorm with augmented intelligence — at your direction</span>
         </div>
         <div class="onboarding-benefit-item">
           <span class="onboarding-benefit-icon">🔒</span>
@@ -347,9 +347,8 @@ const Onboarding: Component<OnboardingProps> = (props) => {
 
       <div class="onboarding-feature-cards">
         <div class="onboarding-feature-card">
-          <span class="onboarding-feature-icon">🤖</span>
-          <div class="onboarding-feature-title">AI Executive Assistant</div>
-          <div class="onboarding-feature-desc">Stay organized, manage tasks, and get more done with AI that works for you</div>
+          <div class="onboarding-feature-title">Your External Mind</div>
+          <div class="onboarding-feature-desc">Notes, tasks, and decisions in one place — augmented intelligence, human in the lead</div>
         </div>
         <div class="onboarding-feature-card">
           <span class="onboarding-feature-icon">🔗</span>
