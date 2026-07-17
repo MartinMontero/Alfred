@@ -75,6 +75,13 @@ jobs:
 
       # Zero-Soapbox gate: a DEPENDENCY-manifest check (NOT a source grep — the
       # constitution text in topology.ts/spec-kit.ts legitimately names Soapbox).
+      # Seconds-cheap reproduction of the tauri CLI's release-lane preflight:
+      # Rust crate <-> JS guest package major/minor alignment across both
+      # lockfiles. Added after W5 dry-run #1 hard-errored on two skewed pairs
+      # (this class previously had zero coverage outside the release lane).
+      - name: Tauri Rust/JS version-alignment guard
+        run: npm run check:tauri-align
+
       - name: Zero-Soapbox dependency gate
         run: |
           if grep -riE 'soapbox|@nostrify' package.json package-lock.json .mcp.json; then

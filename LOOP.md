@@ -36,6 +36,21 @@ SUCCESS, all four jobs, chromedriver cause-fix in tree
 on the branch (this commit) — see below; keypair ceremony is the gate · then W6 tag → W7 PWA →
 W8 docs/SHIP. W6 manual gate on the installed artifact stays in force.**
 
+## W5 DRY-RUN #1 (2026-07-17) — FAILED on tauri version-alignment preflight; cause-fixed + guarded
+Builder's diagnosis from full run logs: two Rust/JS pairs skewed in major/minor — tauri 2.9.5 vs
+@tauri-apps/api 2.11.1 (pre-existing: the ^2.9.1 caret let the JS lockfile drift while the Rust
+crate held), and tauri-plugin-updater 2.9.0 vs 2.10.1 (W5 pair: updater 2.10.x requires tauri
+^2.10, so cargo silently resolved 2.9.0 under the old core). Direction ruled by the actual
+registry matrix (crates.io + npm, queried): UPGRADE THE RUST SIDE — the JS lockfile already
+shipped api 2.11.1 to every build; pinning JS down would remove a compiled-against API surface.
+New pairs: tauri 2.11.5 ↔ api 2.11.1 · tauri-build 2.6.3 · plugin-updater 2.10.1 ↔ 2.10.1 ·
+cli 2.11.4. Gates over both re-locked files: vendor-exclusion ✓ · cargo-audit 0 vulns/22
+warnings ✓ (quick-xml copies unchanged at 0.37.5/0.38.4 — allowlist entries stand; webpki still
+0.103.13) · tsc ✓ · vitest 278|4 ✓ · build ✓; cargo test runs in CI on this push (no GTK here).
+STRUCTURAL GUARD landed: scripts/check-tauri-alignment.mjs + `check:tauri-align` in ci.yml
+verify job — reproduces the release-lane preflight in seconds on every push; 12 pairs, all
+aligned; would have caught both original skews. Dry-run #2 is the builder's re-fire.
+
 ## CEREMONY CORRECTION (2026-07-17, builder's words — supersedes 80ab55f's message on one point)
 "Secrets were NOT set at ceremony-complete time — the GitHub read-back caught an empty list.
 Both repository secrets now set and verified by name + timestamp. Pubkey paste stands." The

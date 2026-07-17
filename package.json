@@ -1,7 +1,7 @@
 {
   "name": "alfred",
   "version": "0.1.0",
-  "description": "Sovereign, local-first, Nostr-native PKM for agentic AI development — part of wecanjustbuildthings.dev",
+  "description": "Sovereign, local-first, Nostr-native PKM for agentic AI development \u2014 part of wecanjustbuildthings.dev",
   "type": "module",
   "author": "Martin Montero",
   "repository": {
@@ -26,7 +26,8 @@
     "check:exclusion": "tsx ../wecanjustbuildthings.dev/enforcement/cli.ts layer1 --tree . && tsx ../wecanjustbuildthings.dev/enforcement/cli.ts layer2 --tree .",
     "check:exclusion:l3": "tsx ../wecanjustbuildthings.dev/enforcement/cli.ts layer3 --tree . || exit 0",
     "verify:all": "npm run typecheck && npm run typecheck:mcp && npm run test && npm run test:rust && npm run check:exclusion && npm run check:exclusion:l3 && npm run build && npm run build:web",
-    "postinstall": "patch-package"
+    "postinstall": "patch-package",
+    "check:tauri-align": "node scripts/check-tauri-alignment.mjs"
   },
   "license": "AGPL-3.0-or-later",
   "engines": {
@@ -82,8 +83,8 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@tauri-apps/api": "^2.9.1",
-    "@tauri-apps/cli": "^2.9.6",
+    "@tauri-apps/api": "^2.11.1",
+    "@tauri-apps/cli": "^2.11.4",
     "@types/jszip": "^3.4.0",
     "@types/node": "^24.13.2",
     "@types/uuid": "^10.0.0",
