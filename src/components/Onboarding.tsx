@@ -16,7 +16,7 @@ import type { NostrIdentity } from '../lib/nostr/types';
 import '../styles/onboarding.css';
 
 // Import SVG illustrations
-import WelcomeSvg from '../assets/onboarding/welcome.svg';
+import AlfredMark from '../assets/onboarding/alfred-mark.png';
 import VaultSvg from '../assets/onboarding/vault.svg';
 import FeaturesSvg from '../assets/onboarding/features.svg';
 import NostrSvg from '../assets/onboarding/nostr.svg';
@@ -250,18 +250,16 @@ const Onboarding: Component<OnboardingProps> = (props) => {
   const renderWelcome = () => (
     <>
       <div class="onboarding-illustration">
-        <img src={WelcomeSvg} alt="Welcome to Alfred" />
+        <img src={AlfredMark} alt="The Alfred mark" />
       </div>
       <h1 class="onboarding-headline">Welcome to Alfred</h1>
       <p class="onboarding-subhead">Your AI-powered workspace for focused work and clear thinking.</p>
       
       <div class="onboarding-benefits">
         <div class="onboarding-benefit-item">
-          <span class="onboarding-benefit-icon">🚀</span>
           <span class="onboarding-benefit-text">Capture ideas, organize projects, and get more done</span>
         </div>
         <div class="onboarding-benefit-item">
-          <span class="onboarding-benefit-icon">🤖</span>
           <span class="onboarding-benefit-text">AI assistant helps you write, research, and brainstorm</span>
         </div>
         <div class="onboarding-benefit-item">

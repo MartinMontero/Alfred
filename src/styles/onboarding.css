@@ -77,6 +77,13 @@
   height: 100%;
 }
 
+/* Identity pass: the welcome art is the raster Alfred mark now. */
+.onboarding-illustration img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
 /* Typography */
 .onboarding-headline {
   font-size: 28px;
