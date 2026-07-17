@@ -36,6 +36,13 @@ SUCCESS, all four jobs, chromedriver cause-fix in tree
 on the branch (this commit) — see below; keypair ceremony is the gate · then W6 tag → W7 PWA →
 W8 docs/SHIP. W6 manual gate on the installed artifact stays in force.**
 
+## CEREMONY CORRECTION (2026-07-17, builder's words — supersedes 80ab55f's message on one point)
+"Secrets were NOT set at ceremony-complete time — the GitHub read-back caught an empty list.
+Both repository secrets now set and verified by name + timestamp. Pubkey paste stands." The
+80ab55f commit message recorded secrets-set as part of ceremony-complete; that was the report
+at the time, corrected here rather than by history rewrite. The read-back catching it is the
+escrow discipline working. Dry-run remains the end-to-end proof (.sig + latest.json emitted).
+
 ## W5 UPDATER WIRING (2026-07-17) — full re-scope executed, ceremony-blocked slots explicit
 Advisor finding independently re-verified at all six points before wiring (plugin entirely
 absent). Landed: `tauri-plugin-updater` 2.9.0 (Cargo) + `@tauri-apps/plugin-updater` ^2.10.1
