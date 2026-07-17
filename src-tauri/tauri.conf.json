@@ -38,7 +38,7 @@
       }
     },
     "updater": {
-      "pubkey": "",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDNEOUEyRjdCRDlFQkY0M0UKUldRKzlPdlpleSthUGZvcnFJL2ZPYllyT2NWK3lNa2NUaGhjb1JlTzVRZDVXdGFKVEo5K2ZEZVoK",
       "endpoints": [
         "https://github.com/MartinMontero/Alfred/releases/latest/download/latest.json"
       ]
