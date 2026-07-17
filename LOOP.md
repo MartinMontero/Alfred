@@ -29,10 +29,50 @@ This session runs in the **Linux remote container** (`/home/user/Alfred`), not
   announce).
 
 ## STAGE POINTER
-**Current: BETA SHIP ORDERS — W0 ✓ · W1 LANDED (G2 in flight on the laptop) · W2 ✓ (epistemic
-canon landed 78f6da1, hashes verified; audit: docs/audit/epistemic-canon-landing.md; stage-d
-execution addendum appended 95377cd on builder's word) · next: W1 Windows-leg tails, then W3
-(operator rulings batch — see operator card).**
+**Current: BETA SHIP ORDERS — W0 ✓ · W1 ✓ CLOSED (cargo 9/9; verify:all 269/0 at 2f72db1
+[VERIFIED provenance]; journey walk executed, produced findings #1–#3; badge sub-test SUPERSEDED
+by command decision) · W2 ✓ · FIX WAVE = RULING B accepted (#1+#3; #2 parked
+[UNVERIFIED — deferred to open beta], drafted into docs/beta/known-issues.md) · queue: fix wave
+→ W3 → W4 → W5 → W6 → W7 → W8, shortest path to a stable installed artifact + deploy. W6 manual
+gate on the installed artifact stays in force (install, launch, create vault, open note).**
+
+## COMMAND DECISION (2026-07-14, builder's words) — ship-first
+"Badge protocol SUSPENDED; the three readings are not coming. RULING: B. Fix wave = #1 + #3 as
+drafted; #2 documented in beta known-issues. Rationale for the ledger: beta testers should focus
+on visible bugs and task-level QA; the shipped beta must be stable and clean in the core note
+loop." Hold lifted on the two working-tree docs (loss-class rationale: uncommitted work in an
+ephemeral container, logged twice already — A7/A8 being the standing example). #1 remains
+ship-blocking with the failure-surface requirement. #3 acceptance = red-first regression tests:
+(a) fence survives editor round-trip; (b) "Complete load-bearing fields" idempotent — two
+presses, one scaffold; (c) clean badge fixture parses end-to-end.
+
+## W1 TAILS — Windows leg EXECUTED 2026-07-14 (builder's capture, laptop at ≥361b05c after --ff-only pull)
+- **Cargo (criterion 1) CLOSED:** standalone 9/9 incl. `closing_job_handle_kills_member_process`;
+  re-executed identically inside verify:all. The 224e624-era honest-partial (re-run at/after
+  ebb843c) is closed.
+- **verify:all (criterion 2) CLOSED:** &&-chain completed through build:web ⇒ every step exit 0.
+  Tests **269 passed (269), ZERO skips** — container arithmetic holds (265 + 4 platform-skips,
+  every skip executes on Windows). Trio EXECUTED at sidecar-spawn durations: recipes.live 2 tests
+  1094ms · acp-handshake 920ms · permission-startup 878ms (real title rendered).
+- **Run provenance [VERIFIED] (caveat resolved by builder addendum, 2026-07-14):** post-hoc disk
+  check confirms laptop HEAD = **2f72db1 (the branch tip)** at verify:all time — the block's pull
+  was the only HEAD-moving event, nothing pulled since. (Original honest boundary: the post-pull
+  SHA/exit lines scrolled off before capture; kept here for the record of how it was closed.)
+- **Exclusion:** L1/L2 MUST-STAY-BLOCKED failures: 0. L3 advisory red ~20 findings, ALL in the
+  enforcement family (provider-lockdown.ts + tests, config-scan.test.ts, dist bundles carrying
+  the same strings) — zero findings outside blocklist code = the denylist holding, not leaking.
+  Adjudicated known-negative.
+- **Journey findings:** #1 P1 vault-create silent failure · #3 P2 non-idempotent scaffold prepend
+  above the frontmatter fence (stacking mechanism CONFIRMED in source: parseFrontmatter requires
+  fence at line 0, frontmatter.ts:53-56; applyChanges prepends a second block on null parse,
+  PropertiesPanel.tsx:157-163 — also the #2 contamination path) · #2 badge CONDITIONAL pending
+  the clean-test word · flash-then-revert write-race stays [HYPOTHESIS] — instrument designed
+  (three-writer trace), no fix before its verdict. Full plan: docs/proposals/.
+- **A7/A8 status entry:** both Stage-A working-tree edits (CLAUDE.md/AGENTS.md reconciliation;
+  README.md:36 goose-docs link) are ABSENT from every current tree — container clean at 2f72db1,
+  laptop synced to the same history. The uncommitted edits died with their session container.
+  RE-STAGE REQUIRED before the W3 commit word; content spec survives in the A7/A8 evidence lines
+  of this file (Stage A section).
 W1 evidence: docs/audit/study-instrument-landing.md. Gate (a) RATIFIED (ADR-0005 Accepted
 2026-07-14, draft date disclosed); gate (b) LOOP-DESIGN.md committed. Commits 271cbbc / 90cc7da /
 008a14b; vitest 254|4 → 265|4 (+1 file/+11 tests exactly, skips unchanged); contrast all-AA; both
