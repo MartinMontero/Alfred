@@ -84,21 +84,23 @@ const GraphView: Component<GraphViewProps> = (props) => {
     return `#${((rr << 16) | (rg << 8) | rb).toString(16).padStart(6, '0')}`;
   };
 
+  const accentHover = (typeof document !== 'undefined' ? getComputedStyle(document.documentElement).getPropertyValue('--accent-hover').trim() : '') || '#e9b76e';
+
   // Get node color based on connectivity (0..1 normalized)
   const getNodeColors = (t: number, isCurrentFile: boolean) => {
     // Color stops: dim gray -> muted purple -> vibrant purple
     const bgLow = '#55556a';
-    const bgMid = '#7b6b9e';
-    const bgHigh = '#a78bfa';
+    const bgMid = '#9e8055';
+    const bgHigh = accentHover;
     const borderLow = '#6b6b80';
-    const borderMid = '#9580b8';
-    const borderHigh = '#c4b5fd';
+    const borderMid = '#b89a63';
+    const borderHigh = '#ecd3a3';
 
     if (isCurrentFile) {
       return {
-        background: '#c084fc',
+        background: '#e8c07f',
         border: '#d8b4fe',
-        highlight: { background: '#c084fc', border: '#e9d5ff' },
+        highlight: { background: '#e8c07f', border: '#f3e2bf' },
         hover: { background: '#b175eb', border: '#d8b4fe' },
       };
     }
@@ -115,12 +117,12 @@ const GraphView: Component<GraphViewProps> = (props) => {
       background: bg,
       border: border,
       highlight: {
-        background: lerpColor(bg, '#c084fc', 0.5),
-        border: lerpColor(border, '#e9d5ff', 0.5),
+        background: lerpColor(bg, '#e8c07f', 0.5),
+        border: lerpColor(border, '#f3e2bf', 0.5),
       },
       hover: {
-        background: lerpColor(bg, '#a78bfa', 0.3),
-        border: lerpColor(border, '#c4b5fd', 0.3),
+        background: lerpColor(bg, accentHover, 0.3),
+        border: lerpColor(border, '#ecd3a3', 0.3),
       },
     };
   };
@@ -206,9 +208,9 @@ const GraphView: Component<GraphViewProps> = (props) => {
             from: link.from,
             to: link.to,
             color: {
-              color: lerpColor('#3f3f50', '#8b7cc9', edgeT),
-              highlight: '#c084fc',
-              hover: lerpColor('#52525b', '#a78bfa', edgeT),
+              color: lerpColor('#3f3f50', '#a98b54', edgeT),
+              highlight: '#e8c07f',
+              hover: lerpColor('#52525b', accentHover, edgeT),
             },
             width: Math.max(0.5, 0.5 + edgeT * 2.5),
           };

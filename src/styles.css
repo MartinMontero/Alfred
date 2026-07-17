@@ -6,9 +6,9 @@
   --bg-tertiary: #2a2a2e;
   --text-primary: #e0e0e0;
   --text-secondary: #888888;
-  --accent: #8b5cf6;
-  --accent-hover: #a78bfa;
-  --accent-muted: rgba(139, 92, 246, 0.15);
+  --accent: #b8863d;
+  --accent-hover: #e9b76e;
+  --accent-muted: rgba(184, 134, 61, 0.15);
   --accent-text: #ffffff;
   --border: #3a3a3f;
   --sidebar-width: 260px;
@@ -882,29 +882,29 @@ body {
 
 /* Hashtags */
 .milkdown-editor .hashtag {
-  color: #a78bfa;
-  background: rgba(139, 92, 246, 0.15);
+  color: var(--accent);
+  background: var(--accent-muted);
   padding: 1px 4px;
   border-radius: 4px;
   cursor: pointer;
   transition: background 0.15s ease;
 }
 .milkdown-editor .hashtag:hover {
-  background: rgba(139, 92, 246, 0.25);
+  background: color-mix(in srgb, var(--accent) 25%, transparent);
   text-decoration: none;
 }
 
 /* Wikilinks */
 .milkdown-editor .wikilink {
-  color: #a78bfa;
+  color: var(--accent);
   cursor: pointer;
   text-decoration: underline;
-  text-decoration-color: rgba(139, 92, 246, 0.5);
+  text-decoration-color: color-mix(in srgb, var(--accent) 50%, transparent);
   text-underline-offset: 2px;
 }
 
 .milkdown-editor .wikilink:hover {
-  text-decoration-color: #a78bfa;
+  text-decoration-color: var(--accent);
 }
 
 /* Broken wikilink (note doesn't exist) */
@@ -957,8 +957,8 @@ body {
 
 /* Checked task state */
 .milkdown-editor li[data-item-type="task"][data-checked="true"]::before {
-  background: #a78bfa;
-  border-color: #a78bfa;
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
 }
 
 .milkdown-editor li[data-item-type="task"][data-checked="true"]::after {
@@ -1142,12 +1142,12 @@ body {
 }
 
 .graph-legend-mid {
-  background: #7b6b9e;
+  background: color-mix(in srgb, var(--accent) 55%, var(--bg-tertiary));
 }
 
 .graph-legend-high {
-  background: #a78bfa;
-  box-shadow: 0 0 4px rgba(167, 139, 250, 0.5);
+  background: var(--accent-hover);
+  box-shadow: 0 0 4px color-mix(in srgb, var(--accent-hover) 50%, transparent);
 }
 
 .graph-container {
@@ -2692,9 +2692,9 @@ body {
 }
 
 .chat-tool-call {
-  background: rgba(139, 92, 246, 0.1);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
   color: var(--accent);
-  border: 1px solid rgba(139, 92, 246, 0.2);
+  border: 1px solid color-mix(in srgb, var(--accent) 20%, transparent);
 }
 
 .chat-tool-result {
@@ -2768,8 +2768,8 @@ body {
   padding: 8px 12px;
   border-radius: 8px;
   font-size: 12px;
-  background: rgba(139, 92, 246, 0.1);
-  border: 1px solid rgba(139, 92, 246, 0.2);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 20%, transparent);
   color: var(--accent);
 }
 
@@ -2885,7 +2885,7 @@ body {
 }
 
 .chat-context-toggle.active:hover {
-  background: rgba(139, 92, 246, 0.25);
+  background: color-mix(in srgb, var(--accent) 25%, transparent);
 }
 
 .chat-model-indicator {
@@ -3166,7 +3166,7 @@ body {
 
 .mentioned-file-chip .remove-file-btn:hover {
   opacity: 1;
-  background: rgba(139, 92, 246, 0.2);
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
 }
 
 /* File picker dropdown */
@@ -3644,7 +3644,7 @@ body {
 
 /* Obsidian-style mention highlighting */
 .backlinks-highlight {
-  background: rgba(139, 92, 246, 0.15);
+  background: var(--accent-muted);
   color: var(--accent);
   padding: 0 2px;
   border-radius: 2px;
@@ -5028,8 +5028,8 @@ body {
 }
 
 .skill-badge.custom {
-  background: rgba(139, 92, 246, 0.2);
-  color: #a78bfa;
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+  color: var(--accent);
 }
 
 .skill-badge.deps {
@@ -8120,7 +8120,7 @@ body {
 }
 
 .post-nostr-section-icon.article {
-  background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(139, 92, 246, 0.1));
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 20%, transparent), color-mix(in srgb, var(--accent) 10%, transparent));
   color: var(--accent);
 }
 
@@ -8213,7 +8213,7 @@ body {
 .post-nostr-input:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 10%, transparent);
 }
 
 .post-nostr-input::placeholder {
@@ -8237,7 +8237,7 @@ body {
 .post-nostr-textarea:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 10%, transparent);
 }
 
 .post-nostr-textarea::placeholder {
@@ -10005,4 +10005,148 @@ body {
 .unlock-submit:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+/* ============================================================================
+   Design pass — "Study & Instrument" (Direction A) tokens. Additive only.
+   Registers + evidence states + type roles + motion. Evidence hues are the
+   only saturated additions; app chrome stays calm. See LOOP-DESIGN.md.
+   ========================================================================== */
+:root {
+  /* registers (scoped accents; brand --accent untouched this pass) */
+  --reg-workshop-accent: #c9974a;
+  --reg-workshop-accent-muted: rgba(201, 151, 74, 0.15);
+  --reg-evidence-accent: #6aa3b8;
+  --reg-evidence-accent-muted: rgba(106, 163, 184, 0.15);
+
+  /* evidence states — opaque pairs (contrast-checkable), dark theme */
+  --ev-high-text: #8fd6ac;    --ev-high-bg: #14241b;    --ev-high-border: #2f5c43;
+  --ev-mid-text: #e0b56a;     --ev-mid-bg: #2a2115;     --ev-mid-border: #6b5528;
+  --ev-low-text: #e0907e;     --ev-low-bg: #2a1815;     --ev-low-border: #6b382e;
+  --ev-flag-text: #9cc3d4;    --ev-flag-bg: #16232a;    --ev-flag-border: #3a5866;
+  --ev-invalid-text: #a8a8a8; --ev-invalid-bg: #232326; --ev-invalid-border: #4a4a4f;
+  --ev-unknown-text: #9a9a9a; --ev-unknown-bg: #212124; --ev-unknown-border: #3a3a3f;
+
+  /* type roles (system stacks only — no font files) */
+  --font-canon: Georgia, 'Iowan Old Style', 'Times New Roman', serif;
+  --font-data: ui-monospace, 'Cascadia Mono', 'SF Mono', Menlo, Consolas, monospace;
+
+  /* motion — settle, don't zip; opacity/transform only */
+  --motion-fast: 120ms;
+  --motion-base: 200ms;
+  --motion-settle: 320ms;
+  --motion-ease: cubic-bezier(0.2, 0, 0, 1);
+
+  /* alias: ActionPreview & co. referenced undefined --error; bind to --danger */
+  --error: var(--danger);
+}
+
+[data-theme="light"] {
+  --reg-workshop-accent: #8a5f1e;
+  --reg-workshop-accent-muted: rgba(138, 95, 30, 0.12);
+  --reg-evidence-accent: #2f6e88;
+  --reg-evidence-accent-muted: rgba(47, 110, 136, 0.12);
+
+  --ev-high-text: #1d6b42;    --ev-high-bg: #e6f4ec;    --ev-high-border: #a9d8bd;
+  --ev-mid-text: #8a5a12;     --ev-mid-bg: #faf0dc;     --ev-mid-border: #e3c891;
+  --ev-low-text: #a13c2c;     --ev-low-bg: #fbe9e5;     --ev-low-border: #eab8ad;
+  --ev-flag-text: #275d75;    --ev-flag-bg: #e4eff5;    --ev-flag-border: #aecfdd;
+  --ev-invalid-text: #5a5a5a; --ev-invalid-bg: #ececec; --ev-invalid-border: #c6c6c6;
+  --ev-unknown-text: #666666; --ev-unknown-bg: #f5f5f5; --ev-unknown-border: #d0d0d0;
+}
+
+/* Evidence badge — always glyph + text (never color alone); data font; dated when known */
+.ev-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+  font-family: var(--font-data);
+  font-size: 0.78em;
+  line-height: 1;
+  padding: 0.25em 0.55em;
+  border-radius: 999px;
+  border: 1px solid var(--ev-unknown-border);
+  background: var(--ev-unknown-bg);
+  color: var(--ev-unknown-text);
+  white-space: nowrap;
+  transition: background var(--motion-fast) var(--motion-ease);
+}
+.ev-badge--high    { color: var(--ev-high-text);    background: var(--ev-high-bg);    border-color: var(--ev-high-border); }
+.ev-badge--mid     { color: var(--ev-mid-text);     background: var(--ev-mid-bg);     border-color: var(--ev-mid-border); }
+.ev-badge--low     { color: var(--ev-low-text);     background: var(--ev-low-bg);     border-color: var(--ev-low-border); }
+.ev-badge--flag    { color: var(--ev-flag-text);    background: var(--ev-flag-bg);    border-color: var(--ev-flag-border); }
+.ev-badge--invalid { color: var(--ev-invalid-text); background: var(--ev-invalid-bg); border-color: var(--ev-invalid-border); }
+.ev-badge__date { opacity: 0.8; }
+.ev-badge--invalid .ev-badge__label { text-decoration: line-through; }
+.ev-badge__reason { text-decoration: none; }
+
+/* ActionPreview — token classes replacing inline styles (structure unchanged) */
+.action-preview {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px;
+  margin: 8px 0;
+  background: var(--bg-secondary);
+}
+.action-preview__summary { color: var(--text-secondary); font-size: 0.9em; }
+.action-preview__section-title { margin-top: 6px; font-weight: 600; }
+.action-preview__list { margin: 2px 0; padding-left: 18px; }
+.action-preview__detail { color: var(--text-secondary); }
+.action-preview__label { white-space: pre; }
+.action-preview__empty { color: var(--text-secondary); }
+.action-preview__notice { color: var(--text-secondary); font-size: 0.9em; }
+.action-preview__reversibility {
+  margin-top: 6px;
+  font-size: 0.9em;
+  font-family: var(--font-data);
+  color: var(--reg-evidence-accent);
+}
+.action-preview__warnings-head { margin-top: 8px; color: var(--error); font-weight: 600; }
+.action-preview__warning { display: block; color: var(--error); font-size: 0.9em; margin: 2px 0; }
+.action-preview__warning-detail { opacity: 0.85; }
+.action-preview__buttons { display: flex; gap: 6px; margin-top: 8px; }
+
+/* Calm-tech accessibility: honor reduced motion globally */
+@media (prefers-reduced-motion: reduce) {
+  :root { --motion-fast: 0.01ms; --motion-base: 0.01ms; --motion-settle: 0.01ms; }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* W1 fix-wave #3 — displaced-frontmatter warning in the Properties panel */
+.properties-warning {
+  margin: 8px 12px 0;
+  padding: 8px 10px;
+  border: 1px solid var(--ev-low-border);
+  border-radius: 6px;
+  background: var(--ev-low-bg);
+  color: var(--ev-low-text);
+  font-size: 0.85em;
+}
+
+/* W1 fix-wave #1 — vault-open failure surface (never an empty shell) */
+.vault-open-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--ev-low-border);
+  background: var(--ev-low-bg);
+  color: var(--ev-low-text);
+  font-size: 0.9em;
+}
+.vault-open-banner__action {
+  padding: 4px 10px;
+  border: 1px solid var(--ev-low-border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ev-low-text);
+  cursor: pointer;
+}
+.vault-open-banner__action:hover {
+  background: color-mix(in srgb, var(--ev-low-text) 10%, transparent);
 }

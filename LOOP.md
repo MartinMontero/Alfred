@@ -29,9 +29,61 @@ This session runs in the **Linux remote container** (`/home/user/Alfred`), not
   announce).
 
 ## STAGE POINTER
-**Current: STAGE D (CI gate) — CODE COMPLETE, awaiting GATE D review.**
-Stages A ✓, B ✓ (Windows-verified), C ✓ (committed+pushed 8d38b3e). Next after GATE D: Stage E
-(release pipeline).
+**Current: BETA SHIP ORDERS — W0 ✓ · W1 ✓ · W2 ✓ · FIX WAVE ✓ EXECUTED (#3 57f4ca7 red-first,
+#1 7270f33; race mechanism found in source and closed by the #3 wiring; audit:
+docs/audit/fix-wave-w1.md) · IDENTITY PASS art/icons ✓ 1853ac5 (copy drafts STAGED, awaiting
+word) · known-issues entry 2 promoted to "fixed in 57f4ca7" · A7/A8 CLOSED BY HISTORY (landed
+d1d96e3/7b2731c — ledger's "not committed" was stale; no word needed) · W3 remaining: PR merge
+(PR open, builder merges) + already-confirmed ADR-0003/0004/scope · then W4→W8. W6 manual gate
+on the installed artifact stays in force.**
+
+## COMMAND DECISION (2026-07-14, builder's words) — ship-first
+"Badge protocol SUSPENDED; the three readings are not coming. RULING: B. Fix wave = #1 + #3 as
+drafted; #2 documented in beta known-issues. Rationale for the ledger: beta testers should focus
+on visible bugs and task-level QA; the shipped beta must be stable and clean in the core note
+loop." Hold lifted on the two working-tree docs (loss-class rationale: uncommitted work in an
+ephemeral container, logged twice already — A7/A8 being the standing example). #1 remains
+ship-blocking with the failure-surface requirement. #3 acceptance = red-first regression tests:
+(a) fence survives editor round-trip; (b) "Complete load-bearing fields" idempotent — two
+presses, one scaffold; (c) clean badge fixture parses end-to-end.
+
+## W1 TAILS — Windows leg EXECUTED 2026-07-14 (builder's capture, laptop at ≥361b05c after --ff-only pull)
+- **Cargo (criterion 1) CLOSED:** standalone 9/9 incl. `closing_job_handle_kills_member_process`;
+  re-executed identically inside verify:all. The 224e624-era honest-partial (re-run at/after
+  ebb843c) is closed.
+- **verify:all (criterion 2) CLOSED:** &&-chain completed through build:web ⇒ every step exit 0.
+  Tests **269 passed (269), ZERO skips** — container arithmetic holds (265 + 4 platform-skips,
+  every skip executes on Windows). Trio EXECUTED at sidecar-spawn durations: recipes.live 2 tests
+  1094ms · acp-handshake 920ms · permission-startup 878ms (real title rendered).
+- **Run provenance [VERIFIED] (caveat resolved by builder addendum, 2026-07-14):** post-hoc disk
+  check confirms laptop HEAD = **2f72db1 (the branch tip)** at verify:all time — the block's pull
+  was the only HEAD-moving event, nothing pulled since. (Original honest boundary: the post-pull
+  SHA/exit lines scrolled off before capture; kept here for the record of how it was closed.)
+- **Exclusion:** L1/L2 MUST-STAY-BLOCKED failures: 0. L3 advisory red ~20 findings, ALL in the
+  enforcement family (provider-lockdown.ts + tests, config-scan.test.ts, dist bundles carrying
+  the same strings) — zero findings outside blocklist code = the denylist holding, not leaking.
+  Adjudicated known-negative.
+- **Journey findings:** #1 P1 vault-create silent failure · #3 P2 non-idempotent scaffold prepend
+  above the frontmatter fence (stacking mechanism CONFIRMED in source: parseFrontmatter requires
+  fence at line 0, frontmatter.ts:53-56; applyChanges prepends a second block on null parse,
+  PropertiesPanel.tsx:157-163 — also the #2 contamination path) · #2 badge CONDITIONAL pending
+  the clean-test word · flash-then-revert write-race stays [HYPOTHESIS] — instrument designed
+  (three-writer trace), no fix before its verdict. Full plan: docs/proposals/.
+- **A7/A8 status entry:** both Stage-A working-tree edits (CLAUDE.md/AGENTS.md reconciliation;
+  README.md:36 goose-docs link) are ABSENT from every current tree — container clean at 2f72db1,
+  laptop synced to the same history. The uncommitted edits died with their session container.
+  RE-STAGE REQUIRED before the W3 commit word; content spec survives in the A7/A8 evidence lines
+  of this file (Stage A section).
+W1 evidence: docs/audit/study-instrument-landing.md. Gate (a) RATIFIED (ADR-0005 Accepted
+2026-07-14, draft date disclosed); gate (b) LOOP-DESIGN.md committed. Commits 271cbbc / 90cc7da /
+008a14b; vitest 254|4 → 265|4 (+1 file/+11 tests exactly, skips unchanged); contrast all-AA; both
+builds green. W2 payloads transit-verified: map 5da35695 ✓, integration prompt 879ed992 ✓,
+triad-canon 3d9af2dc ✓ (stage-d refs recorded: 7cf828c6, ebae855b).
+Stages A ✓, B ✓ (Windows-verified), C ✓, D ✓ (CI live + green; Gate D verdict executed: allowlist
+= exactly 3 IDs, ruling A reqwest bump landed, run 29311241457 all 4 jobs green). PR #3 merged
+2026-07-14: main tip `70952f4` contains everything through `ebb843c`. Sequencing now follows
+`cc-prompt-alfred-beta-ship-orders.md` (W0–W8; received 2026-07-14, batch 1 of 3). Next after the
+W0 GATE: W1 (study-instrument pass) → W2 (epistemic canon) → W3 (rulings) → W4–W8 per orders.
 
 ## STAGE D EVIDENCE (2026-07-13)
 - **.github/workflows/ci.yml** — NEW. push + PR, Linux, Node 22. Jobs: `verify` (typecheck app+mcp,
@@ -145,6 +197,31 @@ Executed (working tree, uncommitted, at 224e624):
   `npm audit fix --force`.
 - **23 informational warnings logged** (18 unmaintained incl. Linux-GTK family; 5 unsound) in the
   allowlist doc; non-blocking per constitution; monthly-cadence review.
+
+## W0 RECONCILIATION (2026-07-14) — ship-orders W0 step 1+3 EXECUTED, step 2 pending inputs
+Orders: `cc-prompt-alfred-beta-ship-orders.md` (batch 1 of 3 received; operator card alongside).
+**Topology (EXECUTED):** origin/main `70952f4` = PR #3 merge; PRs #1 `6829c88` / #2 `150e25c` /
+#3 `70952f4` all merged from this working branch; branch tip `ebb843c` fully contained in main;
+local working branch re-pointed to main tip, clean tree.
+**Stage-D end-state verification (EXECUTED, at main tip):** ci.yml cargo-audit ignores = exactly
+RUSTSEC-2026-0194 + 0195 (no webpki ID ignored anywhere; webpki IDs appear in the allowlist doc
+only inside the RESOLVED-ruling-A table); allowlist doc = exactly the three authorized IDs with
+proof/triggers/review-date/decision-record per entry; LOOP.md carries the FINAL RULING block;
+docs/audit/safety-spine-verification.md committed (f60ea44) and in main; Cargo.toml reqwest =
+0.12.28; Cargo.lock: rustls-webpki 0.103.13 + rustls 0.23.42 only; cargo-audit 0 vulns /
+22 warnings (EXECUTED 2026-07-14); CI run 29311241457 on ebb843c: all four jobs SUCCESS.
+**cargo 9/9 nuance (honest):** Linux CI executes 8 of 9 (job_guard is #[cfg(windows)]); the
+9/9 incl. Job Object ran on Windows at 224e624; re-run at/after ebb843c awaits laptop pull
+(4 commits behind).
+**W0 step 2 — BLOCKED on inputs:** `docs/audit/stage-d-vulnerability-decision.md` is NOT in the
+repo (decision content lives in docs/security/dependency-allowlist.md + this ledger). The two
+reference artifacts (`docs-audit-stage-d-vulnerability-decision.md`,
+`alfred-stage-d-allowlist-entries.md`) are in manifest batch 3 — requested; reconcile-or-create
+when they arrive.
+**W0 GATE (operator card):** audit-note commit word — already satisfied (f60ea44, pushed, merged).
+Branch ruling merge 63gf68→main — already satisfied by PR #3. Remaining word: confirm beta tags
+cut from main + proceed to W1 (W1 needs `cc-prompt-alfred-study-instrument-land.md` +
+`study-instrument-pass.patch` — batch 2).
 
 ## PRIOR: STAGE B POINTER (kept for history)
 Stage order: A ✓ (committed b5c1a98..d1d96e3, pushed 2026-07-12) → B (now) → C three locks
@@ -320,17 +397,31 @@ pushed) before this loop started. The task's "ADR-0002 (skills)" is therefore **
     doc mandates it).
 
 ## BETA DEFINITION OF DONE (verbatim; every line needs evidence)
-- [ ] Phase 5 steps 5/6/7 shipped + docs/audit/phase5.md exists and matches the tree.
-- [ ] Skills channel: three locks shipped (post-ADR) OR channel proven closed on the real launch
+- [x] Phase 5 steps 5/6/7 shipped + docs/audit/phase5.md exists and matches the tree.
+      (EXECUTED: Stage B evidence above; phase5.md in main at 70952f4.)
+- [x] Skills channel: three locks shipped (post-ADR) OR channel proven closed on the real launch
       path with a pinning test + recorded accepted-risk. No Skillsmith auto-install without locks.
-- [ ] Permission enforcement proven keyed on (extension, tool_name), never model-authored title.
+      (EXECUTED: Stage C, ADR-0003 Implemented 2026-07-13, planted-payload canaries green;
+      Skillsmith auto-install remains OUT.)
+- [x] Permission enforcement proven keyed on (extension, tool_name), never model-authored title.
+      (EXECUTED: Stage B fix + safety-spine row 4 — exact-match Set.has, 8/8, live goose start
+      at 224e624 on Windows 2026-07-14.)
 - [ ] verify:all green locally WITH the live-goose trio EXECUTED on this machine; CI green on remote
       with honest skip surfacing; SHA-pinned actions; no Trivy.
+      (PARTIAL: CI green at ebb843c incl. rust job on the new TLS stack [run 29311241457]; trio
+      EXECUTED on Windows at 224e624; laptop is 4 commits behind — trio re-run at/after ebb843c
+      pending laptop pull; full closure comes with the W6 manual release gate.)
 - [ ] Threat model, SECURITY.md, privacy policy, LICENSE-COMPLIANCE.md published.
+      (PARTIAL: docs/threat-model.md + SECURITY.md exist in main; privacy policy and
+      LICENSE-COMPLIANCE.md not yet written — W8 candidates.)
 - [ ] Installer: built, installed, journeys EXECUTED on it; updater keypair generated + escrowed;
       signing state = signed, or unsigned with Martin's recorded acceptance + AV-submission plan.
 - [ ] Sidecar pinned by version + SHA-256; goose version decision recorded (1.39.0 held or bump
       executed + re-verified).
+      (PARTIAL: version pin 1.41.0 + bump re-verified live [trio EXECUTED 2026-07-13/14]. The
+      SHA-256 pin does NOT exist yet — stage-goose-sidecar.mjs:27 defers it to Stage E (E4) in
+      its own comment. W5 work. Earlier "hash-verified" phrasing in session reports overstated;
+      corrected here.)
 - [ ] MCP server bundled — no npx tsx dependency in the packaged app.
 - [ ] PWA live at the confirmed wecanjustbuildthings.dev subdomain; delta notice visible; live
       journeys EXECUTED post-deploy.

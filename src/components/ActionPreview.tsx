@@ -5,6 +5,10 @@
  * scanner (Step 1) and the tool-permission gating (Step 2) both render their
  * action surface through this. Routine `notices` proceed on a plain Run; every
  * `warning` must be EXPLICITLY acknowledged before Run is enabled.
+ *
+ * Design pass: presentation only — inline styles moved to token classes
+ * (styles.css, "Study & Instrument" section); optional `reversibility` line
+ * added to the evidence pack. Gating logic and API are otherwise unchanged.
  */
 import { createSignal, For, Show, type Component } from 'solid-js';
 
@@ -25,6 +29,8 @@ export interface ActionPreviewProps {
   actions: PreviewAction[];
   notices?: string[];
   warnings: PreviewWarningItem[];
+  /** Plain-language reversibility/rollback note, when the caller knows it. */
+  reversibility?: string;
   runLabel?: string;
   onRun: () => void;
   onCancel: () => void;
@@ -42,21 +48,24 @@ const ActionPreview: Component<ActionPreviewProps> = (props) => {
     });
 
   return (
-    <div class="action-preview" style={{ border: '1px solid var(--border, #444)', 'border-radius': '6px', padding: '10px', margin: '8px 0' }}>
+    <div class="action-preview">
       <strong>{props.title}</strong>
       <Show when={props.summary}>
-        <div style={{ opacity: 0.8, 'font-size': '0.9em' }}>{props.summary}</div>
+        <div class="action-preview__summary">{props.summary}</div>
       </Show>
 
-      <div style={{ 'margin-top': '6px', 'font-weight': 600 }}>Actions this will take</div>
-      <Show when={props.actions.length} fallback={<div style={{ opacity: 0.6 }}>(none enumerated)</div>}>
-        <ul style={{ margin: '2px 0', 'padding-left': '18px' }}>
+      <div class="action-preview__section-title">Actions this will take</div>
+      <Show
+        when={props.actions.length}
+        fallback={<div class="action-preview__empty">(none enumerated)</div>}
+      >
+        <ul class="action-preview__list">
           <For each={props.actions}>
             {(a) => (
               <li>
-                <span style={{ 'white-space': 'pre' }}>{a.label}</span>
+                <span class="action-preview__label">{a.label}</span>
                 <Show when={a.detail}>
-                  <span style={{ opacity: 0.7 }}> — {a.detail}</span>
+                  <span class="action-preview__detail"> — {a.detail}</span>
                 </Show>
               </li>
             )}
@@ -64,29 +73,31 @@ const ActionPreview: Component<ActionPreviewProps> = (props) => {
         </ul>
       </Show>
 
+      <Show when={props.reversibility}>
+        <div class="action-preview__reversibility">Reversibility — {props.reversibility}</div>
+      </Show>
+
       <Show when={props.notices && props.notices.length > 0}>
-        <For each={props.notices}>
-          {(n) => <div style={{ opacity: 0.75, 'font-size': '0.9em' }}>• {n}</div>}
-        </For>
+        <For each={props.notices}>{(n) => <div class="action-preview__notice">• {n}</div>}</For>
       </Show>
 
       <Show when={props.warnings.length > 0}>
-        <div style={{ 'margin-top': '8px', color: 'var(--error, #c0392b)', 'font-weight': 600 }}>
+        <div class="action-preview__warnings-head">
           ⚠ {props.warnings.length} warning(s) — acknowledge each to proceed
         </div>
         <For each={props.warnings}>
           {(w) => (
-            <label style={{ display: 'block', color: 'var(--error, #c0392b)', 'font-size': '0.9em', margin: '2px 0' }}>
+            <label class="action-preview__warning">
               <input type="checkbox" checked={acked().has(w.id)} onChange={() => toggle(w.id)} /> {w.label}
               <Show when={w.detail}>
-                <span style={{ opacity: 0.85 }}> — {w.detail}</span>
+                <span class="action-preview__warning-detail"> — {w.detail}</span>
               </Show>
             </label>
           )}
         </For>
       </Show>
 
-      <div style={{ display: 'flex', gap: '6px', 'margin-top': '8px' }}>
+      <div class="action-preview__buttons">
         <button disabled={!allAcked()} onClick={() => props.onRun()}>
           {props.runLabel ?? 'Run'}
         </button>

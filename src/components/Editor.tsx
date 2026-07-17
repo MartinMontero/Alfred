@@ -41,6 +41,7 @@ import { commentPlugin } from '../lib/editor/comment-plugin';
 import { calloutPlugin } from '../lib/editor/callout-plugin';
 import { historyPlugin, historyKeymap } from '../lib/editor/history';
 import { AssetIndex } from '../lib/editor/asset-index';
+import { splitFrontmatter, joinFrontmatter } from '../lib/frontmatter';
 import {
   vaultUploadPlugin,
   setUploadVaultPath,
@@ -92,6 +93,12 @@ const MilkdownEditor: Component<EditorProps> = (props) => {
   let dragOverHandler: ((e: DragEvent) => void) | null = null;
   // Track the last content we set in the editor to detect external changes
   let lastEditorContent: string = '';
+  // W1 #3: the frontmatter fence must never enter Milkdown — markdown treats
+  // `---` as a thematic break and the serializer rewrites it (observed in the
+  // field as `***` + heading mutations). The block is split off here, held,
+  // and re-joined on every serialize. lastBody mirrors the editor's document.
+  let currentFrontmatter: string | null = null;
+  let lastBody: string = '';
   // Source editor state: completely independent from Milkdown.
   // Reads/writes directly to disk, never touches Milkdown's serializer.
   const [_sourceContent, setSourceContent] = createSignal('');
@@ -140,10 +147,14 @@ const MilkdownEditor: Component<EditorProps> = (props) => {
       (plugin) => plugin !== remarkPreserveEmptyLinePlugin.plugin && plugin !== remarkPreserveEmptyLinePlugin.options
     );
 
+    const initialSplit = splitFrontmatter(initialContent);
+    currentFrontmatter = initialSplit.frontmatter;
+    lastBody = initialSplit.body;
+
     editorInstance = await Editor.make()
       .config((ctx) => {
         ctx.set(rootCtx, container);
-        ctx.set(defaultValueCtx, initialContent);
+        ctx.set(defaultValueCtx, initialSplit.body);
       })
       .config(nord)
       .use(customCommonmark)
@@ -178,8 +189,11 @@ const MilkdownEditor: Component<EditorProps> = (props) => {
           // Strip backslash escapes from [ ] _ ! that remark-stringify adds.
           // These are literal in Milkdown (links/emphasis/images are nodes).
           const cleaned = markdown.replace(/\\([[\]_!])/g, '$1');
-          lastEditorContent = cleaned;
-          props.onContentChange(cleaned);
+          // Re-attach the held frontmatter: the serializer only ever saw the body.
+          lastBody = cleaned;
+          const full = joinFrontmatter(currentFrontmatter, cleaned);
+          lastEditorContent = full;
+          props.onContentChange(full);
 
           // Export headings from plugin state
           const view = ctx.get(editorViewCtx);
@@ -423,9 +437,13 @@ const MilkdownEditor: Component<EditorProps> = (props) => {
                 setUploadVaultPath(props.vaultPath || null);
                 setOnFilesUploaded(props.onFilesUploaded || null);
 
-                // Parse the new file's markdown with the existing parser
+                // Parse the new file's markdown with the existing parser.
+                // Split first: the fence never enters the serializer (W1 #3).
+                const swapSplit = splitFrontmatter(props.content);
+                currentFrontmatter = swapSplit.frontmatter;
+                lastBody = swapSplit.body;
                 const parser = ctx.get(parserCtx);
-                const doc = parser(props.content);
+                const doc = parser(swapSplit.body);
                 if (!doc) {
                   throw new Error('Parser returned no document');
                 }
@@ -515,6 +533,42 @@ const MilkdownEditor: Component<EditorProps> = (props) => {
           }
         }
       }
+    )
+  );
+
+  // External content changes for the SAME file (Properties-panel writes,
+  // file-watcher reloads). Previously the editor only watched filePath, so
+  // its stale buffer clobbered outside edits on the next keystroke (the W1
+  // flash-then-revert race). Frontmatter-only changes just update the held
+  // fence; the document is touched only when the body itself changed.
+  createEffect(
+    on(
+      () => props.content,
+      (content) => {
+        if (content === undefined || content === lastEditorContent) return;
+        if (props.viewMode === 'source') return; // source editor reads disk directly
+        if (props.filePath !== currentPath()) return; // a tab switch owns this change
+        const split = splitFrontmatter(content);
+        currentFrontmatter = split.frontmatter;
+        lastEditorContent = content;
+        if (split.body === lastBody) return; // frontmatter-only edit: fence ref updated, done
+        if (!editorInstance?.ctx) return;
+        try {
+          const ctx = editorInstance.ctx;
+          const view = ctx.get(editorViewCtx);
+          if (!view.dom.isConnected) return;
+          const parser = ctx.get(parserCtx);
+          const doc = parser(split.body);
+          if (!doc) return;
+          view.updateState(
+            EditorState.create({ doc, schema: view.state.schema, plugins: view.state.plugins })
+          );
+          lastBody = split.body;
+        } catch (err) {
+          console.error('[Editor] Failed to apply external content change:', err);
+        }
+      },
+      { defer: true }
     )
   );
 

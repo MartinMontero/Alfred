@@ -96,11 +96,18 @@ const App: Component = () => {
   // Extend the plugin-fs scope whenever the vault path changes.
   // This grants the webview's fs plugin read/write access to the user-chosen
   // vault directory, which may be outside the static fs:scope paths.
+  // W1 #1: a scope failure used to die in console.error while the app opened
+  // as an empty shell — the "silent by architecture" case. It now surfaces.
+  const [vaultOpenError, setVaultOpenError] = createSignal<string | null>(null);
   createEffect(on(vaultPath, (path: string | null) => {
     if (path) {
-      platform.vault.setVaultScope(path).catch((err: unknown) => {
-        console.error('[App] Failed to set vault scope:', err);
-      });
+      platform.vault.setVaultScope(path)
+        .then(() => setVaultOpenError(null))
+        .catch((err: unknown) => {
+          console.error('[App] Failed to set vault scope:', err);
+          const reason = err instanceof Error ? err.message : String(err);
+          setVaultOpenError(`Your vault could not be opened: ${reason} — ${path}`);
+        });
     }
   }));
 
@@ -270,7 +277,7 @@ const App: Component = () => {
     }
 
     // Apply accent color
-    const accent = localStorage.getItem('accent_color') || '#8b5cf6';
+    const accent = localStorage.getItem('accent_color') || '#b8863d';
     root.style.setProperty('--accent', accent);
     // Calculate hover color (lighter version)
     const num = parseInt(accent.replace('#', ''), 16);
@@ -2493,6 +2500,30 @@ const App: Component = () => {
 
   return (
     <div class={`app ${isMobileApp() ? 'mobile' : ''}`}>
+      {/* W1 #1 failure surface: vault could not be opened (scope rejection etc.) */}
+      <Show when={vaultOpenError()}>
+        <div class="vault-open-banner" role="alert">
+          <span>{vaultOpenError()}</span>
+          <button
+            class="vault-open-banner__action"
+            onClick={() => {
+              const p = vaultPath();
+              setVaultOpenError(null);
+              if (p) platform.vault.setVaultScope(p)
+                .then(() => setVaultOpenError(null))
+                .catch((err: unknown) => {
+                  const reason = err instanceof Error ? err.message : String(err);
+                  setVaultOpenError(`Your vault could not be opened: ${reason} — ${p}`);
+                });
+            }}
+          >
+            Retry
+          </button>
+          <button class="vault-open-banner__action" onClick={() => setShowSettings(true)}>
+            Choose a different folder
+          </button>
+        </div>
+      </Show>
       {/* Mobile Header - Only shown on mobile */}
       <Show when={isMobileApp()}>
         <MobileHeader

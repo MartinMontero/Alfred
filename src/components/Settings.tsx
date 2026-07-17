@@ -396,7 +396,7 @@ const Settings: Component<SettingsProps> = (props) => {
     (localStorage.getItem('theme') as 'dark' | 'light' | 'system') || 'dark'
   );
   const [accentColor, setAccentColor] = createSignal(
-    localStorage.getItem('accent_color') || '#8b5cf6'
+    localStorage.getItem('accent_color') || '#b8863d'
   );
   const [interfaceFontSize, setInterfaceFontSize] = createSignal<'small' | 'medium' | 'large'>(
     (localStorage.getItem('interface_font_size') as 'small' | 'medium' | 'large') || 'medium'
@@ -1834,16 +1834,16 @@ const Settings: Component<SettingsProps> = (props) => {
                       const value = e.currentTarget.value as 'dark' | 'light' | 'system';
                       setTheme(value);
                       localStorage.setItem('theme', value);
-                      // Auto-apply purple accent for Nostr Purple theme
+                      // Auto-apply the default brass accent for the dark theme
                       if (value === 'dark') {
-                        const purple = '#8b5cf6';
-                        setAccentColor(purple);
-                        localStorage.setItem('accent_color', purple);
+                        const brass = '#b8863d';
+                        setAccentColor(brass);
+                        localStorage.setItem('accent_color', brass);
                       }
                       applyAppearanceSettings();
                     }}
                   >
-                    <option value="dark">Dark (Nostr Purple)</option>
+                    <option value="dark">Dark</option>
                     <option value="light">Light</option>
                     <option value="system">System</option>
                   </select>

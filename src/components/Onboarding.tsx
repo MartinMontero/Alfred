@@ -16,7 +16,7 @@ import type { NostrIdentity } from '../lib/nostr/types';
 import '../styles/onboarding.css';
 
 // Import SVG illustrations
-import WelcomeSvg from '../assets/onboarding/welcome.svg';
+import AlfredMark from '../assets/onboarding/alfred-mark.png';
 import VaultSvg from '../assets/onboarding/vault.svg';
 import FeaturesSvg from '../assets/onboarding/features.svg';
 import NostrSvg from '../assets/onboarding/nostr.svg';
@@ -111,22 +111,34 @@ const Onboarding: Component<OnboardingProps> = (props) => {
   const createNewVault = async () => {
     setVaultLoading(true);
     setVaultError(null);
+    // W1 #1 instrument + failure surface: every step is named so a failure
+    // reports WHERE it broke, with the underlying OS reason — never a bare
+    // "failed". DEV logs let one repro pin the failing step.
+    let step = 'determining the vault location';
+    const trace = (msg: string) => {
+      if (import.meta.env.DEV) console.debug('[vault-create]', msg);
+    };
     try {
+      trace('start');
       const path = defaultVaultPath() || (props.isMobile ? null : `${await getHomeDir()}/Documents/Alfred Notes`);
-      if (!path) throw new Error('Could not determine vault path');
-      
-      // Create the folder
+      if (!path) throw new Error('no default path available on this platform');
+      trace(`path determined: ${path}`);
+
+      step = 'creating the vault folder';
       await platform.vault.createFolder(path, path);
+      trace('folder created');
       setVaultPath(path);
 
-      // Save to settings
+      step = 'saving the vault location to settings';
       await platform.settings.save({ vault_path: path });
       localStorage.setItem('vault_path', path);
-      
+      trace('settings saved');
+
       goNext();
     } catch (err) {
-      console.error('Failed to create vault:', err);
-      setVaultError(err instanceof Error ? err.message : 'Failed to create vault');
+      console.error('[vault-create] failed while', step, '-', err);
+      const reason = err instanceof Error ? err.message : String(err);
+      setVaultError(`Failed while ${step}: ${reason}`);
     } finally {
       setVaultLoading(false);
     }
@@ -238,18 +250,16 @@ const Onboarding: Component<OnboardingProps> = (props) => {
   const renderWelcome = () => (
     <>
       <div class="onboarding-illustration">
-        <img src={WelcomeSvg} alt="Welcome to Alfred" />
+        <img src={AlfredMark} alt="The Alfred mark" />
       </div>
       <h1 class="onboarding-headline">Welcome to Alfred</h1>
       <p class="onboarding-subhead">Your AI-powered workspace for focused work and clear thinking.</p>
       
       <div class="onboarding-benefits">
         <div class="onboarding-benefit-item">
-          <span class="onboarding-benefit-icon">🚀</span>
           <span class="onboarding-benefit-text">Capture ideas, organize projects, and get more done</span>
         </div>
         <div class="onboarding-benefit-item">
-          <span class="onboarding-benefit-icon">🤖</span>
           <span class="onboarding-benefit-text">AI assistant helps you write, research, and brainstorm</span>
         </div>
         <div class="onboarding-benefit-item">
