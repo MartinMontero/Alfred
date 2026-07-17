@@ -32,14 +32,24 @@
   "plugins": {
     "deep-link": {
       "desktop": {
-        "schemes": ["alfred"]
+        "schemes": [
+          "alfred"
+        ]
       }
+    },
+    "updater": {
+      "pubkey": "",
+      "endpoints": [
+        "https://github.com/MartinMontero/Alfred/releases/latest/download/latest.json"
+      ]
     }
   },
   "bundle": {
     "active": true,
     "targets": "all",
-    "externalBin": ["binaries/goose"],
+    "externalBin": [
+      "binaries/goose"
+    ],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -57,6 +67,7 @@
       "appimage": {
         "bundleMediaFramework": false
       }
-    }
+    },
+    "createUpdaterArtifacts": true
   }
 }

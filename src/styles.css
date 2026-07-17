@@ -10150,3 +10150,31 @@ body {
 .vault-open-banner__action:hover {
   background: color-mix(in srgb, var(--ev-low-text) 10%, transparent);
 }
+
+/* W5 — updater flow in Settings > About */
+.about-updates {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-start;
+}
+.about-updates__button {
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+.about-updates__button:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.about-updates__error {
+  color: var(--ev-low-text);
+}
+.about-updates__note {
+  color: var(--text-secondary);
+  font-size: 0.85em;
+  margin: 0;
+}

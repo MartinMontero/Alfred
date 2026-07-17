@@ -31,6 +31,8 @@ import {
   clearCustomProviderApiKey,
 } from '../lib/ai-credentials';
 import { usePlatformInfo, isMobile, isDesktop } from '../lib/platform';
+import { checkForUpdate, downloadAndInstallPending, mapUpdaterError } from '../lib/updater';
+import AlfredMark from '../assets/onboarding/alfred-mark.png';
 import { invoke } from '@tauri-apps/api/core';
 import { authenticateWithBiometric } from '../lib/biometric';
 import {
@@ -248,6 +250,42 @@ const Settings: Component<SettingsProps> = (props) => {
 
   // App version
   const [appVersion, setAppVersion] = createSignal('...');
+
+  // W5 updater flow — three explicit user actions, nothing automatic.
+  const [updateStatus, setUpdateStatus] = createSignal<
+    'idle' | 'checking' | 'none' | 'available' | 'downloading' | 'error'
+  >('idle');
+  const [updateDetail, setUpdateDetail] = createSignal('');
+  const [updateVersion, setUpdateVersion] = createSignal('');
+
+  const runUpdateCheck = async () => {
+    setUpdateStatus('checking');
+    setUpdateDetail('');
+    try {
+      const r = await checkForUpdate();
+      if (r.phase === 'available') {
+        setUpdateVersion(r.version ?? '');
+        setUpdateStatus('available');
+      } else {
+        setUpdateStatus('none');
+      }
+    } catch (e) {
+      setUpdateDetail(mapUpdaterError(e));
+      setUpdateStatus('error');
+    }
+  };
+
+  const runUpdateInstall = async () => {
+    setUpdateStatus('downloading');
+    setUpdateDetail('');
+    try {
+      await downloadAndInstallPending((pct) => setUpdateDetail(pct === null ? '' : `${pct}%`));
+      // On Windows the app exits when the installer takes over; nothing to do here.
+    } catch (e) {
+      setUpdateDetail(mapUpdaterError(e));
+      setUpdateStatus('error');
+    }
+  };
 
   // Custom Provider state
   const [customProviderUrl, setCustomProviderUrl] = createSignal<string>(
@@ -2751,37 +2789,47 @@ const Settings: Component<SettingsProps> = (props) => {
               <div class="settings-section about">
                 <div class="about-header">
                   <div class="about-logo">
-                    <svg width="64" height="64" viewBox="0 0 512 512">
-                      <defs>
-                        <linearGradient id="aboutRockShine" x1="0%" y1="0%" x2="100%" y2="100%">
-                          <stop offset="0%" style="stop-color:#3a3a3a"/>
-                          <stop offset="30%" style="stop-color:#1a1a1a"/>
-                          <stop offset="70%" style="stop-color:#0a0a0a"/>
-                          <stop offset="100%" style="stop-color:#000000"/>
-                        </linearGradient>
-                        <linearGradient id="aboutHighlight" x1="0%" y1="0%" x2="100%" y2="100%">
-                          <stop offset="0%" style="stop-color:#4a4a4a"/>
-                          <stop offset="100%" style="stop-color:#2a2a2a"/>
-                        </linearGradient>
-                      </defs>
-                      <g>
-                        <polygon points="256,48 380,140 420,280 350,420 162,420 92,280 132,140" fill="#0a0a0a"/>
-                        <polygon points="132,140 92,280 162,420 200,320 180,200" fill="#151515"/>
-                        <polygon points="380,140 420,280 350,420 312,320 332,200" fill="#101010"/>
-                        <polygon points="162,420 350,420 312,320 256,360 200,320" fill="#080808"/>
-                        <polygon points="256,48 132,140 180,200 256,160" fill="url(#aboutHighlight)"/>
-                        <polygon points="256,48 380,140 332,200 256,160" fill="#2a2a2a"/>
-                        <polygon points="180,200 332,200 312,320 256,360 200,320" fill="url(#aboutRockShine)"/>
-                        <polygon points="200,210 280,210 260,260 210,250" fill="#4a4a4a" opacity="0.3"/>
-                        <polygon points="210,220 250,220 240,245 215,240" fill="#5a5a5a" opacity="0.2"/>
-                      </g>
-                      <polygon points="256,48 380,140 420,280 350,420 162,420 92,280 132,140" fill="none" stroke="#2a2a2a" stroke-width="2"/>
-                    </svg>
+                    <img src={AlfredMark} width="64" height="64" alt="The Alfred mark" style={{ 'object-fit': 'contain' }} />
                   </div>
                   <h1>Alfred</h1>
                   <p class="about-tagline">A sovereign, local-first, Nostr-native PKM for agentic AI development</p>
                   <p class="about-version">Version {appVersion()}</p>
                 </div>
+
+                <Show when={isDesktop()}>
+                  <div class="about-section">
+                    <h3>Updates</h3>
+                    <div class="about-updates">
+                      <Show when={updateStatus() === 'idle' || updateStatus() === 'none' || updateStatus() === 'error'}>
+                        <button class="about-updates__button" onClick={runUpdateCheck}>
+                          Check for updates
+                        </button>
+                      </Show>
+                      <Show when={updateStatus() === 'checking'}>
+                        <span>Checking for updates…</span>
+                      </Show>
+                      <Show when={updateStatus() === 'none'}>
+                        <span>Alfred is up to date.</span>
+                      </Show>
+                      <Show when={updateStatus() === 'error'}>
+                        <span class="about-updates__error">{updateDetail()}</span>
+                      </Show>
+                      <Show when={updateStatus() === 'available'}>
+                        <span>Version {updateVersion()} is available.</span>
+                        <button class="about-updates__button" onClick={runUpdateInstall}>
+                          Download and install
+                        </button>
+                        <p class="about-updates__note">
+                          Alfred will close to apply the update. The download is verified against the
+                          release signing key before anything is installed.
+                        </p>
+                      </Show>
+                      <Show when={updateStatus() === 'downloading'}>
+                        <span>Downloading… {updateDetail()}</span>
+                      </Show>
+                    </div>
+                  </div>
+                </Show>
 
                 <div class="about-section">
                   <h3>About</h3>

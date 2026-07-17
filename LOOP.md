@@ -29,13 +29,26 @@ This session runs in the **Linux remote container** (`/home/user/Alfred`), not
   announce).
 
 ## STAGE POINTER
-**Current: BETA SHIP ORDERS — W0 ✓ · W1 ✓ · W2 ✓ · FIX WAVE ✓ EXECUTED (#3 57f4ca7 red-first,
-#1 7270f33; race mechanism found in source and closed by the #3 wiring; audit:
-docs/audit/fix-wave-w1.md) · IDENTITY PASS art/icons ✓ 1853ac5 (copy drafts STAGED, awaiting
-word) · known-issues entry 2 promoted to "fixed in 57f4ca7" · A7/A8 CLOSED BY HISTORY (landed
-d1d96e3/7b2731c — ledger's "not committed" was stale; no word needed) · W3 remaining: PR merge
-(PR open, builder merges) + already-confirmed ADR-0003/0004/scope · then W4→W8. W6 manual gate
-on the installed artifact stays in force.**
+**Current: BETA SHIP ORDERS — W0–W3 ✓ (PRs #4 + #5 MERGED by builder; copy reframe landed
+7b9b386) · W4 ✓ CONFIRMED ON MAIN: run 29553158098 on fec5bc6 (PR #5 merge tip) completed
+SUCCESS, all four jobs, chromedriver cause-fix in tree
+(https://github.com/MartinMontero/Alfred/actions/runs/29553158098) · W5 UPDATER WIRING STAGED
+on the branch (this commit) — see below; keypair ceremony is the gate · then W6 tag → W7 PWA →
+W8 docs/SHIP. W6 manual gate on the installed artifact stays in force.**
+
+## W5 UPDATER WIRING (2026-07-17) — full re-scope executed, ceremony-blocked slots explicit
+Advisor finding independently re-verified at all six points before wiring (plugin entirely
+absent). Landed: `tauri-plugin-updater` 2.9.0 (Cargo) + `@tauri-apps/plugin-updater` ^2.10.1
+(npm; vendor-exclusion enforcement PASSED over both lockfiles); desktop-gated registration in
+lib.rs; `updater:default` capability; `plugins.updater` in tauri.conf.json (endpoints → GitHub
+releases latest.json; **pubkey EMPTY by design until the builder's keypair ceremony**);
+`bundle.createUpdaterArtifacts: true`; release.yml `includeUpdaterJson: true` + `.sig` upload
+globs; Settings→About "Updates" flow (three explicit user actions — check / download+install /
+installer handoff — nothing automatic; plain-language error mapping incl. the honest
+"not configured in this build" state; unit-tested, 5 new tests). Bonus residue kill: the About
+logo was a hardcoded inline Onyx-rock SVG — replaced with the Alfred mark. Gates: tsc ✓,
+vitest 278|4 ✓, exclusion ✓, build ✓. **Dry-run acceptance stands: .sig files + latest.json
+actually emitted — requires TAURI_SIGNING_PRIVATE_KEY, i.e. ceremony first.**
 
 ## COMMAND DECISION (2026-07-14, builder's words) — ship-first
 "Badge protocol SUSPENDED; the three readings are not coming. RULING: B. Fix wave = #1 + #3 as
