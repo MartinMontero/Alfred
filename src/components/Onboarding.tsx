@@ -111,22 +111,34 @@ const Onboarding: Component<OnboardingProps> = (props) => {
   const createNewVault = async () => {
     setVaultLoading(true);
     setVaultError(null);
+    // W1 #1 instrument + failure surface: every step is named so a failure
+    // reports WHERE it broke, with the underlying OS reason — never a bare
+    // "failed". DEV logs let one repro pin the failing step.
+    let step = 'determining the vault location';
+    const trace = (msg: string) => {
+      if (import.meta.env.DEV) console.debug('[vault-create]', msg);
+    };
     try {
+      trace('start');
       const path = defaultVaultPath() || (props.isMobile ? null : `${await getHomeDir()}/Documents/Alfred Notes`);
-      if (!path) throw new Error('Could not determine vault path');
-      
-      // Create the folder
+      if (!path) throw new Error('no default path available on this platform');
+      trace(`path determined: ${path}`);
+
+      step = 'creating the vault folder';
       await platform.vault.createFolder(path, path);
+      trace('folder created');
       setVaultPath(path);
 
-      // Save to settings
+      step = 'saving the vault location to settings';
       await platform.settings.save({ vault_path: path });
       localStorage.setItem('vault_path', path);
-      
+      trace('settings saved');
+
       goNext();
     } catch (err) {
-      console.error('Failed to create vault:', err);
-      setVaultError(err instanceof Error ? err.message : 'Failed to create vault');
+      console.error('[vault-create] failed while', step, '-', err);
+      const reason = err instanceof Error ? err.message : String(err);
+      setVaultError(`Failed while ${step}: ${reason}`);
     } finally {
       setVaultLoading(false);
     }

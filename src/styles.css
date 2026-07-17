@@ -10127,3 +10127,26 @@ body {
   color: var(--ev-low-text);
   font-size: 0.85em;
 }
+
+/* W1 fix-wave #1 — vault-open failure surface (never an empty shell) */
+.vault-open-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--ev-low-border);
+  background: var(--ev-low-bg);
+  color: var(--ev-low-text);
+  font-size: 0.9em;
+}
+.vault-open-banner__action {
+  padding: 4px 10px;
+  border: 1px solid var(--ev-low-border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ev-low-text);
+  cursor: pointer;
+}
+.vault-open-banner__action:hover {
+  background: color-mix(in srgb, var(--ev-low-text) 10%, transparent);
+}
