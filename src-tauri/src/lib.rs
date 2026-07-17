@@ -1133,7 +1133,11 @@ pub fn run() {
             }
         }))
         // Window state plugin - remembers window position and size
-        .plugin(tauri_plugin_window_state::Builder::default().build());
+        .plugin(tauri_plugin_window_state::Builder::default().build())
+        // Updater plugin (W5). Endpoints + pubkey live in tauri.conf.json
+        // (plugins.updater). The check/download/install flow is driven from
+        // Settings with explicit user consent at each step — never automatic.
+        .plugin(tauri_plugin_updater::Builder::new().build());
     }
 
     // Mobile-only plugins

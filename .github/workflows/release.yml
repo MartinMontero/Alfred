@@ -76,11 +76,16 @@ jobs:
         uses: tauri-apps/tauri-action@42e9df6c59070d114bf90dcd3943a1b8f138b113 # v0.5.20
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Updater signing — when unset, tauri-action builds unsigned (beta-acceptable).
+          # Updater signing — when unset, tauri-action builds unsigned (beta-acceptable),
+          # but createUpdaterArtifacts requires the key: the W5 dry-run acceptance is
+          # .sig files + latest.json actually emitted, so the keypair ceremony precedes
+          # any release run (docs/release-process.md).
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           args: --target x86_64-pc-windows-msvc
+          # Emit latest.json alongside the updater artifacts in the draft release.
+          includeUpdaterJson: true
 
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
@@ -89,6 +94,8 @@ jobs:
           path: |
             src-tauri/target/x86_64-pc-windows-msvc/release/bundle/msi/*.msi
             src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/*.exe
+            src-tauri/target/x86_64-pc-windows-msvc/release/bundle/msi/*.sig
+            src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/*.sig
           if-no-files-found: error
 
   release:

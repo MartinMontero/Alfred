@@ -12,22 +12,47 @@
     {
       "identifier": "shell:allow-spawn",
       "allow": [
-        { "name": "binaries/goose", "sidecar": true, "args": ["acp"] },
         {
           "name": "binaries/goose",
           "sidecar": true,
-          "args": ["run", "--recipe", { "validator": ".+" }, "--no-session"]
+          "args": [
+            "acp"
+          ]
+        },
+        {
+          "name": "binaries/goose",
+          "sidecar": true,
+          "args": [
+            "run",
+            "--recipe",
+            {
+              "validator": ".+"
+            },
+            "--no-session"
+          ]
         }
       ]
     },
     {
       "identifier": "shell:allow-execute",
       "allow": [
-        { "name": "binaries/goose", "sidecar": true, "args": ["acp"] },
         {
           "name": "binaries/goose",
           "sidecar": true,
-          "args": ["recipe", "validate", { "validator": ".+" }]
+          "args": [
+            "acp"
+          ]
+        },
+        {
+          "name": "binaries/goose",
+          "sidecar": true,
+          "args": [
+            "recipe",
+            "validate",
+            {
+              "validator": ".+"
+            }
+          ]
         }
       ]
     },
@@ -39,11 +64,21 @@
     {
       "identifier": "fs:scope",
       "allow": [
-        { "path": "$DOCUMENT/**" },
-        { "path": "$DOWNLOAD/**" },
-        { "path": "$APPCONFIG/**" },
-        { "path": "$APPDATA/**" },
-        { "path": "$HOME/.config/alfred/**" }
+        {
+          "path": "$DOCUMENT/**"
+        },
+        {
+          "path": "$DOWNLOAD/**"
+        },
+        {
+          "path": "$APPCONFIG/**"
+        },
+        {
+          "path": "$APPDATA/**"
+        },
+        {
+          "path": "$HOME/.config/alfred/**"
+        }
       ]
     },
     "store:default",
@@ -60,6 +95,7 @@
     "clipboard-manager:allow-write-text",
     "clipboard-manager:allow-read-image",
     "clipboard-manager:allow-write-image",
-    "clipboard-manager:allow-write-html"
+    "clipboard-manager:allow-write-html",
+    "updater:default"
   ]
 }

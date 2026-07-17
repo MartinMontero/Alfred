@@ -32,14 +32,24 @@
   "plugins": {
     "deep-link": {
       "desktop": {
-        "schemes": ["alfred"]
+        "schemes": [
+          "alfred"
+        ]
       }
+    },
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDNEOUEyRjdCRDlFQkY0M0UKUldRKzlPdlpleSthUGZvcnFJL2ZPYllyT2NWK3lNa2NUaGhjb1JlTzVRZDVXdGFKVEo5K2ZEZVoK",
+      "endpoints": [
+        "https://github.com/MartinMontero/Alfred/releases/latest/download/latest.json"
+      ]
     }
   },
   "bundle": {
     "active": true,
     "targets": "all",
-    "externalBin": ["binaries/goose"],
+    "externalBin": [
+      "binaries/goose"
+    ],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -57,6 +67,7 @@
       "appimage": {
         "bundleMediaFramework": false
       }
-    }
+    },
+    "createUpdaterArtifacts": true
   }
 }

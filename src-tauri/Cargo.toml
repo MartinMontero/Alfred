@@ -42,6 +42,7 @@ dirs = "5.0"
 # Born-redacted local telemetry store (src/telemetry.rs). Bundled = compile SQLite
 # in, no system dependency; gives direct PRAGMA / wal_checkpoint / VACUUM control.
 rusqlite = { version = "0.32", features = ["bundled"] }
+tauri-plugin-updater = "2"
 
 [target.'cfg(not(target_os = "android"))'.dependencies]
 keyring = { version = "3", features = ["sync-secret-service", "apple-native", "windows-native"] }
