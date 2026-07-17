@@ -36,6 +36,28 @@ SUCCESS, all four jobs, chromedriver cause-fix in tree
 on the branch (this commit) — see below; keypair ceremony is the gate · then W6 tag → W7 PWA →
 W8 docs/SHIP. W6 manual gate on the installed artifact stays in force.**
 
+## W5 DRY-RUN #5 (2026-07-17) — GREEN; acceptance met verbatim; ceremony chain proven end-to-end
+Builder's capture: run 80203426635, 15m52s, **282/282 tests** (every platform skip executes on
+the Windows runner), draft `v0.0.0-dryrun.1` created with **.msi + .msi.sig + setup.exe +
+.exe.sig + latest.json** (log-proven). Draft inspected and deleted by the builder. Root causes
+for the ledger (builder's words): #1 version-pair preflight (fixed ba5977f + CI guard);
+**#2–#4 secrets held wrong values — key/password field confusion; resolved (key text in KEY,
+password in PASSWORD)**. The updater release mechanism W6 will run is now rehearsed exactly.
+
+**Standing Stage-D posture check on the new dep tree (2026-07-17, post-alignment):**
+- **Two reqwest majors, both explained and clean:** 0.12.28 = Alfred's direct dep (ruling-A TLS
+  stack, custom-provider commands); 0.13.4 = tauri-plugin-updater 2.10.1's own client (update
+  downloads). BOTH resolve to the single modern TLS stack — one rustls (0.23.42) and one
+  rustls-webpki (0.103.13) in the entire lockfile; no 0.21.x/0.101.x regression (the un-ignored
+  cargo-audit gate would go red if one re-entered). Unifying Alfred's 0.12→0.13 is a routine
+  future Renovate bump, not a posture issue.
+- **cargo-audit:** 0 vulnerabilities / 22 informational warnings (fresh run over the aligned
+  lock). **Allowlist still exactly three IDs** — ci.yml carries exactly `--ignore
+  RUSTSEC-2026-0194 --ignore RUSTSEC-2026-0195` (grep -o verified) + npm-side
+  GHSA-w5hq-g745-h8pq documented; webpki IDs ignored nowhere.
+- **Grype:** runs in the CI supply-chain job on the ba5977f push / PR #7 (blocking
+  high/critical, .grype.yaml still empty); verdict rides the PR-green the builder merges on.
+
 ## W5 DRY-RUN #1 (2026-07-17) — FAILED on tauri version-alignment preflight; cause-fixed + guarded
 Builder's diagnosis from full run logs: two Rust/JS pairs skewed in major/minor — tauri 2.9.5 vs
 @tauri-apps/api 2.11.1 (pre-existing: the ^2.9.1 caret let the JS lockfile drift while the Rust
