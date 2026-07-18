@@ -28,6 +28,7 @@ import {
   type RecipePreview,
 } from '../lib/goose';
 import ActionPreview from './ActionPreview';
+import { mapGooseConnectError, PROVIDER_DEFAULT_MODEL } from '../lib/goose/connect-errors';
 import { invoke } from '@tauri-apps/api/core';
 import { createSessionTap, type SessionTap } from '../lib/telemetry/session-tap';
 import { generateTraceContext } from '../lib/telemetry/trace';
@@ -226,7 +227,11 @@ const GoosePanel: Component<GoosePanelProps> = (props) => {
       setConnected(true);
       append('system', `Connected to goose (${session.initialize.agentInfo?.name} ${session.initialize.agentInfo?.version}). The vault is registered as ground truth.`);
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      // F5: honest not-connected state — mapped reason + concrete setup path,
+      // never a raw spawn/ACP string as the only signal.
+      const f = mapGooseConnectError(e);
+      setError(`${f.message} ${f.setupPath}`);
+      setConnected(false);
     } finally {
       setBusy(false);
     }
@@ -328,7 +333,16 @@ const GoosePanel: Component<GoosePanelProps> = (props) => {
           <div class="goose-panel__connect" style={{ padding: '8px', display: 'flex', 'flex-direction': 'column', gap: '6px' }}>
             <label>
               Provider
-              <select value={provider()} onChange={(e) => setProvider(e.currentTarget.value)}>
+              <select
+                value={provider()}
+                onChange={(e) => {
+                  const next = e.currentTarget.value;
+                  setProvider(next);
+                  // F5: keep provider and model coherent — switching provider
+                  // resets the model to that provider's starting point.
+                  setModel(PROVIDER_DEFAULT_MODEL[next] ?? '');
+                }}
+              >
                 <For each={PERMITTED_PROVIDERS}>{(p) => <option value={p.value}>{p.name}</option>}</For>
               </select>
             </label>
