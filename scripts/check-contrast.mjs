@@ -72,5 +72,21 @@ for (const [name, [fg, bg]] of Object.entries(accentUi)) {
   if (!ok) fail++;
   console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${r.toFixed(2)}:1  ${name}`);
 }
+
+// Design-ship pass (beta.2): app-baseline text pairs now that the goose panel
+// and shell surfaces lean on them directly. Text pairs require AA 4.5:1.
+const appBaseline = {
+  'text-primary on bg-primary (dark)': ['#e0e0e0', '#1a1a1d'],
+  'text-primary on bg-secondary (dark)': ['#e0e0e0', '#212124'],
+  'text-secondary on bg-primary (dark)': ['#888888', '#1a1a1d'],
+  'text-secondary on bg-secondary (dark)': ['#888888', '#212124'],
+};
+console.log('\n[app baseline — text pairs, ≥4.5:1]');
+for (const [name, [fg, bg]] of Object.entries(appBaseline)) {
+  const r = ratio(fg, bg);
+  const ok = r >= 4.5;
+  if (!ok) fail++;
+  console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${r.toFixed(2)}:1  ${name}`);
+}
 console.log(fail ? `\n${fail} pair(s) below AA 4.5:1` : '\nAll pairs meet WCAG AA (4.5:1).');
 process.exit(fail ? 1 : 0);

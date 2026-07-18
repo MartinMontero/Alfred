@@ -55,7 +55,8 @@
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+  /* Type roles (0006): bundled Inter is the UI grotesque; system stack is fallback only. */
+  font-family: var(--font-ui, 'Inter'), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
   font-size: var(--font-size-ui);
   background: var(--bg-primary);
   color: var(--text-primary);
@@ -10028,8 +10029,10 @@ body {
   --ev-unknown-text: #9a9a9a; --ev-unknown-bg: #212124; --ev-unknown-border: #3a3a3f;
 
   /* type roles (system stacks only — no font files) */
-  --font-canon: Georgia, 'Iowan Old Style', 'Times New Roman', serif;
-  --font-data: ui-monospace, 'Cascadia Mono', 'SF Mono', Menlo, Consolas, monospace;
+  /* 0006: bundled OFL faces lead every role; the old stacks remain as fallbacks. */
+  --font-ui: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-canon: 'Merriweather', Georgia, 'Iowan Old Style', 'Times New Roman', serif;
+  --font-data: 'JetBrains Mono', ui-monospace, 'Cascadia Mono', Menlo, Consolas, monospace;
 
   /* motion — settle, don't zip; opacity/transform only */
   --motion-fast: 120ms;
@@ -10177,4 +10180,193 @@ body {
   color: var(--text-secondary);
   font-size: 0.85em;
   margin: 0;
+}
+
+/* F6 (beta.1 smoke) — theme-nord keys its dark table styling on the OS
+   prefers-color-scheme media query, but Alfred themes via data-theme: a dark
+   app on a light-scheme OS rendered odd table cells near-white (measured
+   oklch(0.985 ...) in the shipped stylesheet). Bind table surfaces to
+   Alfred's own tokens so both themes follow data-theme. Zero new hex. */
+.milkdown-editor .milkdown-theme-nord.prose :where(td, th):nth-child(odd) {
+  background-color: color-mix(in srgb, var(--bg-tertiary) 55%, transparent);
+}
+.milkdown-editor .milkdown-theme-nord.prose :where(td, th) {
+  border-color: var(--border);
+}
+.milkdown-editor .milkdown-theme-nord.prose tr {
+  border-color: var(--border);
+}
+
+/* ============================================================================
+   Design-ship pass (beta.2) — goose panel restyle (F5-UI + F10) and type
+   roles (0006). Workshop register throughout; evidence/steel reserved for
+   verification surfaces. Tokens only — zero new hex in this pass.
+   ========================================================================== */
+
+/* Type roles: serif leads headings/canon surfaces; mono already rules badges. */
+.welcome-screen h1,
+.onboarding-headline,
+.about-header h1,
+.milkdown-editor h1,
+.milkdown-editor h2,
+.milkdown-editor h3 {
+  font-family: var(--font-canon);
+}
+
+.goose-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--bg-primary);
+}
+.goose-panel__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+}
+.goose-panel__title {
+  flex-grow: 1;
+  font-family: var(--font-canon);
+  font-weight: 700;
+}
+.goose-panel__status {
+  font-family: var(--font-data);
+  font-size: 0.78em;
+  color: var(--text-secondary);
+  padding: 0.2em 0.6em;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+}
+.goose-panel__status--live {
+  color: var(--ev-high-text);
+  background: var(--ev-high-bg);
+  border-color: var(--ev-high-border);
+}
+.goose-panel__connect {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 10px;
+}
+.goose-panel__connect label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.85em;
+  color: var(--text-secondary);
+}
+.goose-panel__connect select,
+.goose-panel__connect input {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+}
+.goose-panel__connect input[placeholder="model id"] {
+  font-family: var(--font-data);
+}
+.goose-panel__primary {
+  padding: 8px 14px;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  background: var(--accent);
+  color: var(--accent-text);
+  cursor: pointer;
+}
+.goose-panel__primary:hover { background: var(--accent-hover); }
+.goose-panel__primary:disabled { opacity: 0.6; cursor: default; }
+.goose-panel__hint { color: var(--text-secondary); }
+.goose-panel__toolbar {
+  display: flex;
+  gap: 6px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+}
+.goose-panel__toolbar button {
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+.goose-panel__toolbar button:hover { border-color: var(--accent); color: var(--accent); }
+.goose-panel__preview { padding: 0 10px; }
+.goose-panel__warnings,
+.goose-panel__guardrail {
+  color: var(--ev-mid-text);
+  background: var(--ev-mid-bg);
+  border-left: 3px solid var(--ev-mid-border);
+  padding: 6px 10px;
+  font-size: 0.85em;
+}
+.goose-panel__error {
+  color: var(--ev-low-text);
+  background: var(--ev-low-bg);
+  border-left: 3px solid var(--ev-low-border);
+  padding: 8px 10px;
+  font-size: 0.9em;
+}
+.goose-panel__messages {
+  flex-grow: 1;
+  overflow: auto;
+  padding: 8px 10px;
+}
+.goose-panel__idle {
+  color: var(--text-secondary);
+  font-size: 0.9em;
+  padding: 12px 4px;
+}
+.goose-msg {
+  margin: 6px 0;
+  white-space: pre-wrap;
+  line-height: 1.45;
+}
+.goose-msg__role {
+  display: inline-block;
+  font-family: var(--font-data);
+  font-size: 0.75em;
+  color: var(--text-secondary);
+  margin-right: 0.6em;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.goose-msg--user { color: var(--text-primary); }
+.goose-msg--assistant { color: var(--text-primary); }
+.goose-msg--system { color: var(--text-secondary); font-size: 0.85em; }
+.goose-panel__input {
+  display: flex;
+  gap: 6px;
+  padding: 8px 10px;
+  border-top: 1px solid var(--border);
+}
+.goose-panel__input-field {
+  flex-grow: 1;
+  padding: 7px 9px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+.goose-panel__input button {
+  padding: 6px 14px;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  background: var(--accent);
+  color: var(--accent-text);
+  cursor: pointer;
+}
+.goose-panel__terminal {
+  height: 180px;
+  background: var(--bg-primary);
+  border-top: 1px solid var(--border);
+  overflow: hidden;
+}
+.goose-panel__terminal--idle {
+  display: none;
 }

@@ -1,7 +1,7 @@
 {
   "name": "alfred",
   "version": "0.1.0",
-  "description": "Sovereign, local-first, Nostr-native PKM for agentic AI development \u2014 part of wecanjustbuildthings.dev",
+  "description": "Sovereign, local-first, Nostr-native PKM for agentic AI development — part of wecanjustbuildthings.dev",
   "type": "module",
   "author": "Martin Montero",
   "repository": {
@@ -39,6 +39,9 @@
     "@codemirror/state": "^6.5.4",
     "@codemirror/theme-one-dark": "^6.1.3",
     "@floating-ui/dom": "^1.7.4",
+    "@fontsource/inter": "^5.2.8",
+    "@fontsource/jetbrains-mono": "^5.2.8",
+    "@fontsource/merriweather": "^5.2.11",
     "@milkdown/core": "^7.18.0",
     "@milkdown/ctx": "^7.18.0",
     "@milkdown/plugin-listener": "^7.18.0",

@@ -75,3 +75,29 @@ rendering; palette-swap decision for brand accent.
 - Finding: live accent change in Settings won't retint an already-open graph until remount
   (pre-existing class of limitation — graph was fully hardcoded before). Finding: dark-theme
   selection still auto-resets accent to default (inherited behavior, kept, flagged).
+
+## PASS 3 (design-ship) — 2026-07-17
+- [x] S1-F1 vault creation: canonicalize_lenient applied to BOTH sides of validate_vault_path.
+      RED (verbatim pre-fix fn, standalone rustc): Err("Invalid vault path…") on the first-run
+      shape; GREEN 6/6 incl. ../escape denied + sibling-prefix denied. vault_path_tests.rs
+      landed (cargo execution routes to CI/laptop — no GTK link here).
+- [x] S1-F2/F11 clean first-run: startup vault-open + session-tab restore gated behind
+      onboarding_completed; web lock applies only post-onboarding. VERIFIED-LIVE (probe A on the
+      rebuilt PWA: fresh profile → onboarding, zero unlock modals).
+- [x] S1-F3 About license → AGPL-3.0-or-later (sole MIT claim). S1-F4 no-feed updater states →
+      steward info line, never red. S1-F5(function) connect-errors mapper (sidecar-missing/
+      spawn-denied/handshake/key-missing, setup path each) + provider→model reset. +7 tests.
+- [x] S2-F6 white blocks = theme-nord odd-cell gray-50 gated only on OS prefers-color-scheme;
+      Alfred themes via data-theme → near-white cells in dark notes. MEASURED red oklch(0.985…)
+      in the shipped stylesheet; tokenized override; MEASURED green bg-tertiary@55%. Zero new hex.
+- [x] S2-F7 Onyx marks: welcome rock (Editor.tsx) → Alfred mark (About rock died in W5);
+      public/icons ×3 regenerated from the mark. Purge grep: user-facing 0 (one code comment).
+- [x] S2-F8 mark re-exported 512 LANCZOS (312 KB, was 1.1 MB raw 1024).
+- [x] S2 type roles (0006): @fontsource Inter + Merriweather + JetBrains Mono (OFL, bundled,
+      exclusion gate green); --font-ui/--font-canon/--font-data lead with bundled faces; body →
+      Inter; headings serif. VERIFIED-LIVE: welcome h1 computes "Merriweather, Georgia, …".
+- [x] S2 goose panel (F5-UI/F10): all inline styles → tokenized classes; status chip (mono,
+      ev-high when live); honest idle copy in the message area; terminal collapsed until a
+      session is live — the dead black rectangle cannot render. Registers per 0006.
+- [x] S2 contrast gate: +4 app-baseline text pairs; 24/24 PASS.
+- [ ] G2 routed to Martin: fresh Windows install walk + visual light/dark walk (Stage 4 list).
