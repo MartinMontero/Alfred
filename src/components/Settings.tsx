@@ -2794,7 +2794,7 @@ const Settings: Component<SettingsProps> = (props) => {
                     <img src={AlfredMark} width="64" height="64" alt="The Alfred mark" style={{ 'object-fit': 'contain' }} />
                   </div>
                   <h1>Alfred</h1>
-                  <p class="about-tagline">A sovereign, local-first, Nostr-native PKM for agentic AI development</p>
+                  <p class="about-tagline">A sovereign, local-first, Nostr-native PKM for builders who direct AI to build software</p>
                   <p class="about-version">Version {appVersion()}</p>
                 </div>
 
@@ -2838,7 +2838,7 @@ const Settings: Component<SettingsProps> = (props) => {
 
                 <div class="about-section">
                   <h3>About</h3>
-                  <p>Alfred is an open-source, local-first, Nostr-native PKM for agentic AI development, part of wecanjustbuildthings.dev. Your notes are stored locally as plain markdown files, with optional encrypted sync via Nostr.</p>
+                  <p>Alfred is an open-source, local-first, Nostr-native PKM for builders who direct AI to build software — part of wecanjustbuildthings.dev. Your notes live on your machine as plain markdown files, with optional encrypted sync over Nostr. Your keys and your work stay yours.</p>
                 </div>
 
                 <div class="about-section">

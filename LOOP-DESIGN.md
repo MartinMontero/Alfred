@@ -101,3 +101,9 @@ rendering; palette-swap decision for brand accent.
       session is live — the dead black rectangle cannot render. Registers per 0006.
 - [x] S2 contrast gate: +4 app-baseline text pairs; 24/24 PASS.
 - [ ] G2 routed to Martin: fresh Windows install walk + visual light/dark walk (Stage 4 list).
+- [x] S3 copy (F9): tagline + About re-anchored to canon — "for builders who direct AI to build
+      software" (both Settings surfaces); banned-framing sweep clean (no magic/aura terms).
+- [x] S4 gates: tsc 0 · vitest 285|4 · contrast 24/24 · build ✓ · build:web ✓ (precache 76).
+      cargo test ATTEMPTED here, hits the known wall (gdk-sys: pkg-config gdk-3.0 absent) —
+      UNVERIFIED in-container; exact command routed to Windows: cargo test --manifest-path
+      src-tauri\Cargo.toml (expect 13 tests: 9 prior + 4 vault_path).
