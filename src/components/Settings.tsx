@@ -31,7 +31,7 @@ import {
   clearCustomProviderApiKey,
 } from '../lib/ai-credentials';
 import { usePlatformInfo, isMobile, isDesktop } from '../lib/platform';
-import { checkForUpdate, downloadAndInstallPending, mapUpdaterError } from '../lib/updater';
+import { checkForUpdate, downloadAndInstallPending, mapUpdaterError, isExpectedBetaState } from '../lib/updater';
 import AlfredMark from '../assets/onboarding/alfred-mark.png';
 import { invoke } from '@tauri-apps/api/core';
 import { authenticateWithBiometric } from '../lib/biometric';
@@ -253,7 +253,7 @@ const Settings: Component<SettingsProps> = (props) => {
 
   // W5 updater flow — three explicit user actions, nothing automatic.
   const [updateStatus, setUpdateStatus] = createSignal<
-    'idle' | 'checking' | 'none' | 'available' | 'downloading' | 'error'
+    'idle' | 'checking' | 'none' | 'available' | 'downloading' | 'info' | 'error'
   >('idle');
   const [updateDetail, setUpdateDetail] = createSignal('');
   const [updateVersion, setUpdateVersion] = createSignal('');
@@ -271,7 +271,9 @@ const Settings: Component<SettingsProps> = (props) => {
       }
     } catch (e) {
       setUpdateDetail(mapUpdaterError(e));
-      setUpdateStatus('error');
+      // F4: expected beta states (no feed yet / pubkey pending) are
+      // information, not errors — no red styling for a normal condition.
+      setUpdateStatus(isExpectedBetaState(e) ? 'info' : 'error');
     }
   };
 
@@ -2792,7 +2794,7 @@ const Settings: Component<SettingsProps> = (props) => {
                     <img src={AlfredMark} width="64" height="64" alt="The Alfred mark" style={{ 'object-fit': 'contain' }} />
                   </div>
                   <h1>Alfred</h1>
-                  <p class="about-tagline">A sovereign, local-first, Nostr-native PKM for agentic AI development</p>
+                  <p class="about-tagline">A sovereign, local-first, Nostr-native PKM for builders who direct AI to build software</p>
                   <p class="about-version">Version {appVersion()}</p>
                 </div>
 
@@ -2800,7 +2802,7 @@ const Settings: Component<SettingsProps> = (props) => {
                   <div class="about-section">
                     <h3>Updates</h3>
                     <div class="about-updates">
-                      <Show when={updateStatus() === 'idle' || updateStatus() === 'none' || updateStatus() === 'error'}>
+                      <Show when={updateStatus() === 'idle' || updateStatus() === 'none' || updateStatus() === 'error' || updateStatus() === 'info'}>
                         <button class="about-updates__button" onClick={runUpdateCheck}>
                           Check for updates
                         </button>
@@ -2810,6 +2812,9 @@ const Settings: Component<SettingsProps> = (props) => {
                       </Show>
                       <Show when={updateStatus() === 'none'}>
                         <span>Alfred is up to date.</span>
+                      </Show>
+                      <Show when={updateStatus() === 'info'}>
+                        <span class="about-updates__note">{updateDetail()}</span>
                       </Show>
                       <Show when={updateStatus() === 'error'}>
                         <span class="about-updates__error">{updateDetail()}</span>
@@ -2833,7 +2838,7 @@ const Settings: Component<SettingsProps> = (props) => {
 
                 <div class="about-section">
                   <h3>About</h3>
-                  <p>Alfred is an open-source, local-first, Nostr-native PKM for agentic AI development, part of wecanjustbuildthings.dev. Your notes are stored locally as plain markdown files, with optional encrypted sync via Nostr.</p>
+                  <p>Alfred is an open-source, local-first, Nostr-native PKM for builders who direct AI to build software — part of wecanjustbuildthings.dev. Your notes live on your machine as plain markdown files, with optional encrypted sync over Nostr. Your keys and your work stay yours.</p>
                 </div>
 
                 <div class="about-section">
@@ -2857,7 +2862,7 @@ const Settings: Component<SettingsProps> = (props) => {
 
                 <div class="about-section">
                   <h3>License</h3>
-                  <p>MIT License - Free and open source</p>
+                  <p>AGPL-3.0-or-later — free and open source</p>
                 </div>
               </div>
             </Show>

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Martin Montero and the Alfred contributors
 import { describe, it, expect } from 'vitest';
-import { mapUpdaterError, downloadAndInstallPending } from './updater';
+import { mapUpdaterError, downloadAndInstallPending, isExpectedBetaState } from './updater';
 
 describe('W5 updater — plain-language error mapping', () => {
   it('unconfigured build (pubkey pending the keypair ceremony) says so honestly', () => {
@@ -12,10 +12,14 @@ describe('W5 updater — plain-language error mapping', () => {
     expect(mapUpdaterError(new Error('signature verification failed'))).toMatch(/rejected/);
     expect(mapUpdaterError(new Error('could not verify update archive'))).toMatch(/rejected/);
   });
-  it('network shapes map to a reachability message', () => {
+  it('network shapes map to the expected-during-beta message (F4)', () => {
     for (const m of ['error sending request for url', 'Could not fetch latest.json', 'HTTP 404']) {
-      expect(mapUpdaterError(new Error(m))).toMatch(/update service/);
+      expect(mapUpdaterError(new Error(m))).toMatch(/expected/);
+      expect(isExpectedBetaState(new Error(m))).toBe(true);
     }
+  });
+  it('signature failures are NEVER an expected state', () => {
+    expect(isExpectedBetaState(new Error('signature verification failed'))).toBe(false);
   });
   it('unknown errors pass the raw reason through, never silently', () => {
     expect(mapUpdaterError(new Error('weird disk state'))).toContain('weird disk state');

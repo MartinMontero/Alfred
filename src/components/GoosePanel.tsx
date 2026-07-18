@@ -28,6 +28,7 @@ import {
   type RecipePreview,
 } from '../lib/goose';
 import ActionPreview from './ActionPreview';
+import { mapGooseConnectError, PROVIDER_DEFAULT_MODEL } from '../lib/goose/connect-errors';
 import { invoke } from '@tauri-apps/api/core';
 import { createSessionTap, type SessionTap } from '../lib/telemetry/session-tap';
 import { generateTraceContext } from '../lib/telemetry/trace';
@@ -226,7 +227,11 @@ const GoosePanel: Component<GoosePanelProps> = (props) => {
       setConnected(true);
       append('system', `Connected to goose (${session.initialize.agentInfo?.name} ${session.initialize.agentInfo?.version}). The vault is registered as ground truth.`);
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      // F5: honest not-connected state — mapped reason + concrete setup path,
+      // never a raw spawn/ACP string as the only signal.
+      const f = mapGooseConnectError(e);
+      setError(`${f.message} ${f.setupPath}`);
+      setConnected(false);
     } finally {
       setBusy(false);
     }
@@ -315,9 +320,12 @@ const GoosePanel: Component<GoosePanelProps> = (props) => {
   });
 
   return (
-    <div class="goose-panel" style={{ display: 'flex', 'flex-direction': 'column', height: '100%' }}>
-      <div class="goose-panel__header" style={{ display: 'flex', 'align-items': 'center', gap: '8px', padding: '8px' }}>
-        <strong style={{ 'flex-grow': 1 }}>goose</strong>
+    <div class="goose-panel">
+      <div class="goose-panel__header">
+        <strong class="goose-panel__title">Agent session</strong>
+        <span class={`goose-panel__status ${connected() ? 'goose-panel__status--live' : ''}`}>
+          {connected() ? 'connected' : 'not connected'}
+        </span>
         <button class="icon-btn" title="Settings" onClick={props.onOpenSettings}>⚙</button>
         <button class="icon-btn" title="Close" onClick={props.onClose}>✕</button>
       </div>
@@ -325,10 +333,19 @@ const GoosePanel: Component<GoosePanelProps> = (props) => {
       <Show
         when={connected()}
         fallback={
-          <div class="goose-panel__connect" style={{ padding: '8px', display: 'flex', 'flex-direction': 'column', gap: '6px' }}>
+          <div class="goose-panel__connect">
             <label>
               Provider
-              <select value={provider()} onChange={(e) => setProvider(e.currentTarget.value)}>
+              <select
+                value={provider()}
+                onChange={(e) => {
+                  const next = e.currentTarget.value;
+                  setProvider(next);
+                  // F5: keep provider and model coherent — switching provider
+                  // resets the model to that provider's starting point.
+                  setModel(PROVIDER_DEFAULT_MODEL[next] ?? '');
+                }}
+              >
                 <For each={PERMITTED_PROVIDERS}>{(p) => <option value={p.value}>{p.name}</option>}</For>
               </select>
             </label>
@@ -342,12 +359,14 @@ const GoosePanel: Component<GoosePanelProps> = (props) => {
                 <input type="password" value={apiKey()} onInput={(e) => setApiKey(e.currentTarget.value)} />
               </label>
             </Show>
-            <button disabled={busy()} onClick={connect}>{busy() ? 'Connecting…' : 'Connect goose'}</button>
-            <small>Only non-excluded providers are offered (Meta/OpenAI/xAI are excluded).</small>
+            <button class="goose-panel__primary" disabled={busy()} onClick={connect}>
+              {busy() ? 'Connecting…' : 'Connect goose'}
+            </button>
+            <small class="goose-panel__hint">Only non-excluded providers are offered (Meta/OpenAI/xAI are excluded).</small>
           </div>
         }
       >
-        <div class="goose-panel__toolbar" style={{ display: 'flex', gap: '6px', padding: '4px 8px' }}>
+        <div class="goose-panel__toolbar">
           <button disabled={busy()} onClick={previewVaultRecipe}>Preview & run vault-summary recipe</button>
           <button onClick={disconnect}>Disconnect</button>
         </div>
@@ -355,7 +374,7 @@ const GoosePanel: Component<GoosePanelProps> = (props) => {
 
       <Show when={recipePreview()}>
         {(p) => (
-          <div style={{ padding: '0 8px' }}>
+          <div class="goose-panel__preview">
             <ActionPreview
               title="Recipe pre-flight: vault-summary"
               summary="Review the actions this recipe will take. Invisible characters are stripped; any warning must be acknowledged before it runs."
@@ -372,7 +391,7 @@ const GoosePanel: Component<GoosePanelProps> = (props) => {
 
       <Show when={pendingPermission()}>
         {(p) => (
-          <div style={{ padding: '0 8px' }}>
+          <div class="goose-panel__preview">
             <ActionPreview
               title="Approve tool call"
               summary="goose wants to run a tool that can modify your vault or run a command. Approve to allow this one call; cancel to deny."
@@ -400,26 +419,32 @@ const GoosePanel: Component<GoosePanelProps> = (props) => {
       </Show>
 
       <Show when={configWarnings().length > 0}>
-        <div class="goose-panel__warnings" style={{ color: 'var(--warning, #a60)', padding: '4px 8px' }}>
+        <div class="goose-panel__warnings">
           {configWarnings().map((w) => (
             <div>{w}</div>
           ))}
         </div>
       </Show>
       <Show when={riskTurns() > 0}>
-        <div class="goose-panel__guardrail" style={{ color: 'var(--warning, #a60)', padding: '4px 8px', 'font-size': '0.85em' }}>
+        <div class="goose-panel__guardrail">
           {riskTurns()} turn{riskTurns() === 1 ? '' : 's'} this session answered slowly without consulting your vault — worth a spot-check.
         </div>
       </Show>
       <Show when={error()}>
-        <div class="goose-panel__error" style={{ color: 'var(--error, #c00)', padding: '4px 8px' }}>{error()}</div>
+        <div class="goose-panel__error">{error()}</div>
       </Show>
 
-      <div class="goose-panel__messages" style={{ 'flex-grow': 1, overflow: 'auto', padding: '8px' }}>
+      <div class="goose-panel__messages">
+        <Show when={!connected() && messages().length === 0 && !error()}>
+          <div class="goose-panel__idle">
+            No agent session yet. Connect goose above — read access is free; anything that
+            writes or runs a command asks you first.
+          </div>
+        </Show>
         <For each={messages()}>
           {(m) => (
-            <div class={`goose-msg goose-msg--${m.role}`} style={{ margin: '4px 0', 'white-space': 'pre-wrap' }}>
-              <span style={{ opacity: 0.6 }}>{m.role}: </span>
+            <div class={`goose-msg goose-msg--${m.role}`}>
+              <span class="goose-msg__role">{m.role}</span>
               {m.text}
             </div>
           )}
@@ -427,9 +452,9 @@ const GoosePanel: Component<GoosePanelProps> = (props) => {
       </div>
 
       <Show when={connected()}>
-        <div class="goose-panel__input" style={{ display: 'flex', gap: '6px', padding: '8px' }}>
+        <div class="goose-panel__input">
           <input
-            style={{ 'flex-grow': 1 }}
+            class="goose-panel__input-field"
             value={input()}
             onInput={(e) => setInput(e.currentTarget.value)}
             onKeyDown={(e) => {
@@ -445,8 +470,14 @@ const GoosePanel: Component<GoosePanelProps> = (props) => {
         </div>
       </Show>
 
-      {/* xterm.js terminal — tool calls, recipe output, and stderr. */}
-      <div class="goose-panel__terminal" ref={termEl} style={{ height: '180px', background: '#000', overflow: 'hidden' }} />
+      {/* xterm.js terminal — tool calls, recipe output, and stderr. F10: kept
+          in the DOM for ref stability but collapsed until a session is live,
+          so it can never render as a dead black rectangle. */}
+      <div
+        class="goose-panel__terminal"
+        classList={{ 'goose-panel__terminal--idle': !connected() }}
+        ref={termEl}
+      />
     </div>
   );
 };

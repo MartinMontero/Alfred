@@ -11,6 +11,8 @@ mod job_guard_tests;
 mod telemetry;
 #[cfg(test)]
 mod telemetry_tests;
+#[cfg(test)]
+mod vault_path_tests;
 
 #[cfg(not(target_os = "android"))]
 use keyring::Entry;
@@ -118,60 +120,69 @@ fn get_configured_vault(app: &AppHandle) -> Option<PathBuf> {
     Path::new(&vault).canonicalize().ok()
 }
 
+/// Canonicalize a path that may not exist yet: canonicalize the nearest
+/// existing ancestor (resolving `..` and symlinks), then re-append the
+/// remaining not-yet-existing components after verifying each is a plain
+/// name — never `..`, a root, or a prefix.
+fn canonicalize_lenient(path: &Path) -> Result<PathBuf, String> {
+    if path.exists() {
+        return path.canonicalize().map_err(|e| format!("Invalid path: {}", e));
+    }
+    // Find the nearest existing ancestor (skip the path itself, which doesn't exist)
+    let existing_ancestor = path
+        .ancestors()
+        .skip(1)
+        .find(|a| a.exists())
+        .ok_or("Invalid path: no existing ancestor directory")?;
+    let canonical_ancestor = existing_ancestor
+        .canonicalize()
+        .map_err(|e| format!("Invalid path: {}", e))?;
+    // Verify the remaining (non-existent) components are plain names
+    let remainder = path
+        .strip_prefix(existing_ancestor)
+        .map_err(|_| "Invalid path: unable to resolve path components".to_string())?;
+    let mut resolved = canonical_ancestor;
+    for component in remainder.components() {
+        match component {
+            std::path::Component::Normal(name) => {
+                if name.is_empty() {
+                    return Err("Invalid path: empty path component".to_string());
+                }
+                resolved.push(name);
+            }
+            std::path::Component::CurDir => {}
+            _ => {
+                return Err(format!(
+                    "Invalid path: unsafe component in '{}'",
+                    path.display()
+                ));
+            }
+        }
+    }
+    Ok(resolved)
+}
+
 /// Validates that a path is within the allowed vault directory.
 /// Returns the canonicalized path if valid, or an error if path traversal is detected.
 fn validate_vault_path(path: &str, vault_path: &str) -> Result<PathBuf, String> {
     let path = Path::new(path);
     let vault = Path::new(vault_path);
-    
-    // Canonicalize both paths to resolve any .. or symlinks
-    // For non-existent paths (e.g., new files or nested folders), walk up to the
-    // nearest existing ancestor, canonicalize that, then re-append the remaining
-    // components after verifying none of them are `..` (or otherwise unsafe).
-    let canonical_path = if path.exists() {
-        path.canonicalize().map_err(|e| format!("Invalid path: {}", e))?
-    } else {
-        // Find the nearest existing ancestor (skip the path itself, which doesn't exist)
-        let existing_ancestor = path
-            .ancestors()
-            .skip(1)
-            .find(|a| a.exists())
-            .ok_or("Invalid path: no existing ancestor directory")?;
-        let canonical_ancestor = existing_ancestor
-            .canonicalize()
-            .map_err(|e| format!("Invalid path: {}", e))?;
-        // Verify the remaining (non-existent) components are plain names
-        let remainder = path
-            .strip_prefix(existing_ancestor)
-            .map_err(|_| "Invalid path: unable to resolve path components".to_string())?;
-        let mut resolved = canonical_ancestor;
-        for component in remainder.components() {
-            match component {
-                std::path::Component::Normal(name) => {
-                    if name.is_empty() {
-                        return Err("Invalid path: empty path component".to_string());
-                    }
-                    resolved.push(name);
-                }
-                std::path::Component::CurDir => {}
-                _ => {
-                    return Err(format!(
-                        "Invalid path: unsafe component in '{}'",
-                        path.display()
-                    ));
-                }
-            }
-        }
-        resolved
-    };
-    
-    let canonical_vault = vault.canonicalize().map_err(|e| format!("Invalid vault path: {}", e))?;
-    
+
+    let canonical_path = canonicalize_lenient(path)?;
+
+    // F1 (beta.1 smoke): the vault itself may not exist yet — first-run vault
+    // creation calls create_folder(path == vault). The old unconditional
+    // vault.canonicalize() here failed every fresh install. Both sides now
+    // resolve under the same lenient-but-strict rules, so the containment
+    // check below holds identically for existing and to-be-created vaults.
+    let canonical_vault = canonicalize_lenient(vault)
+        .map_err(|e| format!("Invalid vault path: {}", e))?;
+
     // Check if the path starts with the vault path
     if !canonical_path.starts_with(&canonical_vault) {
         return Err(format!("Access denied: path '{}' is outside the vault directory", path.display()));
     }
-    
+
     Ok(canonical_path)
 }
 

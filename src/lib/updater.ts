@@ -83,7 +83,25 @@ export function mapUpdaterError(err: unknown): string {
     msg.includes('404') ||
     msg.includes('dns')
   ) {
-    return 'Could not reach the update service. Check your connection and try again.';
+    // F4 (beta.1 smoke): during the beta this is an EXPECTED state, not a
+    // fault — the update feed goes live with the first published release.
+    return 'I couldn’t reach an update feed. During the beta that’s expected — updates also arrive as fresh installers on the releases page.';
   }
   return `Update check failed: ${raw}`;
+}
+
+/**
+ * True for degraded-but-expected beta states (no feed yet, pubkey pending):
+ * the UI renders these as plain information, never error styling.
+ */
+export function isExpectedBetaState(err: unknown): boolean {
+  const msg = (err instanceof Error ? err.message : String(err)).toLowerCase();
+  return (
+    msg.includes('error sending request') ||
+    msg.includes('could not fetch') ||
+    msg.includes('network') ||
+    msg.includes('404') ||
+    msg.includes('dns') ||
+    (msg.includes('updater') && (msg.includes('config') || msg.includes('pubkey') || msg.includes('public key')))
+  );
 }

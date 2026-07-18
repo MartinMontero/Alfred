@@ -232,8 +232,15 @@ const App: Component = () => {
   const [showOnboarding, setShowOnboarding] = createSignal(false);
 
   // Web-only: master-passphrase lock state. Tauri builds keep this false.
+  // F11 (design-ship recon): isLocked() is merely "no key derived this
+  // session" — true on every fresh profile — so the unlock dialog used to
+  // greet brand-new users with a decrypt prompt for a key that doesn't
+  // exist, ahead of onboarding. Lock only once onboarding has completed;
+  // onboarding's own key step establishes the passphrase.
   const [webLocked, setWebLocked] = createSignal(
-    platform.info.is_web && !!platform.secrets.isLocked?.(),
+    platform.info.is_web &&
+      !!platform.secrets.isLocked?.() &&
+      localStorage.getItem('onboarding_completed') === 'true',
   );
 
   // Templates modal state
@@ -392,6 +399,21 @@ const App: Component = () => {
     // Load settings asynchronously
     platform.settings.load().then(async (settings) => {
       console.log('[App] Settings loaded:', settings);
+
+      // F2 (beta.1 smoke test): NOTHING opens before onboarding completes.
+      // Previously the saved vault was opened and session tabs restored with
+      // note content BEFORE the first-run check — a machine with dev-era
+      // settings showed another vault's notes under/behind onboarding. A
+      // fresh profile must land on onboarding with zero notes; returning
+      // users (flag set) keep last-vault persistence exactly as before.
+      const onboardingCompleted = localStorage.getItem('onboarding_completed') === 'true';
+      if (!onboardingCompleted) {
+        console.log('[App] First run detected, showing onboarding (vault open deferred)');
+        setSettingsLoaded(true);
+        setShowOnboarding(true);
+        return;
+      }
+
       let vaultToOpen = settings.vault_path ?? null;
 
       // On mobile, if no vault is set, auto-initialize to default vault
@@ -468,13 +490,6 @@ const App: Component = () => {
       // Mark settings as loaded - now the save effect can run
       console.log('[App] Settings load complete, enabling save effect');
       setSettingsLoaded(true);
-      
-      // Check if this is first run - show onboarding if not completed
-      const onboardingCompleted = localStorage.getItem('onboarding_completed') === 'true';
-      if (!onboardingCompleted) {
-        console.log('[App] First run detected, showing onboarding');
-        setShowOnboarding(true);
-      }
     }).catch(err => {
       console.error('Failed to load settings:', err);
       // Still mark as loaded so app can function
