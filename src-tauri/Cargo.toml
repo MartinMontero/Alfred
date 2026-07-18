@@ -1,6 +1,6 @@
 [package]
 name = "alfred"
-version = "0.1.0"
+version = "0.1.1"
 description = "Sovereign, local-first, Nostr-native PKM for agentic AI development"
 authors = ["Martin Montero"]
 license = "AGPL-3.0-or-later"
