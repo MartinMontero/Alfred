@@ -600,3 +600,20 @@ Stage F. Fresh-eyes pass per stage per protocol.
   phase4 audit; applesauce row corrected; ACP SDK 1.0; goose row current) — WORKING-TREE EDIT, not
   committed.
 - A8 README.md:36 block.github.io/goose → goose-docs.ai — WORKING-TREE EDIT, not committed.
+
+## PUBLISH RULING + v-NEXT BACKLOG (builder's word, 2026-07-19)
+- **PUBLISH:** the eighth cut (28a8272, run 29699794692 SUCCESS) goes to testers. Publishing is
+  the builder's click (draft 356242438 → Publish release). First live update feed activates.
+- **Builder's walk finding, root-caused:** "no create-a-new-vault option; both options search
+  existing folders" — that's the OLD vault dropdown in the Notes-panel header ("Holmes ˅" →
+  Open another vault / Open vault folder), which PASS 7 left untouched. The NEW menu with
+  **New vault…** lives on the sidebar's vault line under the Alfred wordmark. Two menus, only
+  one carries create = the real discoverability bug.
+- **v-NEXT (first post-publish update, proves the updater loop):**
+  1. Unify vault menus — the Notes-panel dropdown gains New vault… (or is replaced by the one
+     menu), so create is findable from BOTH places.
+  2. A **Vaults** item in the study sidebar under Notes (builder's word: "in Home, under notes
+     there needs to be another icon for vaults").
+- Post-publish standing items: verify the updater loop from the installed machine when v-next
+  ships; "Alfred" trademark clearance (Running with Crayons) BEFORE any public beta; W7 PWA
+  (subdomain word pending); W8 beta docs/SHIP.
