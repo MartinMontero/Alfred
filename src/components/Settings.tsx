@@ -2006,7 +2006,7 @@ const Settings: Component<SettingsProps> = (props) => {
                     <line x1="12" y1="16" x2="12" y2="12"></line>
                     <line x1="12" y1="8" x2="12.01" y2="8"></line>
                   </svg>
-                  <p>Connect to any OpenAI-compatible API provider. Works with MapleAI Proxy, Ollama, LM Studio, vLLM, and more.</p>
+                  <p>Connect to any provider that serves the standard chat-completions API. Works with MapleAI Proxy, Ollama, LM Studio, vLLM, and more.</p>
                 </div>
 
                 <div class="settings-section-title">Display Name</div>
@@ -2030,7 +2030,7 @@ const Settings: Component<SettingsProps> = (props) => {
                 <div class="setting-item">
                   <div class="setting-info">
                     <div class="setting-name">Base URL</div>
-                    <div class="setting-description">The base URL of your OpenAI-compatible API server</div>
+                    <div class="setting-description">The base URL of your provider's API server</div>
                   </div>
                 </div>
                 <div class="setting-item column">

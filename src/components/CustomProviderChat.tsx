@@ -499,7 +499,7 @@ const CustomProviderChat: Component<CustomProviderChatProps> = (props) => {
         <div class="custom-provider-not-configured">
           <div class="custom-provider-setup-icon"><ProviderIcon /></div>
           <h3>Provider Not Configured</h3>
-          <p>Set up your OpenAI-compatible provider URL to start chatting. Works with MapleAI Proxy, Ollama, LM Studio, and more.</p>
+          <p>Set up your provider's URL to start chatting. Works with MapleAI Proxy, Ollama, LM Studio, and more.</p>
           <button class="setting-button primary" onClick={props.onOpenSettings}>Configure Provider</button>
         </div>
       </Show>
