@@ -29,12 +29,15 @@ This session runs in the **Linux remote container** (`/home/user/Alfred`), not
   announce).
 
 ## STAGE POINTER
-**Current: W6 SECOND CANDIDATE BUILT — v0.1.0-beta.2 tagged (24799e2), release run
-29664308449 SUCCESS, draft assembled (id 356213091). Board is the builder's: installed-artifact
-manual gate → Publish (one-way switch; activates the first live update feed). beta.1 was tagged,
-smoke-tested from its draft, and deliberately NEVER published (builder's ruling: not
-publish-worthy — its defects became register F1–F11, all fixed in the design-ship pass, see
-LOOP-DESIGN.md PASS 3). Then W7 PWA (subdomain word pending) → W8 docs/SHIP.**
+**Current: W6 THIRD CANDIDATE BUILT (Calm-HUD re-cut) — builder caught that the beta.2 draft
+carried only the design skin, not the shell IA the ship order demanded ("fully applied to the
+app shell"); PASS 4 built the IA layer (LOOP-DESIGN.md), PR #11 merged (9c1af56), builder
+deleted the stale beta.1/beta.2 drafts and re-tagged v0.1.0-beta.2 → 9c1af56 from the laptop.
+Release run 29670396341 SUCCESS; new draft id 356242438. Board: installed walk (now incl.
+registers/Build Memory/filter/provenance/presence/gate card) → Publish (one-way switch;
+activates the first live update feed). Superseded cuts, kept for the record: beta.1@1801bc3
+(unpublished by ruling, defects → F1–F11, PASS 3) and beta.2@24799e2 (skin without shell IA,
+caught at the gate → PASS 4). Then W7 PWA (subdomain word pending) → W8 docs/SHIP.**
 
 ## W6 (2026-07-17→19) — beta.1 tagged + smoke-tested (unpublished by ruling); F1–F11 fixed;
 ## 0.1.1 floor; beta.2 tagged + lane GREEN; publish gate open
