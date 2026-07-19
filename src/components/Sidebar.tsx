@@ -1,10 +1,25 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Martin Montero and the Alfred contributors
-import { Component, createSignal, createEffect, For, Show, onMount, onCleanup } from 'solid-js';
+import { Component, createSignal, createEffect, createMemo, For, Show, onMount, onCleanup } from 'solid-js';
 import { platform } from '@platform';
 import type { FileEntry } from '@platform';
 import { isMobile } from '../lib/platform';
 import { searchFileContents } from '../lib/editor/note-index';
+import {
+  buildEvidenceIndex,
+  isoToday,
+  matchesEvidenceFilter,
+  type EvidenceFilter,
+} from '../lib/evidence-index';
+
+// Band glyphs match EvidenceBadge (shape + text title — never color alone).
+const EV_GLYPH: Record<string, string> = { high: '◆', mid: '◈', low: '◇', unknown: '○' };
+
+const EVIDENCE_FILTER_LABEL: Record<EvidenceFilter, string> = {
+  all: 'All notes',
+  marked: 'Graded notes only',
+  attention: 'Needs attention',
+};
 
 /**
  * Get the parent directory of a path, handling both / and \ separators (Windows compatibility).
@@ -127,6 +142,33 @@ const Sidebar: Component<SidebarProps> = (props) => {
   const [showVaultMenu, setShowVaultMenu] = createSignal(false);
   const [deleteConfirm, setDeleteConfirm] = createSignal<{ path: string; name: string } | null>(null);
   const [moveConfirm, setMoveConfirm] = createSignal<{ sourcePath: string; destPath: string; name: string } | null>(null);
+
+  // Evidence layer (Calm-HUD): band glyphs on graded notes + a tree filter.
+  // Derived from the same in-memory content cache the search fast-path uses.
+  const [evidenceFilter, setEvidenceFilter] = createSignal<EvidenceFilter>('all');
+  const evidenceToday = isoToday();
+  const evidenceIndex = createMemo(() => buildEvidenceIndex(props.fileContents ?? new Map()));
+  const cycleEvidenceFilter = () => {
+    const order: EvidenceFilter[] = ['all', 'marked', 'attention'];
+    setEvidenceFilter(order[(order.indexOf(evidenceFilter()) + 1) % order.length]);
+  };
+  const fileMatchesFilter = (path: string): boolean => {
+    if (evidenceFilter() === 'all') return true;
+    if (!path.endsWith('.md')) return false;
+    return matchesEvidenceFilter(evidenceIndex().get(path), evidenceFilter(), evidenceToday);
+  };
+  const subtreeMatchesFilter = (entry: FileEntry): boolean => {
+    if (!entry.isDirectory) return fileMatchesFilter(entry.path);
+    return (entry.children ?? []).some(subtreeMatchesFilter);
+  };
+  const filteredCount = createMemo(() => {
+    if (evidenceFilter() === 'all') return 0;
+    let n = 0;
+    for (const path of evidenceIndex().keys()) {
+      if (fileMatchesFilter(path)) n++;
+    }
+    return n;
+  });
 
   const openVault = async () => {
     try {
@@ -596,8 +638,12 @@ const Sidebar: Component<SidebarProps> = (props) => {
     const isDragging = () => draggedItem() === itemProps.entry.path;
     const isDropTarget = () => dropTarget() === itemProps.entry.path;
     const typeInfo = () => getFileTypeInfo(itemProps.entry.name, itemProps.entry.isDirectory);
+    const evidence = () => evidenceIndex().get(itemProps.entry.path);
+    const visibleUnderFilter = () =>
+      evidenceFilter() === 'all' || subtreeMatchesFilter(itemProps.entry);
 
     return (
+      <Show when={visibleUnderFilter()}>
       <>
         <div
           class={`file-tree-item ${itemProps.entry.isDirectory ? 'folder' : ''} ${isActive() ? 'active' : ''} ${isDragging() ? 'dragging' : ''} ${isDropTarget() ? 'drop-target' : ''}`}
@@ -640,6 +686,20 @@ const Sidebar: Component<SidebarProps> = (props) => {
             <Show when={typeInfo().badge}>
               <span class="file-type-badge">{typeInfo().badge}</span>
             </Show>
+            <Show when={evidence()}>
+              {(m) => (
+                <span
+                  class={`ev-glyph ev-glyph--${m().invalidated !== null ? 'invalid' : m().band}`}
+                  title={
+                    m().invalidated !== null
+                      ? `Invalidated${m().invalidated ? `: ${m().invalidated}` : ''}`
+                      : `Evidence: ${m().confidence !== null ? `${m().confidence} · ` : ''}${m().band}`
+                  }
+                >
+                  {m().invalidated !== null ? '⊘' : EV_GLYPH[m().band]}
+                </span>
+              )}
+            </Show>
           </Show>
         </div>
         <Show when={itemProps.entry.isDirectory && isExpanded()}>
@@ -669,6 +729,7 @@ const Sidebar: Component<SidebarProps> = (props) => {
           </For>
         </Show>
       </>
+      </Show>
     );
   };
 
@@ -771,6 +832,17 @@ const Sidebar: Component<SidebarProps> = (props) => {
             </button>
             <button
               class="header-btn"
+              classList={{ 'header-btn--filter-active': evidenceFilter() !== 'all' }}
+              onClick={cycleEvidenceFilter}
+              title={`Evidence filter: ${EVIDENCE_FILTER_LABEL[evidenceFilter()]} (click to change)`}
+            >
+              {/* Lens — the verification glyph (brief: lens = verification). */}
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+              </svg>
+            </button>
+            <button
+              class="header-btn"
               onClick={toggleSortOrder}
               title={`Sort by ${sortOrder() === 'name' ? 'Modified' : 'Name'}`}
             >
@@ -820,6 +892,15 @@ const Sidebar: Component<SidebarProps> = (props) => {
 
       {/* Files View */}
       <Show when={props.view === 'files'}>
+        <Show when={evidenceFilter() !== 'all'}>
+          <div class="evidence-filter-strip" role="status">
+            <span>{EVIDENCE_FILTER_LABEL[evidenceFilter()]}</span>
+            <span class="evidence-filter-strip__count">
+              {filteredCount()} {filteredCount() === 1 ? 'note' : 'notes'}
+            </span>
+            <button type="button" onClick={() => setEvidenceFilter('all')}>Clear</button>
+          </div>
+        </Show>
         <div
           class={`sidebar-content ${dropTarget() === props.vaultPath ? 'drop-target' : ''}`}
           onDragOver={(e) => {
@@ -935,6 +1016,16 @@ const Sidebar: Component<SidebarProps> = (props) => {
                       onClick={() => props.onFileSelect(result.path)}
                     >
                       📄 {result.name}
+                      <Show when={evidenceIndex().get(result.path)}>
+                        {(m) => (
+                          <span
+                            class={`ev-glyph ev-glyph--${m().invalidated !== null ? 'invalid' : m().band}`}
+                            title={m().invalidated !== null ? 'Invalidated' : `Evidence: ${m().band}`}
+                          >
+                            {m().invalidated !== null ? '⊘' : EV_GLYPH[m().band]}
+                          </span>
+                        )}
+                      </Show>
                     </div>
                     <For each={result.matches.slice(0, 3)}>
                       {(match) => (

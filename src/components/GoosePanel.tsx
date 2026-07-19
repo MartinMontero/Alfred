@@ -42,6 +42,8 @@ interface GoosePanelProps {
   vaultPath: string | null;
   onClose: () => void;
   onOpenSettings: () => void;
+  /** Ambient presence: reports live/idle to the shell status bar. */
+  onPresenceChange?: (state: 'idle' | 'live') => void;
 }
 
 interface ChatMessage {
@@ -65,7 +67,13 @@ const GoosePanel: Component<GoosePanelProps> = (props) => {
   const [provider, setProvider] = createSignal('anthropic');
   const [model, setModel] = createSignal('claude-sonnet-4-6');
   const [apiKey, setApiKey] = createSignal('');
-  const [connected, setConnected] = createSignal(false);
+  const [connected, setConnectedRaw] = createSignal(false);
+  // Single chokepoint so the shell's ambient presence can never disagree with
+  // the panel's own status chip.
+  const setConnected = (v: boolean) => {
+    setConnectedRaw(v);
+    props.onPresenceChange?.(v ? 'live' : 'idle');
+  };
   const [busy, setBusy] = createSignal(false);
   const [error, setError] = createSignal<string | null>(null);
   const [messages, setMessages] = createSignal<ChatMessage[]>([]);
@@ -320,7 +328,7 @@ const GoosePanel: Component<GoosePanelProps> = (props) => {
   });
 
   return (
-    <div class="goose-panel">
+    <div class="goose-panel" data-register="instrument">
       <div class="goose-panel__header">
         <strong class="goose-panel__title">Agent session</strong>
         <span class={`goose-panel__status ${connected() ? 'goose-panel__status--live' : ''}`}>
@@ -389,31 +397,69 @@ const GoosePanel: Component<GoosePanelProps> = (props) => {
         )}
       </Show>
 
+      {/* Permission gate — an evidence pack, not a yes/no popup (Calm-HUD:
+          "the butler asks before entering the room"). Every field below is
+          real ACP data; the agent-authored parts are labeled as claims. */}
       <Show when={pendingPermission()}>
         {(p) => (
-          <div class="goose-panel__preview">
-            <ActionPreview
-              title="Approve tool call"
-              summary="goose wants to run a tool that can modify your vault or run a command. Approve to allow this one call; cancel to deny."
-              actions={[{ label: p().req.toolCall?.title ?? 'tool call', detail: p().req.toolCall?.kind ?? undefined }]}
-              warnings={[
-                {
-                  id: p().req.toolCall?.toolCallId ?? 'tool',
-                  label: `Run: ${p().req.toolCall?.title ?? 'tool'}`,
-                  detail: ((): string | undefined => {
-                    try {
-                      const ri = p().req.toolCall?.rawInput;
-                      return ri ? JSON.stringify(ri).slice(0, 200) : undefined;
-                    } catch {
-                      return undefined;
-                    }
-                  })(),
-                },
-              ]}
-              runLabel="Approve"
-              onRun={() => resolvePermission(selectAllowOption(p().req.options))}
-              onCancel={() => resolvePermission(DENY)}
-            />
+          <div class="gate-card" role="alertdialog" aria-label="Permission request">
+            <div class="gate-card__header">
+              <span class="gate-card__title">Permission requested</span>
+              <span class="gate-card__lane">
+                {p().req.toolCall?.kind === 'execute' ? 'runs a command' : 'can modify your vault'}
+              </span>
+            </div>
+            <div class="gate-card__row">
+              <span class="gate-card__key">action</span>
+              <span class="gate-card__val">{p().req.toolCall?.title ?? 'tool call'}</span>
+            </div>
+            <Show when={p().req.toolCall?.kind}>
+              <div class="gate-card__row">
+                <span class="gate-card__key">kind</span>
+                <span class="gate-card__val">{p().req.toolCall?.kind}</span>
+              </div>
+            </Show>
+            <Show
+              when={((): string | undefined => {
+                try {
+                  const ri = p().req.toolCall?.rawInput;
+                  return ri ? JSON.stringify(ri, null, 0).slice(0, 400) : undefined;
+                } catch {
+                  return undefined;
+                }
+              })()}
+            >
+              {(input) => (
+                <div class="gate-card__row">
+                  <span class="gate-card__key">input</span>
+                  <code class="gate-card__input">{input()}</code>
+                </div>
+              )}
+            </Show>
+            <div class="gate-card__row">
+              <span class="gate-card__key">scope</span>
+              <span class="gate-card__val">
+                This one call only. Nothing else is granted; reads were already free.
+              </span>
+            </div>
+            <p class="gate-card__caveat">
+              The action name and input above are the agent's own description — treat them as a
+              claim, not a fact.
+            </p>
+            <div class="gate-card__actions">
+              <button
+                class="gate-card__deny"
+                onClick={() => resolvePermission(DENY)}
+              >
+                Deny
+              </button>
+              <button
+                class="gate-card__approve"
+                onClick={() => resolvePermission(selectAllowOption(p().req.options))}
+              >
+                Approve this call
+              </button>
+            </div>
           </div>
         )}
       </Show>

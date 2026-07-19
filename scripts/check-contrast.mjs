@@ -88,5 +88,25 @@ for (const [name, [fg, bg]] of Object.entries(appBaseline)) {
   if (!ok) fail++;
   console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${r.toFixed(2)}:1  ${name}`);
 }
+// PASS 4 (Calm-HUD shell): evidence glyphs sit directly on the sidebar
+// (bg-secondary), not on band chips — check those fg/bg pairs per theme.
+const glyphPairs = {
+  'ev-high glyph on sidebar (dark)': ['#8fd6ac', '#212124'],
+  'ev-mid glyph on sidebar (dark)': ['#e0b56a', '#212124'],
+  'ev-low glyph on sidebar (dark)': ['#e0907e', '#212124'],
+  'ev-invalid glyph on sidebar (dark)': ['#a8a8a8', '#212124'],
+  'ev-high glyph on sidebar (light)': ['#1d6b42', '#f5f5f5'],
+  'ev-mid glyph on sidebar (light)': ['#8a5a12', '#f5f5f5'],
+  'ev-low glyph on sidebar (light)': ['#a13c2c', '#f5f5f5'],
+  'ev-invalid glyph on sidebar (light)': ['#5a5a5a', '#f5f5f5'],
+  'steel register accent on bg-primary (dark, mono text)': ['#6aa3b8', '#1a1a1d'],
+};
+console.log('\n[shell glyphs — text pairs, ≥4.5:1]');
+for (const [name, [fg, bg]] of Object.entries(glyphPairs)) {
+  const r = ratio(fg, bg);
+  const ok = r >= 4.5;
+  if (!ok) fail++;
+  console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${r.toFixed(2)}:1  ${name}`);
+}
 console.log(fail ? `\n${fail} pair(s) below AA 4.5:1` : '\nAll pairs meet WCAG AA (4.5:1).');
 process.exit(fail ? 1 : 0);

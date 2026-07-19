@@ -11,6 +11,7 @@ import SearchPanel from './components/SearchPanel';
 import CustomProviderChat from './components/CustomProviderChat';
 const Settings = lazy(() => import('./components/Settings'));
 const GraphView = lazy(() => import('./components/GraphView'));
+const MemoryLedger = lazy(() => import('./components/MemoryLedger'));
 // Desktop-only goose harness panel — keeps the ACP SDK, Tauri shell, and xterm
 // out of the web/startup bundle (rendered behind <Show> on desktop only).
 const GoosePanel = lazy(() => import('./components/GoosePanel'));
@@ -138,6 +139,11 @@ const App: Component = () => {
   const [showSettings, setShowSettings] = createSignal(false);
   const [settingsSection, setSettingsSection] = createSignal<string | undefined>(undefined);
   const [showGraphView, setShowGraphView] = createSignal(false);
+  // Build Memory — the workshop's graded-decision ledger (Calm-HUD IA).
+  const [showMemoryView, setShowMemoryView] = createSignal(false);
+  // Ambient presence: the goose session's live/idle state, surfaced in the
+  // status bar so the instrument's presence is peripheral, never a popup.
+  const [agentPresence, setAgentPresence] = createSignal<'idle' | 'live'>('idle');
   const [sidebarWidth, setSidebarWidth] = createSignal(session?.sidebarWidth ?? 260);
   const [sidebarCollapsed, setSidebarCollapsed] = createSignal(session?.sidebarCollapsed ?? false);
   const [sidebarView, setSidebarView] = createSignal<SidebarView>(session?.sidebarView ?? 'files');
@@ -256,6 +262,12 @@ const App: Component = () => {
   const isMobileApp = () => {
     const info = platformInfo();
     return info?.platform === 'android' || info?.platform === 'ios';
+  };
+  // Reactive web check (isWeb() reads a one-shot cache that can be stale at
+  // first render) — the presence line is desktop-only, like goose itself.
+  const isWebApp = () => {
+    const info = platformInfo();
+    return info?.platform === 'web' || info?.is_web === true;
   };
 
   // Unread count for notifications badge
@@ -2509,6 +2521,7 @@ const App: Component = () => {
   const currentFileTitle = () => {
     const tab = currentTab();
     if (showGraphView()) return 'Graph View';
+    if (showMemoryView()) return 'Build Memory';
     if (!tab) return 'Alfred';
     return tab.name.replace(/\.md$/, '');
   };
@@ -2685,7 +2698,7 @@ const App: Component = () => {
         </button>
         <button
           class={`icon-btn ${showGraphView() ? 'active' : ''}`}
-          onClick={() => setShowGraphView(true)}
+          onClick={() => { setShowMemoryView(false); setShowGraphView(true); }}
           title="Graph View"
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -2695,6 +2708,17 @@ const App: Component = () => {
             <circle cx="18" cy="18" r="3"></circle>
             <line x1="8.5" y1="7.5" x2="15.5" y2="16.5"></line>
             <line x1="15.5" y1="7.5" x2="8.5" y2="16.5"></line>
+          </svg>
+        </button>
+        <button
+          class={`icon-btn ${showMemoryView() ? 'active' : ''}`}
+          onClick={() => { setShowGraphView(false); setShowMemoryView(true); }}
+          title="Build Memory — graded decisions and findings"
+        >
+          {/* Ledger/seal — the canon glyph (brief: seal/ledger = canon). */}
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+            <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
           </svg>
         </button>
         <button
@@ -2746,6 +2770,9 @@ const App: Component = () => {
           </Show>
         </button>
         <div class="icon-bar-spacer"></div>
+        {/* Below this rule sits the instrument: agent surfaces and app controls.
+            The divider carries information (register boundary), not decoration. */}
+        <div class="icon-bar-rule" data-register="instrument" aria-hidden="true"></div>
         {/* Custom Provider button - Hidden on mobile, only shown when enabled */}
         <Show when={!isMobileApp() && !isWeb() && customProviderEnabled()}>
           <button
@@ -2805,7 +2832,7 @@ const App: Component = () => {
 
       {/* Sidebar - Hidden on mobile, use drawer instead */}
       <Show when={!sidebarCollapsed() && !isMobileApp()}>
-        <div style={{ width: `${sidebarWidth()}px`, 'flex-shrink': 0 }}>
+        <div style={{ width: `${sidebarWidth()}px`, 'flex-shrink': 0 }} data-register="workshop">
           <Sidebar
             onFileSelect={openFile}
             currentFile={currentTab()?.path || null}
@@ -2835,18 +2862,18 @@ const App: Component = () => {
           onMouseDown={handleSidebarResizeStart}
         />
       </Show>
-      <main class="main-content">
+      <main class="main-content" data-register="workshop">
         {/* Toolbar */}
         <div class="toolbar">
           <div class="toolbar-left">
             {/* Tab Bar */}
-            <Show when={tabs().length > 0 || showGraphView()}>
+            <Show when={tabs().length > 0 || showGraphView() || showMemoryView()}>
               <div class="tab-bar">
                 <For each={tabs()}>
                   {(tab, index) => (
                     <div
-                      class={`tab ${index() === activeTabIndex() && !showGraphView() ? 'active' : ''}`}
-                      onClick={() => { setShowGraphView(false); setActiveTabIndex(index()); }}
+                      class={`tab ${index() === activeTabIndex() && !showGraphView() && !showMemoryView() ? 'active' : ''}`}
+                      onClick={() => { setShowGraphView(false); setShowMemoryView(false); setActiveTabIndex(index()); }}
                     >
                       <span class="tab-name">{tab.isDirty ? '● ' : ''}{tab.name}</span>
                       <button
@@ -2883,6 +2910,24 @@ const App: Component = () => {
                     </button>
                   </div>
                 </Show>
+                <Show when={showMemoryView()}>
+                  <div class={`tab memory-tab active`}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+                      <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+                    </svg>
+                    <span class="tab-name">Build Memory</span>
+                    <button
+                      class="tab-close"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowMemoryView(false);
+                      }}
+                    >
+                      ×
+                    </button>
+                  </div>
+                </Show>
               </div>
             </Show>
           </div>
@@ -2896,6 +2941,7 @@ const App: Component = () => {
           {/* Editor, Viewer, or Graph View */}
           <div class="editor-area">
             <Show when={currentTab()?.fileType && currentTab()!.fileType !== 'markdown'} fallback={
+              <Show when={showMemoryView()} fallback={
               <Show when={showGraphView()} fallback={
                 <Editor
                   content={currentTab()?.content || ''}
@@ -2936,6 +2982,13 @@ const App: Component = () => {
                   noteGraph={noteGraph()}
                   currentFile={currentTab()?.path || null}
                   onNodeClick={(path) => { setShowGraphView(false); openFile(path); }}
+                />
+              </Show>
+              }>
+                <MemoryLedger
+                  fileContents={fileContents()}
+                  vaultPath={vaultPath()}
+                  onOpenNote={(path) => { setShowMemoryView(false); openFile(path); }}
                 />
               </Show>
             }>
@@ -3116,7 +3169,7 @@ const App: Component = () => {
                 document.addEventListener('mouseup', handleMouseUp);
               }}
             />
-            <div style={{ width: `${gooseWidth()}px` }}>
+            <div style={{ width: `${gooseWidth()}px` }} data-register="instrument">
               <GoosePanel
                 vaultPath={vaultPath()}
                 onClose={() => setShowGoose(false)}
@@ -3124,16 +3177,44 @@ const App: Component = () => {
                   setSettingsSection('customprovider');
                   setShowSettings(true);
                 }}
+                onPresenceChange={setAgentPresence}
               />
             </div>
           </Show>
 
         </div>
 
-        {/* Status Bar */}
+        {/* Status Bar — the ambient layer: quiet presence + visible sovereignty.
+            Not a character; a substrate (design brief, tone rules). */}
         <div class="status-bar">
           <div class="status-bar-left">
-            {/* Future: git branch, etc */}
+            <Show when={!isMobileApp() && !isWebApp()}>
+              <span
+                class="presence"
+                classList={{ 'presence--live': agentPresence() === 'live' }}
+                title={
+                  agentPresence() === 'live'
+                    ? 'A goose session is live. Reads are free; writes and commands ask first.'
+                    : 'No agent session. Nothing runs until you connect.'
+                }
+              >
+                <span class="presence__dot" aria-hidden="true"></span>
+                <span class="presence__label">
+                  {agentPresence() === 'live' ? 'session live' : 'agent idle'}
+                </span>
+              </span>
+            </Show>
+            <Show when={vaultPath()}>
+              <span
+                class="status-item status-item--sovereign"
+                title="Your notes are plain files on this machine. Nothing leaves it without your say-so."
+              >
+                local vault · {(vaultPath() ?? '').replace(/\\/g, '/').split('/').pop()}
+              </span>
+              <Show when={fileContents().size > 0}>
+                <span class="status-item">{fileContents().size} notes</span>
+              </Show>
+            </Show>
           </div>
           <div class="status-bar-right">
             <Show when={currentTab()}>

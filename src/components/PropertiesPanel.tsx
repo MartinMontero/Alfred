@@ -201,7 +201,7 @@ const PropertiesPanel: Component<PropertiesPanelProps> = (props) => {
     <div class="properties-panel">
       <div class="properties-header">
         <span class="properties-header-title">Properties</span>
-        <EvidenceBadge frontmatter={propertiesToObject(properties())} />
+        <EvidenceBadge frontmatter={propertiesToObject(properties())} interactive />
         <button class="properties-close" onClick={props.onClose} title="Close">×</button>
       </div>
 
