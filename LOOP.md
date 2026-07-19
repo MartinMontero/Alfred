@@ -33,11 +33,18 @@ This session runs in the **Linux remote container** (`/home/user/Alfred`), not
 carried only the design skin, not the shell IA the ship order demanded ("fully applied to the
 app shell"); PASS 4 built the IA layer (LOOP-DESIGN.md), PR #11 merged (9c1af56), builder
 deleted the stale beta.1/beta.2 drafts and re-tagged v0.1.0-beta.2 → 9c1af56 from the laptop.
-Release run 29670396341 SUCCESS; new draft id 356242438. Board: installed walk (now incl.
-registers/Build Memory/filter/provenance/presence/gate card) → Publish (one-way switch;
-activates the first live update feed). Superseded cuts, kept for the record: beta.1@1801bc3
-(unpublished by ruling, defects → F1–F11, PASS 3) and beta.2@24799e2 (skin without shell IA,
-caught at the gate → PASS 4). Then W7 PWA (subdomain word pending) → W8 docs/SHIP.**
+FIFTH CUT = the design arc's terminus for beta.2. After the builder judged the shell "still
+Onyx," three full-screen HTML mockups were built for sign-off; builder RATIFIED Direction 1
+(the Morning Study, home-first) + "let the user pick the name the app calls them." PASS 5
+(labeled nav rail) + PASS 6 (Home front door, study sidebar, display name) landed via PRs #14
++ #15 (builder-merged, screens screenshotted for sign-off before each merge — standing process
+now). Tag v0.1.0-beta.2 re-cut onto 3930f91 (PR #15 merge); release run 29678120183 SUCCESS
+(07:37); draft 356242438 refreshed = first installer carrying the home screen. Board: installed
+walk (opens to greeting-by-name + capture + cards + study sidebar; then registers/Build Memory/
+filter/provenance/presence/gate card) → Publish (one-way; activates the first live update
+feed). Superseded cuts kept for the record: beta.1@1801bc3 (unpublished, F1–F11 → PASS 3),
+beta.2@24799e2 (skin, no IA → PASS 4), @9c1af56 (Calm-HUD shell), @5a1e37f (nav rail).
+Then W7 PWA (subdomain word pending) → W8 docs/SHIP.**
 
 ## W6 (2026-07-17→19) — beta.1 tagged + smoke-tested (unpublished by ruling); F1–F11 fixed;
 ## 0.1.1 floor; beta.2 tagged + lane GREEN; publish gate open
