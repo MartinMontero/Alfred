@@ -107,3 +107,47 @@ rendering; palette-swap decision for brand accent.
       cargo test ATTEMPTED here, hits the known wall (gdk-sys: pkg-config gdk-3.0 absent) —
       UNVERIFIED in-container; exact command routed to Windows: cargo test --manifest-path
       src-tauri\Cargo.toml (expect 13 tests: 9 prior + 4 vault_path).
+
+## PASS 4 (Calm-HUD → the shell; builder's order 2026-07-19: "beta.2 ships with the Calm-HUD") — 2026-07-19
+Accountability line: the ship order demanded the direction "fully applied to the app shell (not
+just tokens)"; PASS 3 delivered defect fixes + skin and carried the Pass-1 IA deferral forward
+without re-surfacing it — a silent scope cut, caught by the builder on the installed candidate.
+This pass builds the IA layer. Stated exclusion (not silent): Recon Readouts and automated
+Fabrication Detection have no engine yet — building their frames now would be dead chrome
+(brief principle 7); they land with their engines. Builder may overrule.
+- [x] P4-1 Register zoning ON the shell: data-register="workshop" (sidebar wrap, main-content) /
+      "instrument" (goose wrap, panel root); serif sidebar/vault headers; steel hairline rule on
+      instrument containers + `.icon-bar-rule` register boundary in the rail. VERIFIED-LIVE:
+      computed border-top rgb(106,163,184) = --reg-evidence-accent; sidebar header font computes
+      Merriweather-first.
+- [x] P4-2 Evidence shell-wide: band glyphs (◆◈◇○/⊘, shape+title never color alone) in file tree
+      AND search results from a new pure index (src/lib/evidence-index.ts) over the in-memory
+      content cache; 3-state filter (All / Graded only / Needs attention) with count strip +
+      clear; EvidenceBadge grew a click-to-open provenance card (state/window/sources/issues,
+      right-anchored). RED-first: evidence-index.test.ts written before the module (run: FAIL,
+      module absent) → 8/8 green; filter semantics encoded incl. expired-window admission.
+      VERIFIED-LIVE (PWA probe B): 2 glyphs, title "Evidence: 0.9 · high"; marked→2 notes,
+      attention→1 note; popover text "state 0.90 · high · window 2026-07-01 → … · sources
+      docs/audit/phase4.md".
+- [x] P4-3 Build Memory (workshop IA surface): vault-backed dated ledger of evidence-graded
+      notes (rail button + tab, GraphView pattern); serif titles, mono dates/meta, invalidated
+      struck-through never deleted, honest empty state. VERIFIED-LIVE: 2 rows, dated row first
+      (2026-07-01), row click opens the note.
+- [x] P4-4 Ambient presence (shared IA): status-bar substrate — breathing steel dot (reduced-
+      motion honored) + "session live/agent idle" (desktop-only via reactive isWebApp; the old
+      non-reactive isWeb() cache rendered it on web — caught by probe, fixed) + sovereignty line
+      "local vault · <name>" + note count. VERIFIED-LIVE (web): sovereign line + count render,
+      presence correctly absent; presence dot itself routes to the Windows walk (goose is
+      desktop-only).
+- [x] P4-5 Permission gate → evidence-pack card (gate-card): action/kind/input/scope rows, mono
+      keys, agent-authored fields labeled as claims (threat-model §3), Deny left of Approve,
+      single-call scope stated. Live-fire routes to the Windows walk (needs a real goose
+      session); default-deny logic untouched (resolvePermission path unchanged).
+- [x] P4-6 Gates: tsc 0 · tsc:mcp 0 · vitest 293 passed | 4 pre-existing skips (+8 new) ·
+      contrast 33/33 (added 8 glyph-on-sidebar pairs + steel-on-primary) · build ✓ · build:web ✓
+      · exclusion L1/L2 ✓. Probe A (shell) + probe B (vault: full 6-step onboarding walk clean →
+      seeded OPFS notes → all surfaces) both green; screenshots in session scratchpad.
+- [ ] P4-G Routed to Martin: merge PR; delete draft 356213091 + tag v0.1.0-beta.2 (laptop);
+      re-tag v0.1.0-beta.2 on the new main tip; fresh install walk now includes: two-register
+      shell read, Build Memory with a graded note, filter cycle, provenance card, presence dot
+      breathing during a live goose session, gate card on a write request.

@@ -10370,3 +10370,358 @@ body {
 .goose-panel__terminal--idle {
   display: none;
 }
+
+/* ============================================================
+   PASS 4 — Calm-HUD applied to the app shell (design brief:
+   "The Study & The Instrument"). Registers become visible zones,
+   evidence becomes shell-wide, presence becomes ambient. Uses
+   existing tokens only — no new color literals.
+   ============================================================ */
+
+/* --- Register zoning. Workshop = warm study (serif headers, brass);
+       Instrument = calibrated bench (mono data, steel rule). The zones
+       are marked with data-register on real shell containers. --- */
+
+/* Workshop panel headers read as the study: serif, sentence case. */
+[data-register='workshop'] .sidebar-header > span,
+[data-register='workshop'] .vault-name-btn span {
+  font-family: var(--font-canon);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+/* Instrument surfaces carry the steel register rule — a hairline of
+   information: everything beyond it is the agent's bench. */
+[data-register='instrument'] {
+  border-left: 2px solid var(--reg-evidence-accent);
+}
+[data-register='instrument'] .goose-panel {
+  border-left: none; /* the wrapper already carries the rule */
+}
+
+/* The rail's register boundary between knowledge tools and the instrument. */
+.icon-bar-rule {
+  width: 24px;
+  border-top: 2px solid var(--reg-evidence-accent);
+  margin: 6px 0;
+  opacity: 0.7;
+}
+
+/* --- Evidence glyphs in the file tree and search results.
+       Shape + text title, never color alone (badge rule). --- */
+.ev-glyph {
+  margin-left: auto;
+  padding-left: 6px;
+  font-family: var(--font-data);
+  font-size: 10px;
+  flex-shrink: 0;
+}
+.search-result-file .ev-glyph {
+  margin-left: 6px;
+}
+.ev-glyph--high { color: var(--ev-high-text); }
+.ev-glyph--mid { color: var(--ev-mid-text); }
+.ev-glyph--low { color: var(--ev-low-text); }
+.ev-glyph--unknown { color: var(--ev-unknown-text); }
+.ev-glyph--invalid { color: var(--ev-invalid-text); }
+
+/* Active evidence filter strip under the files header. */
+.evidence-filter-strip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px;
+  font-family: var(--font-data);
+  font-size: 11px;
+  color: var(--reg-evidence-accent);
+  background: var(--reg-evidence-accent-muted);
+  border-bottom: 1px solid var(--border);
+}
+.evidence-filter-strip__count {
+  color: var(--text-secondary);
+}
+.evidence-filter-strip button {
+  margin-left: auto;
+  border: none;
+  background: none;
+  color: var(--text-secondary);
+  font-family: var(--font-data);
+  font-size: 11px;
+  cursor: pointer;
+  text-decoration: underline;
+}
+.header-btn--filter-active {
+  color: var(--reg-evidence-accent);
+}
+
+/* --- Provenance breakdown card (click an evidence badge). --- */
+.ev-badge-wrap {
+  position: relative;
+  display: inline-flex;
+}
+.ev-badge--button {
+  cursor: pointer;
+  border: none;
+  font: inherit;
+}
+.ev-pop {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0; /* badges live on right-edge surfaces; left-anchoring clips off-screen */
+  z-index: 60;
+  min-width: 240px;
+  max-width: 320px;
+  padding: 10px 12px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-left: 2px solid var(--reg-evidence-accent);
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  font-family: var(--font-data);
+  font-size: 11px;
+  text-align: left;
+}
+.ev-pop__row {
+  display: flex;
+  gap: 8px;
+  padding: 3px 0;
+  align-items: baseline;
+}
+.ev-pop__key {
+  flex-shrink: 0;
+  width: 72px;
+  color: var(--text-secondary);
+}
+.ev-pop__val {
+  color: var(--text-primary);
+  word-break: break-word;
+}
+.ev-pop__val--dim {
+  color: var(--text-secondary);
+}
+.ev-pop__sources {
+  margin: 0;
+  padding-left: 14px;
+  color: var(--text-primary);
+}
+.ev-pop__sources li {
+  word-break: break-word;
+}
+
+/* --- Ambient presence (status bar): a quiet substrate, not a character. --- */
+.presence {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-data);
+  font-size: 11px;
+}
+.presence__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text-secondary);
+  opacity: 0.5;
+}
+.presence--live .presence__label {
+  color: var(--reg-evidence-accent);
+}
+.presence--live .presence__dot {
+  background: var(--reg-evidence-accent);
+  opacity: 1;
+  animation: presence-breathe 2.8s var(--motion-ease) infinite;
+}
+@keyframes presence-breathe {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .presence--live .presence__dot { animation: none; }
+}
+.status-item--sovereign {
+  font-family: var(--font-data);
+  font-size: 11px;
+}
+
+/* --- Permission gate as an evidence pack (instrument register). --- */
+.gate-card {
+  margin: 8px 10px;
+  border: 1px solid var(--border);
+  border-left: 2px solid var(--reg-evidence-accent);
+  border-radius: 6px;
+  background: var(--bg-secondary);
+  padding: 10px 12px;
+}
+.gate-card__header {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.gate-card__title {
+  font-family: var(--font-canon);
+  font-weight: 700;
+  font-size: 14px;
+}
+.gate-card__lane {
+  margin-left: auto;
+  font-family: var(--font-data);
+  font-size: 11px;
+  color: var(--ev-mid-text);
+  background: var(--ev-mid-bg);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.gate-card__row {
+  display: flex;
+  gap: 8px;
+  padding: 2px 0;
+  font-size: 12px;
+  align-items: baseline;
+}
+.gate-card__key {
+  flex-shrink: 0;
+  width: 52px;
+  font-family: var(--font-data);
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+.gate-card__val {
+  color: var(--text-primary);
+}
+.gate-card__input {
+  font-family: var(--font-data);
+  font-size: 11px;
+  color: var(--text-primary);
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 4px 6px;
+  word-break: break-all;
+}
+.gate-card__caveat {
+  margin: 6px 0;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+.gate-card__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
+.gate-card__deny,
+.gate-card__approve {
+  padding: 6px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+}
+.gate-card__deny {
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-primary);
+}
+.gate-card__approve {
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: var(--accent-text);
+}
+
+/* --- Build Memory ledger (workshop register: the commonplace book). --- */
+.memory-ledger {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px 32px;
+}
+.memory-ledger__header {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+.memory-ledger__header h2 {
+  font-family: var(--font-canon);
+  font-size: 22px;
+}
+.memory-ledger__count {
+  font-family: var(--font-data);
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+.memory-ledger__intro {
+  margin: 8px 0 20px;
+  max-width: 560px;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+.memory-ledger__empty {
+  max-width: 480px;
+  padding: 16px;
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+.memory-ledger__rows {
+  display: flex;
+  flex-direction: column;
+}
+.memory-ledger__row {
+  display: grid;
+  grid-template-columns: 96px 1fr auto;
+  grid-template-areas:
+    'date name badge'
+    'date meta badge';
+  gap: 2px 14px;
+  padding: 10px 12px;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-primary);
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+.memory-ledger__row:hover {
+  background: var(--bg-secondary);
+}
+.memory-ledger__row--invalidated .memory-ledger__name {
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+  color: var(--text-secondary);
+}
+.memory-ledger__date {
+  grid-area: date;
+  font-family: var(--font-data);
+  font-size: 11px;
+  color: var(--text-secondary);
+  padding-top: 2px;
+}
+.memory-ledger__name {
+  grid-area: name;
+  font-family: var(--font-canon);
+  font-size: 15px;
+}
+.memory-ledger__badge {
+  grid-area: badge;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.memory-ledger__expired {
+  font-family: var(--font-data);
+  font-size: 10px;
+  color: var(--ev-low-text);
+  background: var(--ev-low-bg);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.memory-ledger__meta {
+  grid-area: meta;
+  font-family: var(--font-data);
+  font-size: 11px;
+  color: var(--text-secondary);
+  word-break: break-word;
+}
