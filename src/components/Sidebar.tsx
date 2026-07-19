@@ -50,6 +50,8 @@ interface SidebarProps {
   onFileDeleted: (path: string) => void;
   onFileMoved?: (oldPath: string, newPath: string) => void;
   view: SidebarView;
+  /** Switch the sidebar view (drives the Files | Bookmarks segment). */
+  onViewChange?: (view: SidebarView) => void;
   bookmarks: string[];
   onToggleBookmark: (path: string) => void;
   savedSearches: string[];
@@ -889,6 +891,29 @@ const Sidebar: Component<SidebarProps> = (props) => {
           </div>
         </Show>
       </div>
+
+      {/* Files | Bookmarks segment — bookmarks are a facet of the notes room,
+          not a primary destination (nav-rail keeps to 3–5). */}
+      <Show when={props.onViewChange && (props.view === 'files' || props.view === 'bookmarks') && props.vaultPath}>
+        <div class="sidebar-segment" role="tablist" aria-label="Notes panel view">
+          <button
+            role="tab"
+            aria-selected={props.view === 'files'}
+            classList={{ 'sidebar-segment__btn': true, 'sidebar-segment__btn--on': props.view === 'files' }}
+            onClick={() => props.onViewChange?.('files')}
+          >
+            Files
+          </button>
+          <button
+            role="tab"
+            aria-selected={props.view === 'bookmarks'}
+            classList={{ 'sidebar-segment__btn': true, 'sidebar-segment__btn--on': props.view === 'bookmarks' }}
+            onClick={() => props.onViewChange?.('bookmarks')}
+          >
+            Bookmarks
+          </button>
+        </div>
+      </Show>
 
       {/* Files View */}
       <Show when={props.view === 'files'}>

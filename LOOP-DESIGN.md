@@ -151,3 +151,27 @@ Fabrication Detection have no engine yet — building their frames now would be 
       re-tag v0.1.0-beta.2 on the new main tip; fresh install walk now includes: two-register
       shell read, Build Memory with a graded note, filter cycle, provenance card, presence dot
       breathing during a live goose session, gate card on a write request.
+
+## PASS 5 (the frame itself, for non-developers; builder's order 2026-07-19) — 2026-07-19
+Mandate: Onyx's frame was built dev-for-devs; Alfred serves mainstream non-developers.
+Authority: Pass-1 brief + 0006 + the builder's Apple/Android design field manual (Drive:
+design-field-manual-project-knowledge.md — nav rail with icon + SHORT label (never either
+alone, explicitly not a wall of text), 3–5 primary destinations, aria-current, ≥44px targets,
+rem type, reduced-motion, restraint).
+- [x] P5-1 Primary navigation: the 14-icon unlabeled 48px strip → a 76px labeled nav rail
+      (icon + 10.5px label), grouped as the two rooms — workshop (Notes / Search / Memory /
+      Graph) above, steel-ruled instrument group (Chat when enabled / Agent) below, Settings +
+      panel-collapse at the bottom. semantics: <nav aria-label="Primary">, aria-current="page",
+      :focus-visible rings, 52px item height. Instrument gates now use the REACTIVE isWebApp
+      (old rail leaked goose/provider buttons onto the web build via the stale isWeb cache).
+- [x] P5-2 Note-scoped tools off the rail: Outline / Backlinks / Properties / Shared-with-me
+      (badge preserved) → contextual toolbar cluster (aria-pressed), HIG toolbar pattern.
+      Bookmarks → Files | Bookmarks segmented control inside the notes panel (role=tablist).
+- [x] P5-3 Gates: tsc 0 · vitest 293|4 · contrast 33/33 · build ✓ · build:web ✓.
+      VERIFIED-LIVE (PWA probe): railLabels [Notes, Search, Memory, Graph, Agent, Settings];
+      aria-current follows Notes→Memory; item height 52px; 4 toolbar tools; segment switches
+      to Bookmarks (header follows). Screenshot probe-pass5-frame.png: labeled rail, brass
+      active pill, steel register rule, serif welcome — the frame no longer reads as Onyx.
+- [ ] P5-G Routed to Martin: merge PR; re-tag v0.1.0-beta.2 (fourth cut); installed walk adds:
+      rail labels legible at a glance, bookmarks segment, note tools in toolbar, agent group
+      below the steel rule; then Publish.
