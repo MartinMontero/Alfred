@@ -33,6 +33,7 @@ import Onboarding, { type OnboardingResult } from './components/Onboarding';
 import UnlockDialog from './components/UnlockDialog';
 import { MobileHeader, MobileNav, MobileDrawer, type MobileNavTab } from './components/mobile';
 import { initPlatform, usePlatformInfo, isWeb } from './lib/platform';
+import { validateVaultName, siblingVaultPath } from './lib/vault-name';
 import { impactLight, impactMedium, notificationSuccess, notificationError } from './lib/haptics';
 import { platform } from '@platform';
 import { getSyncEngine, getCurrentLogin, calculateChecksum } from './lib/nostr';
@@ -118,6 +119,11 @@ const App: Component = () => {
   // session's tabs restore into the strip, one click away, but the front door
   // is the greeting, not the last-open note.
   const [activeTabIndex, setActiveTabIndex] = createSignal<number>(-1);
+  // PASS 7: the vault menu on the nav's vault line (New / Switch / Explorer).
+  const [showVaultMenu, setShowVaultMenu] = createSignal(false);
+  const [newVaultOpen, setNewVaultOpen] = createSignal(false);
+  const [newVaultName, setNewVaultName] = createSignal('');
+  const [newVaultError, setNewVaultError] = createSignal<string | null>(null);
   const [showQuickSwitcher, setShowQuickSwitcher] = createSignal(false);
   const [showCommandPalette, setShowCommandPalette] = createSignal(false);
   const [showSearch, setShowSearch] = createSignal(false);
@@ -2552,6 +2558,35 @@ const App: Component = () => {
   };
 
   // Get current file title for mobile header
+  // PASS 7: create a brand-new vault as a sibling of the current one.
+  // createFolder(path, path) passes the containment gate (path == vault root,
+  // the exact first-run shape F1 fixed) — a new vault is its own root.
+  const handleCreateVault = async () => {
+    const verdict = validateVaultName(newVaultName());
+    if (!verdict.ok || !verdict.name) {
+      setNewVaultError(verdict.reason ?? 'Pick another name.');
+      return;
+    }
+    const current = vaultPath();
+    if (!current) return;
+    const path = siblingVaultPath(current, verdict.name);
+    try {
+      if (await platform.vault.exists(path)) {
+        setNewVaultError('A folder with that name already exists there.');
+        return;
+      }
+      await platform.vault.createFolder(path, path);
+      setNewVaultOpen(false);
+      setNewVaultName('');
+      setNewVaultError(null);
+      setTabs([]);
+      setVaultPath(path);
+      goHome();
+    } catch (err) {
+      setNewVaultError(`Couldn't create the vault: ${(err as Error).message}`);
+    }
+  };
+
   // Morning Study: Home is the resting state — no open note, no full view.
   const isHomeView = () => !currentTab() && !showGraphView() && !showMemoryView() && !!vaultPath();
   const goHome = () => {
@@ -2592,6 +2627,54 @@ const App: Component = () => {
           <button class="vault-open-banner__action" onClick={() => setShowSettings(true)}>
             Choose a different folder
           </button>
+        </div>
+      </Show>
+
+      {/* PASS 7: New Vault dialog — name it, see exactly where it will live. */}
+      <Show when={newVaultOpen()}>
+        <div class="modal-overlay" onClick={() => setNewVaultOpen(false)}>
+          <div class="modal-dialog new-vault" onClick={(e) => e.stopPropagation()}>
+            <div class="modal-header">
+              <h3>New vault</h3>
+              <button class="modal-close" onClick={() => setNewVaultOpen(false)}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+            </div>
+            <div class="modal-body">
+              <p class="new-vault__lead">
+                A vault is a folder of notes. Alfred creates it next to your current vault and
+                switches to it — your current notes stay exactly where they are.
+              </p>
+              <label class="new-vault__label" for="new-vault-name">Vault name</label>
+              <input
+                id="new-vault-name"
+                type="text"
+                class="new-vault__input"
+                placeholder="e.g. Casebook"
+                value={newVaultName()}
+                onInput={(e) => { setNewVaultName(e.currentTarget.value); setNewVaultError(null); }}
+                onKeyDown={(e) => { if (e.key === 'Enter') void handleCreateVault(); }}
+                autofocus
+              />
+              <Show when={validateVaultName(newVaultName()).ok && vaultPath()}>
+                <p class="new-vault__preview">
+                  Will be created at: <code>{siblingVaultPath(vaultPath()!, validateVaultName(newVaultName()).name!)}</code>
+                </p>
+              </Show>
+              <Show when={newVaultError()}>
+                <p class="new-vault__error" role="alert">{newVaultError()}</p>
+              </Show>
+            </div>
+            <div class="modal-footer">
+              <button class="setting-button secondary" onClick={() => setNewVaultOpen(false)}>Cancel</button>
+              <button class="setting-button" disabled={!validateVaultName(newVaultName()).ok} onClick={() => void handleCreateVault()}>
+                Create vault
+              </button>
+            </div>
+          </div>
         </div>
       </Show>
       {/* Mobile Header - Only shown on mobile */}
@@ -2715,7 +2798,37 @@ const App: Component = () => {
       <nav class="icon-bar study-nav" aria-label="Primary">
         <div class="study-nav__wordmark">
           Alfred
-          <small>{vaultPath() ? `${(vaultPath() ?? '').replace(/\\/g, '/').split('/').pop()} · on this machine` : 'no vault open yet'}</small>
+          <button
+            class="study-nav__vault-line"
+            aria-haspopup="menu"
+            aria-expanded={showVaultMenu()}
+            title="Vault options"
+            onClick={(e) => { e.stopPropagation(); setShowVaultMenu(!showVaultMenu()); }}
+          >
+            {vaultPath() ? `${(vaultPath() ?? '').replace(/\\/g, '/').split('/').pop()} · on this machine` : 'no vault open yet'}
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </button>
+          <Show when={showVaultMenu()}>
+            <div class="study-nav__vault-backdrop" onClick={() => setShowVaultMenu(false)}></div>
+            <div class="study-nav__vault-menu" role="menu">
+              <button role="menuitem" onClick={() => { setShowVaultMenu(false); setNewVaultName(''); setNewVaultError(null); setNewVaultOpen(true); }}>
+                New vault…
+                <small>A fresh folder of notes, next to this one</small>
+              </button>
+              <button role="menuitem" onClick={async () => { setShowVaultMenu(false); await openVault(); }}>
+                Switch vault…
+                <small>Open a different folder as your vault</small>
+              </button>
+              <Show when={!isMobileApp() && !isWebApp() && vaultPath()}>
+                <button role="menuitem" onClick={() => { setShowVaultMenu(false); platform.shell.showInFolder(vaultPath()!); }}>
+                  Show in Explorer
+                  <small>Your notes are plain files on disk</small>
+                </button>
+              </Show>
+            </div>
+          </Show>
         </div>
         <div class="study-nav__group">
           <div class="study-nav__label">Study</div>
