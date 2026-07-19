@@ -12,6 +12,7 @@
 
 import { Command, type Child } from '@tauri-apps/plugin-shell';
 import { readTextFile, writeTextFile, mkdir, exists } from '@tauri-apps/plugin-fs';
+import { toUint8Array } from './stdio-bytes';
 import { GOOSE_SIDECAR, trackGooseChild, untrackGooseChild } from './acp-client';
 import { buildGooseEnv, type GooseProviderCreds } from './provider-lockdown';
 import {
@@ -107,8 +108,9 @@ export async function runRecipe(recipePath: string, opts: RunRecipeOptions): Pro
 
   const decoder = new TextDecoder();
   if (opts.onOutput) {
-    cmd.stdout.on('data', (b: Uint8Array) => opts.onOutput?.(decoder.decode(b)));
-    cmd.stderr.on('data', (b: Uint8Array) => opts.onOutput?.(decoder.decode(b)));
+    // Same Tauri raw-encoding coercion as the ACP stdio bridge (stdio-bytes.ts).
+    cmd.stdout.on('data', (b: unknown) => opts.onOutput?.(decoder.decode(toUint8Array(b))));
+    cmd.stderr.on('data', (b: unknown) => opts.onOutput?.(decoder.decode(toUint8Array(b))));
   }
 
   let resolveDone!: (code: number | null) => void;
