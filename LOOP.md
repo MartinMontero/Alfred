@@ -29,12 +29,43 @@ This session runs in the **Linux remote container** (`/home/user/Alfred`), not
   announce).
 
 ## STAGE POINTER
-**Current: BETA SHIP ORDERS — W0–W3 ✓ (PRs #4 + #5 MERGED by builder; copy reframe landed
-7b9b386) · W4 ✓ CONFIRMED ON MAIN: run 29553158098 on fec5bc6 (PR #5 merge tip) completed
-SUCCESS, all four jobs, chromedriver cause-fix in tree
-(https://github.com/MartinMontero/Alfred/actions/runs/29553158098) · W5 UPDATER WIRING STAGED
-on the branch (this commit) — see below; keypair ceremony is the gate · then W6 tag → W7 PWA →
-W8 docs/SHIP. W6 manual gate on the installed artifact stays in force.**
+**Current: W6 SECOND CANDIDATE BUILT — v0.1.0-beta.2 tagged (24799e2), release run
+29664308449 SUCCESS, draft assembled (id 356213091). Board is the builder's: installed-artifact
+manual gate → Publish (one-way switch; activates the first live update feed). beta.1 was tagged,
+smoke-tested from its draft, and deliberately NEVER published (builder's ruling: not
+publish-worthy — its defects became register F1–F11, all fixed in the design-ship pass, see
+LOOP-DESIGN.md PASS 3). Then W7 PWA (subdomain word pending) → W8 docs/SHIP.**
+
+## W6 (2026-07-17→19) — beta.1 tagged + smoke-tested (unpublished by ruling); F1–F11 fixed;
+## 0.1.1 floor; beta.2 tagged + lane GREEN; publish gate open
+- **beta.1 leg:** tag `v0.1.0-beta.1` pushed from the laptop (container tag pushes 403 at the
+  git proxy — permanent routing). Release lane built the draft; builder installed and walked the
+  candidate. **Ruling: NOT published — "too many problems… not publish worthy."** The walk's
+  defects became register **F1–F11** (vault-create failure on fresh install, dirty first-run,
+  MIT-claiming About, red no-feed updater, goose dead-states, white table cells, Onyx marks,
+  oversized art, stale tagline, dead black terminal, premature web lock). All fixed red-first —
+  full evidence in LOOP-DESIGN.md PASS 3; merged via PRs #9 + #10 (builder-merged).
+- **Version floor 0.1.1** (c06b024): MSI rejects semver pre-release suffixes, and every field
+  still read 0.1.0 = beta.1's version — the updater would never have offered beta.2 to a beta.1
+  install. Numeric bump across all four surfaces (tauri.conf.json, package.json+lock,
+  Cargo.toml+lock). Tag names keep the beta suffix; installed apps compare latest.json versions.
+- **beta.2 leg:** tag `v0.1.0-beta.2` → merge commit 24799e2 (PR #10 tip), pushed from the
+  laptop (builder's screenshots: ls-remote confirms). Release run **29664308449 SUCCESS**;
+  draft release **id 356213091** (draft:true, lane-assembled, name/notes from tauri-action).
+  Artifact `alfred-windows-x86_64` 152 MB, sha256
+  `5d7c536fd01aeae016c23a247473b595a1fcbf7be3f2168f6045a1eab9507fbe`. **.sig presence
+  mechanically proven** (upload steps run `if-no-files-found: error` + the run is green — a
+  missing .sig cannot produce this outcome). latest.json is generated/attached by tauri-action
+  in native release mode; eyeballing it on the draft asset list is part of the builder's gate.
+- **OPEN — builder's board:** (1) installed-artifact manual gate on the beta.2 candidate,
+  each step mapped to a beta.1 defect (fresh-profile onboarding [F2/F11] → vault create [F1] →
+  table note both themes [F6] → About: AGPL/tagline/serif/mark [F3/F7/F9] → goose idle
+  [F5/F10] → updater check calm info tone [F4]); (2) **Publish** — one-way: the first
+  `releases/latest/download/latest.json` goes live and installed apps start updating from it;
+  (3) post-publish, verify the updater loop from the installed beta.1 machine (0.1.0 → offered
+  0.1.1); (4) cleanup clicks: the unpublished beta.1 draft + the lingering `v0.0.0-dryrun.1`
+  draft. Standing pre-PUBLIC-beta item: "Alfred" trademark clearance (Running with Crayons) per
+  ADR 0006 §6.
 
 ## W5 DRY-RUN #5 (2026-07-17) — GREEN; acceptance met verbatim; ceremony chain proven end-to-end
 Builder's capture: run 80203426635, 15m52s, **282/282 tests** (every platform skip executes on
