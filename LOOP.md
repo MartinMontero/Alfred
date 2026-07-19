@@ -617,3 +617,16 @@ Stage F. Fresh-eyes pass per stage per protocol.
 - Post-publish standing items: verify the updater loop from the installed machine when v-next
   ships; "Alfred" trademark clearance (Running with Crayons) BEFORE any public beta; W7 PWA
   (subdomain word pending); W8 beta docs/SHIP.
+
+## PUBLISHED — Alfred v0.1.0-beta.2 IS LIVE (2026-07-19 19:34:06Z, builder's click)
+- Release public at https://github.com/MartinMontero/Alfred/releases/tag/v0.1.0-beta.2
+  (eighth cut, 28a8272: Morning Study home, study sidebar, Build Memory, evidence layer,
+  working goose agent [connect VERIFIED-LIVE on the installed build], vault menu, AGPL About,
+  0.1.1). First release Alfred has ever shipped; beta.1 was never published by ruling.
+- **Update feed VERIFIED-LIVE:** GET releases/latest/download/latest.json → HTTP 200,
+  version 0.1.1, platforms [windows-x86_64], download URL → the published installer, minisign
+  signature embedded. Every installed Alfred now has a real, signed update channel.
+- Board: (1) v-next = vault-menu unification + Vaults nav item → ships as the FIRST UPDATE and
+  proves the updater loop on the builder's install; (2) trademark clearance (Running with
+  Crayons) BEFORE public beta; (3) W7 PWA deploy (subdomain word pending); (4) W8 beta docs /
+  SHIP.md; (5) housekeeping: delete the stale v0.0.0-dryrun.1 draft (builder's click).
