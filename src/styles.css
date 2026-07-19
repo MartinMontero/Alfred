@@ -10725,3 +10725,128 @@ body {
   color: var(--text-secondary);
   word-break: break-word;
 }
+
+/* ============================================================
+   PASS 5 — the frame itself, for non-developers.
+   Field-manual patterns: labeled navigation rail (icon + short
+   label, never either alone), 3–5 primary destinations, grouped
+   as the two rooms; contextual note tools live in the toolbar.
+   Targets ≥44px; :focus-visible rings; tokens only.
+   ============================================================ */
+
+.nav-rail {
+  width: 76px;
+  padding: 10px 6px;
+  gap: 2px;
+}
+.nav-rail__group {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
+  width: 100%;
+}
+.nav-rail__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  width: 100%;
+  min-height: 52px;
+  padding: 7px 2px;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease);
+}
+.nav-rail__label {
+  font-family: var(--font-ui);
+  font-size: 10.5px;
+  line-height: 1;
+  letter-spacing: 0.01em;
+}
+.nav-rail__item:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+.nav-rail__item--active {
+  background: var(--accent-muted);
+  color: var(--accent);
+}
+.nav-rail__item--instrument.nav-rail__item--active {
+  background: var(--reg-evidence-accent-muted);
+  color: var(--reg-evidence-accent);
+}
+.nav-rail__item:focus-visible,
+.nav-rail__collapse:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.nav-rail__group--instrument {
+  border-top: 2px solid var(--reg-evidence-accent);
+  padding-top: 6px;
+  border-left: none; /* the register rule reads horizontally inside the rail */
+}
+.nav-rail__group--bottom {
+  align-items: center;
+  margin-top: 4px;
+}
+.nav-rail__collapse {
+  width: 36px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+.nav-rail__collapse:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+/* Contextual note tools in the toolbar (moved off the rail). */
+.toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding-right: 8px;
+}
+.toolbar-tool {
+  position: relative;
+  width: 32px;
+  height: 30px;
+}
+
+/* Files | Bookmarks segment inside the notes panel. */
+.sidebar-segment {
+  display: flex;
+  gap: 4px;
+  padding: 6px 10px 2px;
+}
+.sidebar-segment__btn {
+  flex: 1;
+  padding: 5px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: var(--font-ui);
+  font-size: 12px;
+  cursor: pointer;
+}
+.sidebar-segment__btn--on {
+  background: var(--accent-muted);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.sidebar-segment__btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
