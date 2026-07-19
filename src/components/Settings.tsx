@@ -35,6 +35,7 @@ import { checkForUpdate, downloadAndInstallPending, mapUpdaterError, isExpectedB
 import AlfredMark from '../assets/onboarding/alfred-mark.png';
 import { invoke } from '@tauri-apps/api/core';
 import { authenticateWithBiometric } from '../lib/biometric';
+import { getDisplayName, setDisplayName } from '../lib/display-name';
 import {
   loadDailyNotesConfig,
   saveDailyNotesConfig,
@@ -86,6 +87,8 @@ const sections: SettingsSectionItem[] = [
 
 const Settings: Component<SettingsProps> = (props) => {
   const [activeSection, setActiveSection] = createSignal<SettingsSection>(props.initialSection || 'general');
+  // Morning Study: the name Alfred greets the builder by (local-only).
+  const [displayNameSetting, setDisplayNameSetting] = createSignal(getDisplayName());
 
   // Platform detection for hiding desktop-only sections on mobile
   const platformInfo = usePlatformInfo();
@@ -1471,6 +1474,23 @@ const Settings: Component<SettingsProps> = (props) => {
             {/* General Settings */}
             <Show when={activeSection() === 'general'}>
               <div class="settings-section">
+                <div class="setting-item">
+                  <div class="setting-info">
+                    <div class="setting-name">Your name</div>
+                    <div class="setting-description">How Alfred greets you on Home. Stays on this machine; leave blank for no name.</div>
+                  </div>
+                  <input
+                    type="text"
+                    class="setting-input"
+                    placeholder="e.g. Martin"
+                    value={displayNameSetting()}
+                    onInput={(e) => {
+                      setDisplayNameSetting(e.currentTarget.value);
+                      setDisplayName(e.currentTarget.value);
+                    }}
+                  />
+                </div>
+
                 <div class="setting-item">
                   <div class="setting-info">
                     <div class="setting-name">Language</div>
