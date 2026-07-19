@@ -22,6 +22,7 @@ import FeaturesSvg from '../assets/onboarding/features.svg';
 import NostrSvg from '../assets/onboarding/nostr.svg';
 import SyncSvg from '../assets/onboarding/sync.svg';
 import CompleteSvg from '../assets/onboarding/complete.svg';
+import { getDisplayName, setDisplayName } from '../lib/display-name';
 
 // Types
 export interface OnboardingResult {
@@ -61,6 +62,8 @@ const Onboarding: Component<OnboardingProps> = (props) => {
   // Step-specific state
   // Vault
   const [vaultError, setVaultError] = createSignal<string | null>(null);
+  // Morning Study: the name Alfred greets the builder by (optional, local-only).
+  const [displayName, setDisplayNameSignal] = createSignal(getDisplayName());
   const [vaultLoading, setVaultLoading] = createSignal(false);
   const [defaultVaultPath, setDefaultVaultPath] = createSignal<string | null>(null);
 
@@ -268,8 +271,19 @@ const Onboarding: Component<OnboardingProps> = (props) => {
         </div>
       </div>
 
+      <div class="onboarding-name">
+        <label for="onboarding-name-input">What should Alfred call you? <span class="onboarding-name__opt">(optional)</span></label>
+        <input
+          id="onboarding-name-input"
+          type="text"
+          placeholder="Your first name"
+          value={displayName()}
+          onInput={(e) => setDisplayNameSignal(e.currentTarget.value)}
+        />
+      </div>
+
       <div class="onboarding-actions">
-        <button class="onboarding-button primary" onClick={goNext}>
+        <button class="onboarding-button primary" onClick={() => { setDisplayName(displayName()); goNext(); }}>
           Get Started
         </button>
       </div>

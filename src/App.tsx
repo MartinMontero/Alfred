@@ -12,6 +12,7 @@ import CustomProviderChat from './components/CustomProviderChat';
 const Settings = lazy(() => import('./components/Settings'));
 const GraphView = lazy(() => import('./components/GraphView'));
 const MemoryLedger = lazy(() => import('./components/MemoryLedger'));
+const Home = lazy(() => import('./components/Home'));
 // Desktop-only goose harness panel — keeps the ACP SDK, Tauri shell, and xterm
 // out of the web/startup bundle (rendered behind <Show> on desktop only).
 const GoosePanel = lazy(() => import('./components/GoosePanel'));
@@ -113,7 +114,10 @@ const App: Component = () => {
   }));
 
   const [tabs, setTabs] = createSignal<Tab[]>([]);
-  const [activeTabIndex, setActiveTabIndex] = createSignal<number>(session?.activeTabIndex ?? -1);
+  // Morning Study (ratified Direction 1): every launch lands on Home — the
+  // session's tabs restore into the strip, one click away, but the front door
+  // is the greeting, not the last-open note.
+  const [activeTabIndex, setActiveTabIndex] = createSignal<number>(-1);
   const [showQuickSwitcher, setShowQuickSwitcher] = createSignal(false);
   const [showCommandPalette, setShowCommandPalette] = createSignal(false);
   const [showSearch, setShowSearch] = createSignal(false);
@@ -1624,6 +1628,36 @@ const App: Component = () => {
     }
   };
 
+  // Home capture box: a thought becomes a note. Filename from the first words;
+  // collision-suffixed; the note opens so the thought can keep growing.
+  const handleCaptureNote = async (text: string) => {
+    const vault = vaultPath();
+    if (!vault || !text.trim()) return;
+    const slug = text
+      .trim()
+      .slice(0, 48)
+      .replace(/[\\/:*?"<>|#^[\]]/g, '')
+      .trim() || 'Captured thought';
+    let filename = `${slug}.md`;
+    let filepath = `${vault}/${filename}`;
+    let counter = 2;
+    try {
+      while (await platform.vault.exists(filepath)) {
+        filename = `${slug} ${counter}.md`;
+        filepath = `${vault}/${filename}`;
+        counter++;
+      }
+      await platform.vault.createFile(filepath, vault);
+      await platform.vault.write(filepath, `${text.trim()}\n`, vault);
+      await openFile(filepath);
+      refreshSidebar?.();
+      await impactMedium();
+    } catch (err) {
+      console.error('[App] Capture failed:', err);
+      alert('Failed to capture the note: ' + (err as Error).message);
+    }
+  };
+
   const handleFileDeleted = async (path: string) => {
     const idx = tabs().findIndex(t => t.path === path);
     if (idx >= 0) {
@@ -2518,9 +2552,17 @@ const App: Component = () => {
   };
 
   // Get current file title for mobile header
+  // Morning Study: Home is the resting state — no open note, no full view.
+  const isHomeView = () => !currentTab() && !showGraphView() && !showMemoryView() && !!vaultPath();
+  const goHome = () => {
+    setShowGraphView(false);
+    setShowMemoryView(false);
+    setActiveTabIndex(-1);
+  };
+
   const currentFileTitle = () => {
     const tab = currentTab();
-    if (showGraphView()) return 'Graph View';
+    if (showGraphView()) return 'Connections';
     if (showMemoryView()) return 'Build Memory';
     if (!tab) return 'Alfred';
     return tab.name.replace(/\.md$/, '');
@@ -2667,126 +2709,121 @@ const App: Component = () => {
         />
       </Show>
 
-      {/* Primary navigation — a labeled rail (field manual: nav rail, icon +
-          short label, 3–5 primary destinations, aria-current, ≥44px targets).
-          Grouped as the two rooms: the workshop above, the instrument below.
-          Keeps the .icon-bar class so mobile hide rules still apply. */}
-      <nav class="icon-bar nav-rail" aria-label="Primary">
-        <div class="nav-rail__group">
+      {/* Primary navigation — the Morning Study sidebar (ratified Direction 1):
+          wordmark, labeled rows grouped as the two rooms, ambient footer.
+          Keeps .icon-bar so the mobile hide rules still apply. */}
+      <nav class="icon-bar study-nav" aria-label="Primary">
+        <div class="study-nav__wordmark">
+          Alfred
+          <small>{vaultPath() ? `${(vaultPath() ?? '').replace(/\\/g, '/').split('/').pop()} · on this machine` : 'no vault open yet'}</small>
+        </div>
+        <div class="study-nav__group">
+          <div class="study-nav__label">Study</div>
           <button
-            class="nav-rail__item"
-            classList={{ 'nav-rail__item--active': !sidebarCollapsed() && sidebarView() !== 'search' && !showGraphView() && !showMemoryView() }}
-            aria-current={!sidebarCollapsed() && sidebarView() !== 'search' && !showGraphView() && !showMemoryView() ? 'page' : undefined}
-            onClick={() => switchSidebarView('files')}
+            class="study-nav__item"
+            classList={{ 'study-nav__item--on': isHomeView() }}
+            aria-current={isHomeView() ? 'page' : undefined}
+            onClick={goHome}
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-              <polyline points="14 2 14 8 20 8"/>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path d="M3 12l9-9 9 9"/><path d="M5 10v10h14V10"/>
             </svg>
-            <span class="nav-rail__label">Notes</span>
+            Home
           </button>
           <button
-            class="nav-rail__item"
-            classList={{ 'nav-rail__item--active': !sidebarCollapsed() && sidebarView() === 'search' }}
-            aria-current={!sidebarCollapsed() && sidebarView() === 'search' ? 'page' : undefined}
-            onClick={() => switchSidebarView('search')}
+            class="study-nav__item"
+            classList={{ 'study-nav__item--on': !sidebarCollapsed() && !isHomeView() && !showGraphView() && !showMemoryView() }}
+            onClick={() => {
+              if (!sidebarCollapsed() && sidebarView() === 'files') setSidebarCollapsed(true);
+              else switchSidebarView('files');
+            }}
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-              <circle cx="11" cy="11" r="8"></circle>
-              <path d="m21 21-4.35-4.35"></path>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
             </svg>
-            <span class="nav-rail__label">Search</span>
+            Notes
           </button>
           <button
-            class="nav-rail__item"
-            classList={{ 'nav-rail__item--active': showMemoryView() }}
+            class="study-nav__item"
+            classList={{ 'study-nav__item--on': showMemoryView() }}
             aria-current={showMemoryView() ? 'page' : undefined}
             onClick={() => { setShowGraphView(false); setShowMemoryView(true); }}
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-              <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
-              <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
             </svg>
-            <span class="nav-rail__label">Memory</span>
+            Build Memory
           </button>
           <button
-            class="nav-rail__item"
-            classList={{ 'nav-rail__item--active': showGraphView() }}
+            class="study-nav__item"
+            classList={{ 'study-nav__item--on': showGraphView() }}
             aria-current={showGraphView() ? 'page' : undefined}
             onClick={() => { setShowMemoryView(false); setShowGraphView(true); }}
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-              <circle cx="6" cy="6" r="3"></circle>
-              <circle cx="18" cy="6" r="3"></circle>
-              <circle cx="6" cy="18" r="3"></circle>
-              <circle cx="18" cy="18" r="3"></circle>
-              <line x1="8.5" y1="7.5" x2="15.5" y2="16.5"></line>
-              <line x1="15.5" y1="7.5" x2="8.5" y2="16.5"></line>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <circle cx="6" cy="6" r="3"/><circle cx="18" cy="18" r="3"/><line x1="8" y1="8" x2="16" y2="16"/>
             </svg>
-            <span class="nav-rail__label">Graph</span>
+            Connections
           </button>
         </div>
-        <div class="icon-bar-spacer"></div>
-        {/* The instrument: agent surfaces, marked by the steel register rule. */}
-        <div class="nav-rail__group nav-rail__group--instrument" data-register="instrument">
-          <Show when={!isMobileApp() && !isWebApp() && customProviderEnabled()}>
+        <Show when={!isMobileApp() && !isWebApp()}>
+          <div class="study-nav__group study-nav__group--instrument" data-register="instrument">
+            <div class="study-nav__label">Instrument</div>
+            <Show when={customProviderEnabled()}>
+              <button
+                class="study-nav__item study-nav__item--instrument"
+                classList={{ 'study-nav__item--on': showCustomProvider() }}
+                onClick={() => {
+                  const url = localStorage.getItem('custom_provider_url');
+                  if (!url) {
+                    setSettingsSection('customprovider');
+                    setShowSettings(true);
+                  } else {
+                    setShowCustomProvider(!showCustomProvider());
+                  }
+                }}
+              >
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                  <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
+                </svg>
+                Chat
+              </button>
+            </Show>
             <button
-              class="nav-rail__item nav-rail__item--instrument"
-              classList={{ 'nav-rail__item--active': showCustomProvider() }}
-              onClick={() => {
-                const url = localStorage.getItem('custom_provider_url');
-                if (!url) {
-                  setSettingsSection('customprovider');
-                  setShowSettings(true);
-                } else {
-                  setShowCustomProvider(!showCustomProvider());
-                }
-              }}
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
-                <path d="M2 17l10 5 10-5"></path>
-                <path d="M2 12l10 5 10-5"></path>
-              </svg>
-              <span class="nav-rail__label">Chat</span>
-            </button>
-          </Show>
-          <Show when={!isMobileApp() && !isWebApp()}>
-            <button
-              class="nav-rail__item nav-rail__item--instrument"
-              classList={{ 'nav-rail__item--active': showGoose() }}
+              class="study-nav__item study-nav__item--instrument"
+              classList={{ 'study-nav__item--on': showGoose() }}
               onClick={() => setShowGoose(!showGoose())}
             >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                <polyline points="4 17 10 11 4 5"></polyline>
-                <line x1="12" y1="19" x2="20" y2="19"></line>
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/>
               </svg>
-              <span class="nav-rail__label">Agent</span>
+              Agent
             </button>
-          </Show>
-        </div>
-        <div class="nav-rail__group nav-rail__group--bottom">
+          </div>
+        </Show>
+        <div class="study-nav__group study-nav__group--last">
           <button
-            class="nav-rail__item"
-            classList={{ 'nav-rail__item--active': showSettings() }}
+            class="study-nav__item"
+            classList={{ 'study-nav__item--on': showSettings() }}
             onClick={() => setShowSettings(true)}
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-              <circle cx="12" cy="12" r="3"></circle>
-              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <circle cx="12" cy="12" r="3"/><path d="M12 1v4m0 14v4M4.2 4.2l2.8 2.8m10 10l2.8 2.8M1 12h4m14 0h4M4.2 19.8l2.8-2.8m10-10l2.8-2.8"/>
             </svg>
-            <span class="nav-rail__label">Settings</span>
+            Settings
           </button>
-          <button
-            class="nav-rail__collapse"
-            onClick={() => setSidebarCollapsed(!sidebarCollapsed())}
-            title={sidebarCollapsed() ? 'Show the notes panel' : 'Hide the notes panel'}
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-              <line x1="9" y1="3" x2="9" y2="21"></line>
-            </svg>
-          </button>
+        </div>
+        <div class="study-nav__foot">
+          <Show when={!isMobileApp() && !isWebApp()}>
+            <span class="presence" classList={{ 'presence--live': agentPresence() === 'live' }}>
+              <span class="presence__dot" aria-hidden="true"></span>
+              {agentPresence() === 'live' ? 'session live' : 'agent idle'}
+            </span>
+            <span aria-hidden="true">·</span>
+          </Show>
+          <span>{fileContents().size} notes</span>
+          <span aria-hidden="true">·</span>
+          <span>local</span>
         </div>
       </nav>
 
@@ -2859,7 +2896,7 @@ const App: Component = () => {
                       <line x1="8.5" y1="7.5" x2="15.5" y2="16.5"></line>
                       <line x1="15.5" y1="7.5" x2="8.5" y2="16.5"></line>
                     </svg>
-                    <span class="tab-name">Graph</span>
+                    <span class="tab-name">Connections</span>
                     <button
                       class="tab-close"
                       onClick={(e) => {
@@ -2961,6 +2998,7 @@ const App: Component = () => {
             <Show when={currentTab()?.fileType && currentTab()!.fileType !== 'markdown'} fallback={
               <Show when={showMemoryView()} fallback={
               <Show when={showGraphView()} fallback={
+              <Show when={!currentTab() && vaultPath()} fallback={
                 <Editor
                   content={currentTab()?.content || ''}
                   onContentChange={updateTabContent}
@@ -2993,6 +3031,23 @@ const App: Component = () => {
                     }
                   }}
                 />
+              }>
+                <Home
+                  vaultPath={vaultPath()}
+                  vaultName={(vaultPath() ?? '').replace(/\\/g, '/').split('/').pop() || 'your vault'}
+                  fileContents={fileContents()}
+                  openNotes={tabs().map((t) => ({ path: t.path, name: t.name.replace(/\.md$/i, '') }))}
+                  agentPresence={agentPresence()}
+                  showAgentCard={!isMobileApp() && !isWebApp()}
+                  onOpenNote={openFile}
+                  onCreateNote={createNewNote}
+                  onCaptureNote={handleCaptureNote}
+                  onOpenDailyNote={handleOpenDailyNote}
+                  onOpenMemory={() => { setShowGraphView(false); setShowMemoryView(true); }}
+                  onOpenNotesPanel={() => switchSidebarView('files')}
+                  onStartAgent={() => setShowGoose(true)}
+                />
+              </Show>
               }>
                 <GraphView
                   vaultPath={vaultPath()}

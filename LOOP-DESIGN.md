@@ -175,3 +175,31 @@ rem type, reduced-motion, restraint).
 - [ ] P5-G Routed to Martin: merge PR; re-tag v0.1.0-beta.2 (fourth cut); installed walk adds:
       rail labels legible at a glance, bookmarks segment, note tools in toolbar, agent group
       below the steel rule; then Publish.
+
+## PASS 6 (the Morning Study — Direction 1 RATIFIED by builder, 2026-07-19) — 2026-07-19
+Builder's word: Direction 1 (home-first) + "allow the user to pick the name the app calls them."
+Process correction now standing: built screens go back to the builder as screenshots against the
+ratified mockup BEFORE merge; his merge is the sign-off.
+- [x] P6-1 Home.tsx = the front door: time-of-day greeting in the builder's chosen name
+      (graceful unnamed), honest subline (note count, graded count, "everything stays on this
+      machine"), capture box → note (filename from first words, collision-suffixed, opens),
+      "Pick up where you left off" from REAL session tabs (falls back to "In your vault" —
+      label never overclaims; FileEntry has no mtime, nothing fabricated), agent resting card
+      (desktop-only, breathing dot when live), Build Memory top-3, three start tiles (New note /
+      Daily note / Ask the agent — web swaps agent tile for Search). Launch always lands Home;
+      session tabs restore into the strip one click away.
+- [x] P6-2 Nav = the mockup's study sidebar (216px): Alfred wordmark + vault subline; STUDY
+      group (Home / Notes / Build Memory / Connections — Graph renamed); steel-ruled INSTRUMENT
+      group (Chat / Agent, desktop, reactive gate); Settings; ambient footer (presence · notes ·
+      local). Search folded behind Notes (panel search + palette); aria-current, focus-visible.
+- [x] P6-3 Display name: src/lib/display-name.ts (get/set/greeting; unset → no placeholder
+      names) + optional welcome-step field in onboarding + Settings→General "Your name" field.
+      3 new unit tests (red first: localStorage-shim mechanism).
+- [x] P6-4 Gates: tsc 0 · vitest 296|4 (+3) · contrast 33/33 · build ✓ · build:web ✓.
+      VERIFIED-LIVE (PWA probe): onboarding name field → "Good morning, Martin."; nav
+      [Home, Notes, Build Memory, Connections, Settings]; capture "The morning study is the
+      front door now" → tab of that name; Home returns via nav; recents = session tab;
+      wordmark subline de-duplicated after probe caught "vault vault". Screenshots sent to
+      builder with the PR.
+- [ ] P6-G Builder: compare screenshots to the ratified mockup; merge = sign-off; re-tag
+      v0.1.0-beta.2 (fifth cut) → walk → Publish.
