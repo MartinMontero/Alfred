@@ -30,6 +30,7 @@ import {
 } from '@agentclientprotocol/sdk';
 import type { GooseProviderCreds } from './provider-lockdown';
 import { buildGooseEnv } from './provider-lockdown';
+import { toUint8Array } from './stdio-bytes';
 import { optionalTraceMeta, type TraceContext } from '../telemetry/trace';
 
 /** Stem of the sidecar declared in tauri.conf.json `externalBin`. */
@@ -131,8 +132,8 @@ export async function startGooseSession(opts: GooseSessionOptions): Promise<Goos
   });
 
   if (opts.handlers?.onStderr) {
-    command.stderr.on('data', (bytes: Uint8Array) => {
-      opts.handlers?.onStderr?.(decoder.decode(bytes));
+    command.stderr.on('data', (bytes: unknown) => {
+      opts.handlers?.onStderr?.(decoder.decode(toUint8Array(bytes)));
     });
   }
 
@@ -144,9 +145,11 @@ export async function startGooseSession(opts: GooseSessionOptions): Promise<Goos
   });
   const readable = new ReadableStream<Uint8Array>({
     start(controller) {
-      command.stdout.on('data', (bytes: Uint8Array) => {
+      command.stdout.on('data', (bytes: unknown) => {
         try {
-          controller.enqueue(bytes);
+          // encoding:'raw' arrives as a number[] over IPC — coerce to real
+          // Uint8Array so the ACP nd-json reader's TextDecoder doesn't throw.
+          controller.enqueue(toUint8Array(bytes));
         } catch {
           /* stream already closed */
         }

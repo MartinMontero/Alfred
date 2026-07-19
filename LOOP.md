@@ -38,11 +38,20 @@ Onyx," three full-screen HTML mockups were built for sign-off; builder RATIFIED 
 (the Morning Study, home-first) + "let the user pick the name the app calls them." PASS 5
 (labeled nav rail) + PASS 6 (Home front door, study sidebar, display name) landed via PRs #14
 + #15 (builder-merged, screens screenshotted for sign-off before each merge — standing process
-now). Tag v0.1.0-beta.2 re-cut onto 3930f91 (PR #15 merge); release run 29678120183 SUCCESS
-(07:37); draft 356242438 refreshed = first installer carrying the home screen. Board: installed
-walk (opens to greeting-by-name + capture + cards + study sidebar; then registers/Build Memory/
-filter/provenance/presence/gate card) → Publish (one-way; activates the first live update
-feed). Superseded cuts kept for the record: beta.1@1801bc3 (unpublished, F1–F11 → PASS 3),
+now). Fifth cut (3930f91, run 29678120183) delivered the home screen — builder walked it, approved
+("this is much better"), but the installed walk surfaced a real pre-existing agent bug: clicking
+Connect goose threw "Command plugin:fs|write_text_file not allowed by ACL". Root cause: the goose
+distribution writes its locked-down config via the @tauri-apps/plugin-fs JS plugin, but
+capabilities/default.json granted only coarse fs:allow-read/write, which do NOT enable the
+granular write_text_file command. Builder ruled fix-first over publish-now. SIXTH CUT (1560474,
+PR #16): capabilities grant exactly the four JS-fs commands the app calls (write-text-file,
+read-text-file, mkdir, exists — $APPCONFIG already in scope); release run 29679125185 SUCCESS
+(08:14) — the passing Tauri codegen also validates the permission identifiers. Draft 356242438
+refreshed = ACL-fixed installer. Board: installed walk, this time straight to Agent → Start a
+session (the ACL error must be gone; full connect still needs the Windows sidecar + a provider
+key — builder's setup, not the app) → Publish (one-way; activates the first live update feed).
+Full-app-verify note: this container can't build Tauri (gdk absent), so the ACL fix's runtime
+proof is the builder's installed walk, not an in-container run. Superseded cuts kept for the record: beta.1@1801bc3 (unpublished, F1–F11 → PASS 3),
 beta.2@24799e2 (skin, no IA → PASS 4), @9c1af56 (Calm-HUD shell), @5a1e37f (nav rail).
 Then W7 PWA (subdomain word pending) → W8 docs/SHIP.**
 
