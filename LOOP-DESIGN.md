@@ -203,3 +203,24 @@ ratified mockup BEFORE merge; his merge is the sign-off.
       builder with the PR.
 - [ ] P6-G Builder: compare screenshots to the ratified mockup; merge = sign-off; re-tag
       v0.1.0-beta.2 (fifth cut) → walk → Publish.
+
+## PASS 7 (vault menu — builder's eighth-cut ruling, 2026-07-19) — 2026-07-19
+Installed-walk finding (builder): vault switching was buried in the Notes-panel header and
+post-onboarding there was NO way to create a vault at all. Ruled: eighth cut before publish.
+- [x] P7-1 The nav's vault line ("Holmes · on this machine") is now a button → menu:
+      **New vault…** (dialog: name validation with plain-language reasons, live path preview,
+      creates the folder as its own vault root — createFolder(path,path), the F1 shape — and
+      switches to it, tabs cleared, Home shown) · **Switch vault…** (existing picker) ·
+      **Show in Explorer** (desktop only). aria-haspopup/menu roles, focus-visible, backdrop
+      close.
+- [x] P7-2 src/lib/vault-name.ts: validateVaultName (Windows-strict: illegal + control chars,
+      reserved device names, trailing dot/space; spaces/hyphens explicitly ALLOWED — my first
+      regex rejected "My Vault", caught by adding the pin test) + siblingVaultPath (probe caught
+      the web bare-root case nesting the new vault INSIDE the current one; fixed to true
+      sibling). 9 unit tests.
+- [x] P7-3 Gates: tsc 0 · vitest 311|4 (+9) · contrast 33/33 · build ✓ · build:web ✓.
+      VERIFIED-LIVE (PWA probe): menu renders (Explorer item correctly absent on web); Create
+      disabled on "bad/name"; preview "Will be created at: Casebook"; after Create the whole
+      shell switches — vault line, sovereign status line, Home subline all read Casebook.
+- [ ] P7-G Builder: merge PR → retag (eighth cut) → walk: vault line → New vault "Casebook" →
+      shell switches; Switch vault back to Holmes; Show in Explorer opens the folder → Publish.
