@@ -61,7 +61,7 @@ const webPlugins =
           manifest: {
             name: 'Alfred',
             short_name: 'Alfred',
-            description: 'Sovereign, local-first, Nostr-native PKM for agentic AI development.',
+            description: 'Sovereign, local-first, Nostr-native PKM for builders who direct AI to build software.',
             theme_color: '#1e1e1e',
             background_color: '#1e1e1e',
             display: 'standalone',
