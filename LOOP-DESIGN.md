@@ -224,3 +224,51 @@ post-onboarding there was NO way to create a vault at all. Ruled: eighth cut bef
       shell switches — vault line, sovereign status line, Home subline all read Casebook.
 - [ ] P7-G Builder: merge PR → retag (eighth cut) → walk: vault line → New vault "Casebook" →
       shell switches; Switch vault back to Holmes; Show in Explorer opens the folder → Publish.
+
+## PASS 8 (v0.1.0-beta.3 — the first true update; builder's ship order 2026-07-20) — 2026-07-20
+Defect register from the builder's installed walk of beta.2 + STEP 0 recon. Rule 9 this round:
+NO push, NO tag, NO publish — commit set stays local; evidence table + GATE list to the builder.
+- [x] P8-1 F12 one vault door: sidebar dropdown gains **New vault…** (same dialog as the nav
+      menu, one component, one behavior); "Open another vault" renamed **Switch vault…** so
+      both doors use the same verbs. Probe created a vault from EACH door (DoorOne via nav,
+      DoorTwo via sidebar) — shell switched both times.
+- [x] P8-2 F13 Vaults in the nav: STUDY group gains **Vaults** (aria-current, popover with
+      current-vault line + New / Switch / Explorer) — the "under notes there needs to be
+      another icon for vaults" ruling, done as a first-class destination.
+- [x] P8-3 T7-R violet purge COMPLETE: GraphView glow now derives from the brass accent
+      (hexToRgba of --accent-hover, .6/.4); onboarding SVGs recolored to the study palette
+      (brass/steel), dead welcome.svg deleted. grep for #8b5cf6|#a78bfa|#6366f1|violet in
+      src/ → zero.
+- [x] P8-4 F14 interactive-icon contract (ADR-0007, six points): HEAD inventory swept —
+      tab closes, toolbar tools, sidebar header, filter/sort, modal closes, GoosePanel ⚙/✕,
+      EvidenceBadge all carry aria-labels + focus-visible.
+- [x] P8-5 F16 agent discoverability: both "agent idle" renders are now real buttons —
+      the status-bar agent chip opens the agent panel; a one-time dismissible hint
+      (localStorage) replaces the silent resting text. Copy fact-checked against the real
+      goose wiring (ACP over stdio; skills gated) — no capability overclaims.
+- [x] P8-6 F15 relay-not-cloud (ADR-0007 decision 2): status-bar cloud glyph → relay
+      beacon (node + signal arcs, relay-syncing/relay-waves states); FileInfoDialog cloud →
+      relay; onboarding copy "Enable cloud sync" → "Sync over your Nostr relays". The words
+      "cloud sync" no longer appear in the product.
+- [x] P8-7 F17 skills door honest: GoosePanel idle copy says skills are locked this beta;
+      docs/beta/known-issues.md explains why (capability gate, not a defect).
+- [x] P8-8 F9-R metadata: package.json / Cargo.toml / vite descriptions now the one-line
+      canon ("Sovereign, local-first, Nostr-native PKM for builders who direct AI to build
+      software"). F18 release notes: workflow composes releaseBody from
+      docs/beta/RELEASE-NOTES-<tag>.md (beta.3 notes written); F19 tag↔numeric-version map
+      appended to docs/release-process.md.
+- [x] P8-9 Gates + evidence: tsc 0 · vitest 311|4 · contrast 33/33 · build ✓ · build:web ✓.
+      VERIFIED-LIVE (PWA probe): nav [Home, Notes, Vaults, Build Memory, Connections,
+      Settings]; both vault doors create; sidebar menu [New vault…, Switch vault…, Open vault
+      folder, Copy vault path]; sync button aria "Relay sync is off"; 4 toolbar aria-labels;
+      no cloud copy on welcome. C1 canary at the shipped tag (ci.yml run 29699768607 at
+      28a8272, rust job 88226716923):
+      `test telemetry_tests::born_redacted_canary_no_secret_or_note_body_on_disk ... ok`.
+      cargo test locally still walled at gdk-3.0 (container) — Windows/CI route stands.
+- [ ] P8-10 F21 onboarding steward walk: LOGGED for Stage G per the register — no build
+      this cut.
+- [ ] P8-G GATE (builder, in order): push branch → PR → merge → tag v0.1.0-beta.3 → publish →
+      updater-loop proof on the installed beta.2 (Settings → check for updates → 0.1.2 offered
+      with the tester notes) → F20 delete the dryrun draft
+      (`gh release delete v0.0.0-dryrun.1 --yes` or the releases page) → optionally align the
+      live beta.2 body with the beta.2 notes (F18's live half).
