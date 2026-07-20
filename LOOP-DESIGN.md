@@ -272,3 +272,21 @@ NO push, NO tag, NO publish — commit set stays local; evidence table + GATE li
       with the tester notes) → F20 delete the dryrun draft
       (`gh release delete v0.0.0-dryrun.1 --yes` or the releases page) → optionally align the
       live beta.2 body with the beta.2 notes (F18's live half).
+- [x] P8-11 F22 REGRESSION (quality gate, builder-filed 2026-07-20): PWA Lighthouse perf
+      0.78 / LCP 3931ms at main 4626231, masked since c0a0721 by the "first-run calibration"
+      soft-fail (long stale). Recon (local Lighthouse, LCP-element audit + trace candidates +
+      Playwright PerformanceObserver probes): LCP element was the 512px/312K Alfred-mark PNG
+      on onboarding, paint-gated behind the whole SPA JS chain; entry bundle carried the
+      full CodeMirror+Milkdown editor. Fix, four parts: (1) mark resized/quantized 312K→29K
+      (+ PWA icons 88K→20K, 26K→7K, 312K→62K), served as stable /alfred-mark.png;
+      (2) Editor now lazy() like the other heavy views — entry chunk 923K→416K raw;
+      (3) SW register script deferred (was render-blocking ~435ms); (4) static splash in
+      index.html paints the mark from raw HTML/CSS and the app's first render waits for its
+      decode + one committed frame (double rAF) — kills the LCP-candidate race between the
+      splash and the app's first paint (trace-verified: the race, not size, caused the
+      0.99↔0.78 flapping). EXECUTED + VERIFIED-LIVE: five consecutive Lighthouse runs
+      perf 0.99 / LCP 1.8s / CLS 0.02; a11y 0.95; the exact CI command
+      (`lhci autorun`, assertions hard) passes; functional probe: splash retires, onboarding
+      completes, capture→note opens the lazy editor. Soft-fail REMOVED from ci.yml with a
+      never-again note (F22b). Precache now 5.4MB — flagged as a suspect but not what moved
+      the metric; full-offline precache kept deliberately (advisory for a later round).

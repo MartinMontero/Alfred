@@ -15,10 +15,33 @@
         width: 100%;
         overflow: hidden;
       }
+      /* Static splash: paints the Alfred mark from raw HTML + CSS before the
+         bundle executes (the SPA's first render is JS-gated; this is what the
+         F22 Lighthouse LCP gate measures). src/index.tsx removes it on mount.
+         position: fixed so its removal shifts nothing (CLS 0). */
+      #alfred-splash {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #1e1e1e;
+      }
+      /* 240x180 (mark contained at 180px) — deliberately larger than the
+         onboarding illustration's 150px mark so the splash paint is always
+         the winning LCP candidate no matter which frame commits first. */
+      #alfred-splash img {
+        width: 240px;
+        height: 180px;
+        object-fit: contain;
+      }
     </style>
   </head>
   <body>
     <div id="root"></div>
+    <div id="alfred-splash" aria-hidden="true">
+      <img src="/alfred-mark.png" alt="" fetchpriority="high" width="240" height="180" />
+    </div>
     <script type="module" src="/src/index.tsx"></script>
   </body>
 </html>

@@ -57,6 +57,9 @@ const webPlugins =
         webCspPlugin(),
         VitePWA({
           registerType: 'autoUpdate',
+          // Defer the SW register script — as a plain <script> it render-blocks
+          // first paint (~435ms on the Lighthouse mobile profile, F22).
+          injectRegister: 'script-defer',
           includeAssets: ['icons/icon.png', 'icons/128x128.png', 'icons/128x128@2x.png'],
           manifest: {
             name: 'Alfred',

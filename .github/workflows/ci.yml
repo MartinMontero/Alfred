@@ -251,7 +251,10 @@ jobs:
           '
 
       - name: Lighthouse CI (perf >=90, a11y >=95, LCP <=2.5s, CLS <=0.1)
-        run: npx --yes @lhci/cli@0.14.x autorun || echo "::warning::Lighthouse thresholds need first-run calibration"
+        # Constitutional gate (CLAUDE.md #7) — hard fail. The former
+        # "first-run calibration" soft-fail masked a real perf regression for
+        # five weeks (F22); never reintroduce it.
+        run: npx --yes @lhci/cli@0.14.x autorun
 
       # Link-check Alfred's OPERATIONAL docs (install guide, README, security,
       # release process, etc.) — NOT node_modules and NOT docs/research/, which are

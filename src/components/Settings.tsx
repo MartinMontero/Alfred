@@ -32,7 +32,9 @@ import {
 } from '../lib/ai-credentials';
 import { usePlatformInfo, isMobile, isDesktop } from '../lib/platform';
 import { checkForUpdate, downloadAndInstallPending, mapUpdaterError, isExpectedBetaState } from '../lib/updater';
-import AlfredMark from '../assets/onboarding/alfred-mark.png';
+// The mark ships as a stable public asset (/alfred-mark.png) so the static
+// splash in index.html and the app share one copy (F22).
+const AlfredMark = '/alfred-mark.png';
 import { invoke } from '@tauri-apps/api/core';
 import { authenticateWithBiometric } from '../lib/biometric';
 import { getDisplayName, setDisplayName } from '../lib/display-name';

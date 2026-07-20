@@ -2,7 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Martin Montero and the Alfred contributors
 import { Component, createSignal, createEffect, createResource, on, For, Show, onMount, onCleanup, lazy } from 'solid-js';
 import Sidebar from './components/Sidebar';
-import Editor from './components/Editor';
+// Editor pulls the whole CodeMirror + Milkdown chain — lazy so the first
+// paint (onboarding/Home) doesn't pay for it (F22 Lighthouse gate).
+const Editor = lazy(() => import('./components/Editor'));
 import QuickSwitcher from './components/QuickSwitcher';
 import CommandPalette from './components/CommandPalette';
 import SearchPanel from './components/SearchPanel';

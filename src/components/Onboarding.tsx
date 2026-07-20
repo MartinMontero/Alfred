@@ -16,7 +16,9 @@ import type { NostrIdentity } from '../lib/nostr/types';
 import '../styles/onboarding.css';
 
 // Import SVG illustrations
-import AlfredMark from '../assets/onboarding/alfred-mark.png';
+// The mark ships as a stable public asset (/alfred-mark.png) so the static
+// splash in index.html and the app share one copy (F22).
+const AlfredMark = '/alfred-mark.png';
 import VaultSvg from '../assets/onboarding/vault.svg';
 import FeaturesSvg from '../assets/onboarding/features.svg';
 import NostrSvg from '../assets/onboarding/nostr.svg';
