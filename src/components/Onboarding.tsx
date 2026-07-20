@@ -6,7 +6,7 @@
  * Guides users through setting up their Alfred workspace including:
  * - Vault creation/selection
  * - Nostr identity setup
- * - Cloud sync configuration
+ * - Nostr relay sync configuration
  */
 
 import { Component, createSignal, Show, For, onMount } from 'solid-js';
@@ -615,7 +615,7 @@ const Onboarding: Component<OnboardingProps> = (props) => {
 
         <div class="onboarding-sync-toggle">
           <div class="onboarding-sync-info">
-            <div class="onboarding-sync-label">Enable cloud sync</div>
+            <div class="onboarding-sync-label">Sync over your Nostr relays</div>
             <div class="onboarding-sync-desc">Sync your notes across devices</div>
           </div>
           <label class="onboarding-toggle">
@@ -693,7 +693,7 @@ const Onboarding: Component<OnboardingProps> = (props) => {
             </Show>
           </div>
           <span class={`onboarding-summary-text ${!syncEnabled() ? 'skipped' : ''}`}>
-            {syncEnabled() ? 'Cloud sync enabled' : 'Cloud sync — set up in Settings'}
+            {syncEnabled() ? 'Relay sync on — your notes travel encrypted over your own relays' : 'Relay sync — set up in Settings'}
           </span>
         </div>
 

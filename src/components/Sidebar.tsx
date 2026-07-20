@@ -52,6 +52,8 @@ interface SidebarProps {
   view: SidebarView;
   /** Switch the sidebar view (drives the Files | Bookmarks segment). */
   onViewChange?: (view: SidebarView) => void;
+  /** Open the shared New Vault dialog (F12: create reachable from every vault menu). */
+  onNewVault?: () => void;
   bookmarks: string[];
   onToggleBookmark: (path: string) => void;
   savedSearches: string[];
@@ -774,7 +776,7 @@ const Sidebar: Component<SidebarProps> = (props) => {
           <button
             class="vault-name-btn"
             onClick={() => setShowVaultMenu(!showVaultMenu())}
-            title="Vault options"
+            title="Vault options" aria-label="Vault options" aria-haspopup="menu"
           >
             <span>{viewTitle()}</span>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -784,8 +786,16 @@ const Sidebar: Component<SidebarProps> = (props) => {
           {/* Vault Menu Dropdown */}
           <Show when={showVaultMenu()}>
             <div class="vault-menu">
+              <Show when={props.onNewVault}>
+                <div class="context-menu-item" onClick={() => {
+                  setShowVaultMenu(false);
+                  props.onNewVault?.();
+                }}>
+                  New vault…
+                </div>
+              </Show>
               <div class="context-menu-item" onClick={handleSwitchVault}>
-                Open another vault
+                Switch vault…
               </div>
               <div class="context-menu-item" onClick={() => {
                 handleShowInFolder(props.vaultPath!);
@@ -813,6 +823,7 @@ const Sidebar: Component<SidebarProps> = (props) => {
               class="header-btn"
               onClick={() => handleCreateFile(props.vaultPath!)}
               title="New Note"
+              aria-label="New note"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
@@ -825,6 +836,7 @@ const Sidebar: Component<SidebarProps> = (props) => {
               class="header-btn"
               onClick={() => handleCreateFolder(props.vaultPath!)}
               title="New Folder"
+              aria-label="New folder"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
@@ -837,6 +849,7 @@ const Sidebar: Component<SidebarProps> = (props) => {
               classList={{ 'header-btn--filter-active': evidenceFilter() !== 'all' }}
               onClick={cycleEvidenceFilter}
               title={`Evidence filter: ${EVIDENCE_FILTER_LABEL[evidenceFilter()]} (click to change)`}
+              aria-label={`Evidence filter: ${EVIDENCE_FILTER_LABEL[evidenceFilter()]}`}
             >
               {/* Lens — the verification glyph (brief: lens = verification). */}
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -847,6 +860,7 @@ const Sidebar: Component<SidebarProps> = (props) => {
               class="header-btn"
               onClick={toggleSortOrder}
               title={`Sort by ${sortOrder() === 'name' ? 'Modified' : 'Name'}`}
+              aria-label={`Sort by ${sortOrder() === 'name' ? 'modified date' : 'name'}`}
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M3 6h18"/>
@@ -858,6 +872,7 @@ const Sidebar: Component<SidebarProps> = (props) => {
               class="header-btn"
               onClick={collapseAll}
               title="Collapse All"
+              aria-label="Collapse all folders"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <polyline points="4 14 10 14 10 20"/>
@@ -880,6 +895,7 @@ const Sidebar: Component<SidebarProps> = (props) => {
                 }
               }}
               title="Bookmark Active Tab"
+              aria-label="Bookmark the active note"
               disabled={!props.currentFile}
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1019,6 +1035,7 @@ const Sidebar: Component<SidebarProps> = (props) => {
                   class={`search-save-btn ${props.savedSearches.includes(searchQuery().trim()) ? 'saved' : ''}`}
                   onClick={() => props.onToggleSavedSearch(searchQuery().trim())}
                   title={props.savedSearches.includes(searchQuery().trim()) ? 'Remove saved search' : 'Save this search'}
+                  aria-label={props.savedSearches.includes(searchQuery().trim()) ? 'Remove saved search' : 'Save this search'}
                 >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill={props.savedSearches.includes(searchQuery().trim()) ? 'currentColor' : 'none'} stroke="currentColor" stroke-width="2">
                     <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/>
@@ -1290,7 +1307,7 @@ const Sidebar: Component<SidebarProps> = (props) => {
           <div class="modal-dialog" onClick={(e) => e.stopPropagation()}>
             <div class="modal-header">
               <h3>Delete "{deleteConfirm()!.name}"?</h3>
-              <button class="modal-close" onClick={() => setDeleteConfirm(null)}>
+              <button class="modal-close" aria-label="Close" onClick={() => setDeleteConfirm(null)}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <line x1="18" y1="6" x2="6" y2="18"></line>
                   <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -1314,7 +1331,7 @@ const Sidebar: Component<SidebarProps> = (props) => {
           <div class="modal-dialog" onClick={(e) => e.stopPropagation()}>
             <div class="modal-header">
               <h3>Move "{moveConfirm()!.name}"?</h3>
-              <button class="modal-close" onClick={() => setMoveConfirm(null)}>
+              <button class="modal-close" aria-label="Close" onClick={() => setMoveConfirm(null)}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <line x1="18" y1="6" x2="6" y2="18"></line>
                   <line x1="6" y1="6" x2="18" y2="18"></line>

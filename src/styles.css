@@ -616,15 +616,15 @@ body {
   animation: spin 1s linear infinite;
 }
 
-.sync-status svg.cloud-syncing {
-  animation: cloud-pulse 1.5s ease-in-out infinite;
+.sync-status svg.relay-syncing {
+  animation: relay-pulse 1.5s ease-in-out infinite;
 }
 
-.sync-status svg.cloud-syncing .sync-arrows {
+.sync-status svg.relay-syncing .relay-waves {
   animation: sync-arrows-move 0.8s ease-in-out infinite;
 }
 
-@keyframes cloud-pulse {
+@keyframes relay-pulse {
   0%, 100% { opacity: 1; transform: scale(1); }
   50% { opacity: 0.7; transform: scale(1.1); }
 }
@@ -7703,12 +7703,12 @@ body {
   color: var(--accent);
 }
 
-.file-info-section-icon.cloud {
+.file-info-section-icon.relay {
   background: linear-gradient(135deg, rgba(34, 197, 94, 0.15), transparent);
   color: #22c55e;
 }
 
-.file-info-section-icon.cloud.not-synced {
+.file-info-section-icon.relay.not-synced {
   background: linear-gradient(135deg, rgba(156, 163, 175, 0.15), transparent);
   color: var(--text-secondary);
 }
@@ -11219,3 +11219,81 @@ body {
 }
 .new-vault__preview code { font-family: var(--font-data); font-size: 11px; color: var(--text-primary); }
 .new-vault__error { margin-top: 10px; font-size: 12.5px; color: var(--danger); }
+
+/* ============================================================
+   PASS 8 — icon contract + vault everywhere + agent entry.
+   ============================================================ */
+.presence--button {
+  background: none;
+  border: none;
+  padding: 2px 4px;
+  border-radius: 6px;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+  font-family: var(--font-data);
+  font-size: 11px;
+}
+.presence--button:hover { background: var(--bg-tertiary); color: var(--text-primary); }
+.presence--button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.presence-anchor { position: relative; display: inline-flex; }
+.agent-hint {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  z-index: 80;
+  width: 260px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-left: 2px solid var(--reg-evidence-accent);
+  border-radius: 10px;
+  padding: 10px 30px 10px 12px;
+  font-family: var(--font-ui);
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text-primary);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+}
+.agent-hint__close {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 11px;
+  padding: 2px 4px;
+}
+.agent-hint__close:hover { color: var(--text-primary); }
+.study-nav__vaults-anchor { position: relative; display: block; }
+.study-nav__vault-menu--nav { top: 100%; left: 10px; }
+.study-nav__vault-current {
+  padding: 6px 10px 8px;
+  font-family: var(--font-data);
+  font-size: 11px;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 4px;
+}
+/* Icon contract: visible focus on every small control (F14). */
+.header-btn:focus-visible,
+.tab-close:focus-visible,
+.toolbar-tool:focus-visible,
+.modal-close:focus-visible,
+.sync-status:focus-visible,
+.sidebar-segment__btn:focus-visible,
+.icon-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+/* The sync button was a span; keep its layout as a quiet button. */
+button.sync-status {
+  background: none;
+  border: none;
+  color: inherit;
+  font: inherit;
+  cursor: default;
+  padding: 0;
+}
+button.sync-status.clickable { cursor: pointer; }

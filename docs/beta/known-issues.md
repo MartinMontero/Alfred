@@ -41,3 +41,8 @@ Developers running raw `npm audit` in the repo will see a moderate uuid advisory
 This is adjudicated NOT AFFECTED (the vulnerable functions are never invoked — full trace in
 docs/audit/stage-d-vulnerability-decision.md) and npm has no ignore mechanism, so it keeps
 printing. Never run `npm audit fix --force` — it installs a breaking exceljs downgrade.
+
+## Skills are locked this beta
+Alfred's skill system (reusable agent workflows) is switched off while its
+security review finishes. The agent still reads, searches, and — with your
+approval — writes notes; skills return in a later beta.

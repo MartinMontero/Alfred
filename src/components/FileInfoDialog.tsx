@@ -275,12 +275,14 @@ const FileInfoDialog: Component<FileInfoDialogProps> = (props) => {
           {/* Divider */}
           <div class="file-info-divider"></div>
 
-          {/* Cloud Sync Section */}
+          {/* Relay Sync Section */}
           <div class="file-info-section">
             <div class="file-info-section-header">
-              <div class={`file-info-section-icon cloud ${remoteInfo() ? 'synced' : 'not-synced'}`}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path>
+              <div class={`file-info-section-icon relay ${remoteInfo() ? 'synced' : 'not-synced'}`}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                  <circle cx="12" cy="12" r="2"></circle>
+                  <path d="M16.24 7.76a6 6 0 0 1 0 8.49"></path>
+                  <path d="M7.76 16.24a6 6 0 0 1 0-8.49"></path>
                 </svg>
               </div>
               <div class="file-info-section-title">
