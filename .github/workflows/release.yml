@@ -81,6 +81,26 @@ jobs:
       - name: Tests (incl. live-goose trio)
         run: npm run test
 
+      # F18: the release body ships to testers twice — on the release page and
+      # inside the in-app update dialog (latest.json embeds it as `notes`). Read
+      # docs/beta/RELEASE-NOTES-<tag>.md when it exists; otherwise a short
+      # honest fallback. Never the lane boilerplate again.
+      - name: Compose tester-facing release notes
+        id: notes
+        shell: bash
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          if [ -z "${GITHUB_REF##refs/tags/*}" ] && [ -f "docs/beta/RELEASE-NOTES-${TAG}.md" ]; then
+            BODY="$(cat "docs/beta/RELEASE-NOTES-${TAG}.md")"
+          else
+            BODY="Alfred beta build ${TAG:-'(dry run)'}. Updates arrive inside the app (Settings → About → Check for updates). Known issues: https://github.com/MartinMontero/Alfred/blob/main/docs/beta/known-issues.md"
+          fi
+          {
+            echo "body<<NOTES_EOF"
+            echo "$BODY"
+            echo "NOTES_EOF"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Build Tauri app (signed only if secrets present)
         uses: tauri-apps/tauri-action@42e9df6c59070d114bf90dcd3943a1b8f138b113 # v0.5.20
         env:
@@ -103,7 +123,7 @@ jobs:
           tagName: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || github.event.inputs.dryRunTag }}
           releaseName: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || github.event.inputs.dryRunTag }}
           releaseDraft: true
-          releaseBody: 'Draft assembled by the release lane. Publishing is always a human action. See docs/release-process.md for the manual gate that must precede publish.'
+          releaseBody: ${{ steps.notes.outputs.body }}
           includeUpdaterJson: true
 
       - name: Upload Windows artifacts
