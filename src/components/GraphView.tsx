@@ -73,6 +73,14 @@ const GraphView: Component<GraphViewProps> = (props) => {
 
   // Color helpers for connectivity-based gradient
   // Lerp between two hex colors
+  // Token hex → rgba() with alpha, for vis-network fields that need rgba strings.
+  const hexToRgba = (hex: string, alpha: number): string => {
+    const c = hex.replace('#', '');
+    const full = c.length === 3 ? c.split('').map((x) => x + x).join('') : c;
+    const n = parseInt(full, 16);
+    return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
+  };
+
   const lerpColor = (a: string, b: string, t: number): string => {
     const ah = parseInt(a.replace('#', ''), 16);
     const bh = parseInt(b.replace('#', ''), 16);
@@ -171,10 +179,11 @@ const GraphView: Component<GraphViewProps> = (props) => {
           // Size: base 8, scales up with connections
           size: Math.min(45, Math.max(8, 8 + Math.sqrt(totalConnections) * 5)),
           color: getNodeColors(t, isCurrentFile),
-          // Top nodes and current file get a glow
+          // Top nodes and current file get a glow — brass-derived from the
+          // live accent token (T7-R: the last Onyx violet literals, purged).
           shadow: isTopNode || isCurrentFile ? {
             enabled: true,
-            color: isCurrentFile ? 'rgba(192, 132, 252, 0.6)' : 'rgba(167, 139, 250, 0.4)',
+            color: isCurrentFile ? hexToRgba(accentHover, 0.6) : hexToRgba(accentHover, 0.4),
             size: isCurrentFile ? 15 : 10,
             x: 0,
             y: 0,
