@@ -36,6 +36,7 @@ import UnlockDialog from './components/UnlockDialog';
 import { MobileHeader, MobileNav, MobileDrawer, type MobileNavTab } from './components/mobile';
 import { initPlatform, usePlatformInfo, isWeb } from './lib/platform';
 import { validateVaultName, siblingVaultPath } from './lib/vault-name';
+import { vaultLineText, vaultLineLabel } from './lib/vault-line';
 import { impactLight, impactMedium, notificationSuccess, notificationError } from './lib/haptics';
 import { platform } from '@platform';
 import { getSyncEngine, getCurrentLogin, calculateChecksum } from './lib/nostr';
@@ -2815,11 +2816,11 @@ const App: Component = () => {
             class="study-nav__vault-line"
             aria-haspopup="menu"
             aria-expanded={showVaultMenu()}
-            title="Vault options"
-            aria-label="Vault options"
+            title={vaultLineLabel(vaultPath())}
+            aria-label={vaultLineLabel(vaultPath())}
             onClick={(e) => { e.stopPropagation(); setShowVaultMenu(!showVaultMenu()); }}
           >
-            {vaultPath() ? `${(vaultPath() ?? '').replace(/\\/g, '/').split('/').pop()} · on this machine` : 'no vault open yet'}
+            {vaultLineText(vaultPath())}
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
               <polyline points="6 9 12 15 18 9"></polyline>
             </svg>

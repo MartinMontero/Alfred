@@ -290,3 +290,33 @@ NO push, NO tag, NO publish — commit set stays local; evidence table + GATE li
       completes, capture→note opens the lazy editor. Soft-fail REMOVED from ci.yml with a
       never-again note (F22b). Precache now 5.4MB — flagged as a suspect but not what moved
       the metric; full-offline precache kept deliberately (advisory for a later round).
+
+## PASS 9 (a11y margin — builder's order 2026-07-21: real fixes only, bars untouched) — 2026-07-21
+The hard gate left a11y at exactly 0.95 — zero margin, so single-run noise could fail CI on
+chance. STEP-0 recon (lhci, CI config): the WHOLE deduction was color-contrast (weight 7);
+label-content-name-mismatch also failing at weight 0.
+- [x] P9-1 color-contrast, at the source: .onboarding-button.primary was literal white-on-brass
+      (3.22:1) — now var(--accent-text); static --accent-text token corrected #ffffff→#000000
+      to match the check-contrast canon pair (black on brass 6.52:1) and the runtime
+      derivation; .onboarding-name__opt dropped its opacity:0.7 de-emphasis (3.07:1 at 13px →
+      text-secondary 4.90:1). Same defect class fixed on live surfaces Lighthouse couldn't
+      see from page one: .unlock-submit and the user chat bubble (both white-on-brass →
+      token). Onboarding vault-icon + skill-checkbox glyphs joined the token. Zero new colors.
+- [x] P9-2 label-content-name-mismatch (WCAG 2.5.3): the vault-line button's aria-label was
+      "Vault options" while its visible text read "Holmes · on this machine" — voice-control
+      users couldn't say what they saw. New src/lib/vault-line.ts (vaultLineText/Label —
+      accessible name contains the visible text), wired into App.tsx; 6 unit tests (contract
+      test fails against the old constant label). +4 CSS pin tests (a11y-pins.test.ts).
+- [x] P9-3 Sampling (ratified addendum): lighthouserc numberOfRuns 1→3 with EXPLICIT
+      aggregationMethod "median" on every assertion — verified against lhci v0.14.0 docs that
+      the default is "optimistic" (never rely on it). Bars unchanged: perf 0.90 / a11y 0.95 /
+      LCP 2500 / CLS 0.10, all "error". Rule comment in the config: bars never change
+      silently.
+- [x] P9-4 Evidence: THREE consecutive `lhci autorun` (committed config, exit 0, zero
+      assertion failures) — a11y 1.00 on all nine samples (was 0.95); perf 0.96–1.00,
+      LCP 1.2–1.8s, CLS 0.02 (unchanged within noise). Both STEP-0 audits score 1 with zero
+      failing items. axe (wcag2a+2aa, same page CI audits): 0 violations total. tsc 0;
+      vitest 321|4 (+10); contrast 33/33; build ✓ + build:web ✓. Findings logged, not
+      touched: white-on---danger buttons (~4.0:1, needs an on-danger token decision);
+      orphaned .openclaw-* CSS from the deleted Phase-1 component.
+- [ ] P9-G GATE: local commit only — no push, no PR, no tag. Awaiting the builder's word.

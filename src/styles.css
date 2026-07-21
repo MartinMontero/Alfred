@@ -9,7 +9,9 @@
   --accent: #b8863d;
   --accent-hover: #e9b76e;
   --accent-muted: rgba(184, 134, 61, 0.15);
-  --accent-text: #ffffff;
+  /* On-accent text. Black on brass = 6.52:1 (check-contrast canon pair);
+     runtime derivation (App/Settings) recomputes for custom accents. */
+  --accent-text: #000000;
   --border: #3a3a3f;
   --sidebar-width: 260px;
   --danger: #ef4444;
@@ -9692,7 +9694,7 @@ body {
 
 .custom-provider-message.user .custom-provider-message-content {
   background: var(--accent);
-  color: #fff;
+  color: var(--accent-text);
   border-radius: 14px 14px 4px 14px;
   padding: 8px 14px;
 }
@@ -9994,7 +9996,7 @@ body {
 
 .unlock-submit {
   background: var(--accent);
-  color: white;
+  color: var(--accent-text);
   border: none;
   border-radius: 8px;
   padding: 8px 18px;
@@ -11124,7 +11126,8 @@ body {
 /* Onboarding: the optional name field on the welcome step. */
 .onboarding-name { margin: 6px 0 18px; text-align: left; }
 .onboarding-name label { display: block; font-size: 13px; color: var(--text-secondary); margin-bottom: 6px; }
-.onboarding-name__opt { opacity: 0.7; }
+/* .onboarding-name__opt carries no opacity de-emphasis: 13px text on
+   bg-primary must hold 4.5:1; text-secondary already reads as the aside. */
 .onboarding-name input {
   width: 100%;
   background: var(--bg-secondary);
