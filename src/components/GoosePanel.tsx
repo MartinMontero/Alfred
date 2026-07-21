@@ -334,8 +334,8 @@ const GoosePanel: Component<GoosePanelProps> = (props) => {
         <span class={`goose-panel__status ${connected() ? 'goose-panel__status--live' : ''}`}>
           {connected() ? 'connected' : 'not connected'}
         </span>
-        <button class="icon-btn" title="Settings" onClick={props.onOpenSettings}>⚙</button>
-        <button class="icon-btn" title="Close" onClick={props.onClose}>✕</button>
+        <button class="icon-btn" title="Agent settings" aria-label="Agent settings" onClick={props.onOpenSettings}>⚙</button>
+        <button class="icon-btn" title="Close the agent panel" aria-label="Close the agent panel" onClick={props.onClose}>✕</button>
       </div>
 
       <Show
@@ -484,7 +484,8 @@ const GoosePanel: Component<GoosePanelProps> = (props) => {
         <Show when={!connected() && messages().length === 0 && !error()}>
           <div class="goose-panel__idle">
             No agent session yet. Connect goose above — read access is free; anything that
-            writes or runs a command asks you first.
+            writes or runs a command asks you first. Skills are locked for this beta while
+            their security review finishes.
           </div>
         </Show>
         <For each={messages()}>

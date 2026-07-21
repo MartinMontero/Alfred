@@ -157,7 +157,7 @@
 
 .onboarding-button.primary {
   background: var(--accent);
-  color: white;
+  color: var(--accent-text);
 }
 
 .onboarding-button.primary:hover {
@@ -287,7 +287,7 @@
 .onboarding-vault-icon svg {
   width: 20px;
   height: 20px;
-  color: white;
+  color: var(--accent-text);
 }
 
 .onboarding-vault-info {
@@ -651,7 +651,7 @@
 .onboarding-skill-checkbox svg {
   width: 12px;
   height: 12px;
-  color: white;
+  color: var(--accent-text);
   opacity: 0;
 }
 

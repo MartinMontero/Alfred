@@ -80,3 +80,20 @@ against a full quarter of beta feedback.
   log + docs/audit/ note (E8).
 - **After 2026-07-28** (MCP spec release): re-verify SEP-414 trace-context key names + MCP server
   behavior against the released spec; record outcome in docs/audit/ and LOOP.md.
+
+## Tag ↔ numeric version mapping (F19, canon)
+
+MSI rejects semver pre-release suffixes, so the tag string and the numeric app
+version are distinct and BOTH required:
+
+- **Each beta cut bumps the numeric patch** across `package.json`,
+  `src-tauri/tauri.conf.json`, and `src-tauri/Cargo.toml` (+lockfiles).
+- **The updater orders on the numeric** version in `latest.json`; the tag
+  string is display only. An update is offered iff the feed's numeric version
+  is greater than the installed one — re-cutting a tag without bumping the
+  numeric means installed apps will never see the new build.
+- Recorded pairs: `v0.1.0-beta.1` ↔ `0.1.0` (never published) ·
+  `v0.1.0-beta.2` ↔ `0.1.1` (published 2026-07-19) · `v0.1.0-beta.3` ↔ `0.1.2`.
+- Tester-facing release notes live at `docs/beta/RELEASE-NOTES-<tag>.md`; the
+  release workflow reads that file into the release body and the update
+  dialog's notes. Write it before pushing the tag.

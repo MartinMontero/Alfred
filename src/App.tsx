@@ -2,7 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Martin Montero and the Alfred contributors
 import { Component, createSignal, createEffect, createResource, on, For, Show, onMount, onCleanup, lazy } from 'solid-js';
 import Sidebar from './components/Sidebar';
-import Editor from './components/Editor';
+// Editor pulls the whole CodeMirror + Milkdown chain — lazy so the first
+// paint (onboarding/Home) doesn't pay for it (F22 Lighthouse gate).
+const Editor = lazy(() => import('./components/Editor'));
 import QuickSwitcher from './components/QuickSwitcher';
 import CommandPalette from './components/CommandPalette';
 import SearchPanel from './components/SearchPanel';
@@ -34,6 +36,7 @@ import UnlockDialog from './components/UnlockDialog';
 import { MobileHeader, MobileNav, MobileDrawer, type MobileNavTab } from './components/mobile';
 import { initPlatform, usePlatformInfo, isWeb } from './lib/platform';
 import { validateVaultName, siblingVaultPath } from './lib/vault-name';
+import { vaultLineText, vaultLineLabel } from './lib/vault-line';
 import { impactLight, impactMedium, notificationSuccess, notificationError } from './lib/haptics';
 import { platform } from '@platform';
 import { getSyncEngine, getCurrentLogin, calculateChecksum } from './lib/nostr';
@@ -119,6 +122,16 @@ const App: Component = () => {
   // session's tabs restore into the strip, one click away, but the front door
   // is the greeting, not the last-open note.
   const [activeTabIndex, setActiveTabIndex] = createSignal<number>(-1);
+  // PASS 8 / F16: one-time agent hint on the status-bar presence button.
+  const [agentHintVisible, setAgentHintVisible] = createSignal(
+    localStorage.getItem('agent_hint_dismissed') !== 'true'
+  );
+  const dismissAgentHint = () => {
+    setAgentHintVisible(false);
+    localStorage.setItem('agent_hint_dismissed', 'true');
+  };
+  // PASS 8 / F13: the Vaults nav item's popover (same actions as the vault line).
+  const [showVaultsNav, setShowVaultsNav] = createSignal(false);
   // PASS 7: the vault menu on the nav's vault line (New / Switch / Explorer).
   const [showVaultMenu, setShowVaultMenu] = createSignal(false);
   const [newVaultOpen, setNewVaultOpen] = createSignal(false);
@@ -2636,7 +2649,7 @@ const App: Component = () => {
           <div class="modal-dialog new-vault" onClick={(e) => e.stopPropagation()}>
             <div class="modal-header">
               <h3>New vault</h3>
-              <button class="modal-close" onClick={() => setNewVaultOpen(false)}>
+              <button class="modal-close" aria-label="Close" onClick={() => setNewVaultOpen(false)}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <line x1="18" y1="6" x2="6" y2="18"></line>
                   <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -2767,6 +2780,7 @@ const App: Component = () => {
             onFileMoved={handleFileMoved}
             view={sidebarView()}
             onViewChange={switchSidebarView}
+            onNewVault={() => { setNewVaultName(''); setNewVaultError(null); setNewVaultOpen(true); }}
             bookmarks={bookmarks()}
             onToggleBookmark={toggleBookmark}
             savedSearches={savedSearches()}
@@ -2802,10 +2816,11 @@ const App: Component = () => {
             class="study-nav__vault-line"
             aria-haspopup="menu"
             aria-expanded={showVaultMenu()}
-            title="Vault options"
+            title={vaultLineLabel(vaultPath())}
+            aria-label={vaultLineLabel(vaultPath())}
             onClick={(e) => { e.stopPropagation(); setShowVaultMenu(!showVaultMenu()); }}
           >
-            {vaultPath() ? `${(vaultPath() ?? '').replace(/\\/g, '/').split('/').pop()} · on this machine` : 'no vault open yet'}
+            {vaultLineText(vaultPath())}
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
               <polyline points="6 9 12 15 18 9"></polyline>
             </svg>
@@ -2856,6 +2871,45 @@ const App: Component = () => {
             </svg>
             Notes
           </button>
+          {/* F13: Vaults — same menu as the vault line, anchored here. */}
+          <span class="study-nav__vaults-anchor">
+            <button
+              class="study-nav__item"
+              classList={{ 'study-nav__item--on': showVaultsNav() }}
+              aria-haspopup="menu"
+              aria-expanded={showVaultsNav()}
+              title="Vaults — create, switch, or find your vault on disk"
+              onClick={(e) => { e.stopPropagation(); setShowVaultsNav(!showVaultsNav()); }}
+            >
+              {/* Strongbox — engraved-line vault glyph */}
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="12" cy="12" r="3"/><line x1="12" y1="9" x2="12" y2="10.5"/>
+              </svg>
+              Vaults
+            </button>
+            <Show when={showVaultsNav()}>
+              <div class="study-nav__vault-backdrop" onClick={() => setShowVaultsNav(false)}></div>
+              <div class="study-nav__vault-menu study-nav__vault-menu--nav" role="menu">
+                <div class="study-nav__vault-current">
+                  Current: <b>{(vaultPath() ?? '').replace(/\\/g, '/').split('/').pop() || 'none'}</b>
+                </div>
+                <button role="menuitem" onClick={() => { setShowVaultsNav(false); setNewVaultName(''); setNewVaultError(null); setNewVaultOpen(true); }}>
+                  New vault…
+                  <small>A fresh folder of notes, next to this one</small>
+                </button>
+                <button role="menuitem" onClick={async () => { setShowVaultsNav(false); await openVault(); }}>
+                  Switch vault…
+                  <small>Open a different folder as your vault</small>
+                </button>
+                <Show when={!isMobileApp() && !isWebApp() && vaultPath()}>
+                  <button role="menuitem" onClick={() => { setShowVaultsNav(false); platform.shell.showInFolder(vaultPath()!); }}>
+                    Show in Explorer
+                    <small>Your notes are plain files on disk</small>
+                  </button>
+                </Show>
+              </div>
+            </Show>
+          </span>
           <button
             class="study-nav__item"
             classList={{ 'study-nav__item--on': showMemoryView() }}
@@ -2928,10 +2982,16 @@ const App: Component = () => {
         </div>
         <div class="study-nav__foot">
           <Show when={!isMobileApp() && !isWebApp()}>
-            <span class="presence" classList={{ 'presence--live': agentPresence() === 'live' }}>
+            <button
+              class="presence presence--button"
+              classList={{ 'presence--live': agentPresence() === 'live' }}
+              title="Open the agent panel"
+              aria-label={agentPresence() === 'live' ? 'Agent session live — open the agent panel' : 'Agent idle — open the agent panel'}
+              onClick={() => setShowGoose(true)}
+            >
               <span class="presence__dot" aria-hidden="true"></span>
               {agentPresence() === 'live' ? 'session live' : 'agent idle'}
-            </span>
+            </button>
             <span aria-hidden="true">·</span>
           </Show>
           <span>{fileContents().size} notes</span>
@@ -2953,6 +3013,7 @@ const App: Component = () => {
             onFileMoved={handleFileMoved}
             view={sidebarView()}
             onViewChange={switchSidebarView}
+            onNewVault={() => { setNewVaultName(''); setNewVaultError(null); setNewVaultOpen(true); }}
             bookmarks={bookmarks()}
             onToggleBookmark={toggleBookmark}
             savedSearches={savedSearches()}
@@ -2989,6 +3050,8 @@ const App: Component = () => {
                       <span class="tab-name">{tab.isDirty ? '● ' : ''}{tab.name}</span>
                       <button
                         class="tab-close"
+                        title="Close tab"
+                        aria-label={`Close ${tab.name}`}
                         onClick={(e) => {
                           e.stopPropagation();
                           closeTab(index());
@@ -3012,6 +3075,8 @@ const App: Component = () => {
                     <span class="tab-name">Connections</span>
                     <button
                       class="tab-close"
+                      title="Close Connections"
+                      aria-label="Close Connections"
                       onClick={(e) => {
                         e.stopPropagation();
                         setShowGraphView(false);
@@ -3030,6 +3095,8 @@ const App: Component = () => {
                     <span class="tab-name">Build Memory</span>
                     <button
                       class="tab-close"
+                      title="Close Build Memory"
+                      aria-label="Close Build Memory"
                       onClick={(e) => {
                         e.stopPropagation();
                         setShowMemoryView(false);
@@ -3051,6 +3118,7 @@ const App: Component = () => {
               aria-pressed={showOutline()}
               onClick={() => setShowOutline(!showOutline())}
               title="Outline (Ctrl+Shift+O)"
+              aria-label="Outline panel"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                 <line x1="8" y1="6" x2="21" y2="6"></line>
@@ -3067,6 +3135,7 @@ const App: Component = () => {
               aria-pressed={showBacklinks()}
               onClick={() => setShowBacklinks(!showBacklinks())}
               title="Backlinks (Ctrl+Shift+B)"
+              aria-label="Backlinks panel"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                 <path d="M9 17H7A5 5 0 0 1 7 7h2"></path>
@@ -3080,6 +3149,7 @@ const App: Component = () => {
               aria-pressed={showProperties()}
               onClick={() => setShowProperties(!showProperties())}
               title="Properties (Ctrl+Shift+P)"
+              aria-label="Properties panel"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                 <path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
@@ -3092,6 +3162,7 @@ const App: Component = () => {
               aria-pressed={showNotifications()}
               onClick={() => setShowNotifications(!showNotifications())}
               title="Shared with me"
+              aria-label="Shared with me"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                 <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
@@ -3375,19 +3446,31 @@ const App: Component = () => {
         <div class="status-bar">
           <div class="status-bar-left">
             <Show when={!isMobileApp() && !isWebApp()}>
-              <span
-                class="presence"
-                classList={{ 'presence--live': agentPresence() === 'live' }}
-                title={
-                  agentPresence() === 'live'
-                    ? 'A goose session is live. Reads are free; writes and commands ask first.'
-                    : 'No agent session. Nothing runs until you connect.'
-                }
-              >
-                <span class="presence__dot" aria-hidden="true"></span>
-                <span class="presence__label">
-                  {agentPresence() === 'live' ? 'session live' : 'agent idle'}
-                </span>
+              <span class="presence-anchor">
+                <button
+                  class="presence presence--button"
+                  classList={{ 'presence--live': agentPresence() === 'live' }}
+                  title={
+                    agentPresence() === 'live'
+                      ? 'A session is live — open the agent panel. Reads are free; writes and commands ask first.'
+                      : 'Open the agent panel. Nothing runs until you ask.'
+                  }
+                  aria-label={agentPresence() === 'live' ? 'Agent session live — open the agent panel' : 'Agent idle — open the agent panel'}
+                  onClick={() => { dismissAgentHint(); setShowGoose(true); }}
+                >
+                  <span class="presence__dot" aria-hidden="true"></span>
+                  <span class="presence__label">
+                    {agentPresence() === 'live' ? 'session live' : 'agent idle'}
+                  </span>
+                </button>
+                {/* F16: one-time steward hint — shows once, dismissable, never again. */}
+                <Show when={agentHintVisible()}>
+                  <span class="agent-hint" role="note">
+                    I can read and search your notes, and draft with you — writes always ask
+                    first. This is my corner; click it any time.
+                    <button class="agent-hint__close" aria-label="Dismiss this hint" onClick={dismissAgentHint}>✕</button>
+                  </span>
+                </Show>
               </span>
             </Show>
             <Show when={vaultPath()}>
@@ -3407,44 +3490,50 @@ const App: Component = () => {
               <span class="status-item">{wordCount()} words</span>
               <span class="status-item">{charCount()} characters</span>
             </Show>
-            <span
+            {/* F15: the sync indicator is Nostr RELAY sync — relay/beacon glyph,
+                never cloud imagery (ADR-0007). Button = keyboard + SR reachable. */}
+            <button
               class={`status-item sync-status ${syncStatus()} ${syncStatus() !== 'off' && syncStatus() !== 'syncing' ? 'clickable' : ''}`}
               title={
-                syncStatus() === 'off' ? 'Sync disabled' :
-                syncStatus() === 'idle' ? 'Click to sync' :
-                syncStatus() === 'syncing' ? 'Syncing...' :
-                'Sync error - Click to retry'
+                syncStatus() === 'off' ? 'Relay sync is off' :
+                syncStatus() === 'idle' ? 'Synced over your relays — click to sync now' :
+                syncStatus() === 'syncing' ? 'Syncing with your relays…' :
+                'Relay sync hit an error — click to retry'
+              }
+              aria-label={
+                syncStatus() === 'off' ? 'Relay sync is off' :
+                syncStatus() === 'idle' ? 'Relay sync: synced. Click to sync now' :
+                syncStatus() === 'syncing' ? 'Relay sync in progress' :
+                'Relay sync error. Click to retry'
               }
               onClick={handleStatusBarSync}
             >
               <Show when={syncStatus() === 'off'}>
-                {/* Cloud with slash - sync disabled */}
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path>
+                {/* Relay beacon, silenced */}
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                  <circle cx="12" cy="12" r="2"></circle>
                   <line x1="4" y1="4" x2="20" y2="20"></line>
                 </svg>
               </Show>
               <Show when={syncStatus() === 'idle' || syncStatus() === 'syncing'}>
-                {/* Cloud with sync arrows */}
-                <svg class={syncStatus() === 'syncing' ? 'cloud-syncing' : ''} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path>
-                  <Show when={syncStatus() === 'syncing'}>
-                    <g class="sync-arrows">
-                      <path d="M12 14v3m0 0l-1.5-1.5M12 17l1.5-1.5" stroke-width="1.5"></path>
-                      <path d="M12 12V9m0 0l1.5 1.5M12 9l-1.5 1.5" stroke-width="1.5"></path>
-                    </g>
-                  </Show>
+                {/* Relay beacon: node + signal arcs to your relays */}
+                <svg class={syncStatus() === 'syncing' ? 'relay-syncing' : ''} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                  <circle cx="12" cy="12" r="2"></circle>
+                  <g class="relay-waves">
+                    <path d="M16.24 7.76a6 6 0 0 1 0 8.49"></path>
+                    <path d="M7.76 16.24a6 6 0 0 1 0-8.49"></path>
+                  </g>
                 </svg>
               </Show>
               <Show when={syncStatus() === 'error'}>
                 {/* Warning triangle - error */}
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                   <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
                   <line x1="12" y1="9" x2="12" y2="13"></line>
                   <line x1="12" y1="17" x2="12.01" y2="17"></line>
                 </svg>
               </Show>
-            </span>
+            </button>
             {/* Editor view mode toggle */}
             <Show when={currentTab()}>
               <button

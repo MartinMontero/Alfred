@@ -224,3 +224,99 @@ post-onboarding there was NO way to create a vault at all. Ruled: eighth cut bef
       shell switches — vault line, sovereign status line, Home subline all read Casebook.
 - [ ] P7-G Builder: merge PR → retag (eighth cut) → walk: vault line → New vault "Casebook" →
       shell switches; Switch vault back to Holmes; Show in Explorer opens the folder → Publish.
+
+## PASS 8 (v0.1.0-beta.3 — the first true update; builder's ship order 2026-07-20) — 2026-07-20
+Defect register from the builder's installed walk of beta.2 + STEP 0 recon. Rule 9 this round:
+NO push, NO tag, NO publish — commit set stays local; evidence table + GATE list to the builder.
+- [x] P8-1 F12 one vault door: sidebar dropdown gains **New vault…** (same dialog as the nav
+      menu, one component, one behavior); "Open another vault" renamed **Switch vault…** so
+      both doors use the same verbs. Probe created a vault from EACH door (DoorOne via nav,
+      DoorTwo via sidebar) — shell switched both times.
+- [x] P8-2 F13 Vaults in the nav: STUDY group gains **Vaults** (aria-current, popover with
+      current-vault line + New / Switch / Explorer) — the "under notes there needs to be
+      another icon for vaults" ruling, done as a first-class destination.
+- [x] P8-3 T7-R violet purge COMPLETE: GraphView glow now derives from the brass accent
+      (hexToRgba of --accent-hover, .6/.4); onboarding SVGs recolored to the study palette
+      (brass/steel), dead welcome.svg deleted. grep for #8b5cf6|#a78bfa|#6366f1|violet in
+      src/ → zero.
+- [x] P8-4 F14 interactive-icon contract (ADR-0007, six points): HEAD inventory swept —
+      tab closes, toolbar tools, sidebar header, filter/sort, modal closes, GoosePanel ⚙/✕,
+      EvidenceBadge all carry aria-labels + focus-visible.
+- [x] P8-5 F16 agent discoverability: both "agent idle" renders are now real buttons —
+      the status-bar agent chip opens the agent panel; a one-time dismissible hint
+      (localStorage) replaces the silent resting text. Copy fact-checked against the real
+      goose wiring (ACP over stdio; skills gated) — no capability overclaims.
+- [x] P8-6 F15 relay-not-cloud (ADR-0007 decision 2): status-bar cloud glyph → relay
+      beacon (node + signal arcs, relay-syncing/relay-waves states); FileInfoDialog cloud →
+      relay; onboarding copy "Enable cloud sync" → "Sync over your Nostr relays". The words
+      "cloud sync" no longer appear in the product.
+- [x] P8-7 F17 skills door honest: GoosePanel idle copy says skills are locked this beta;
+      docs/beta/known-issues.md explains why (capability gate, not a defect).
+- [x] P8-8 F9-R metadata: package.json / Cargo.toml / vite descriptions now the one-line
+      canon ("Sovereign, local-first, Nostr-native PKM for builders who direct AI to build
+      software"). F18 release notes: workflow composes releaseBody from
+      docs/beta/RELEASE-NOTES-<tag>.md (beta.3 notes written); F19 tag↔numeric-version map
+      appended to docs/release-process.md.
+- [x] P8-9 Gates + evidence: tsc 0 · vitest 311|4 · contrast 33/33 · build ✓ · build:web ✓.
+      VERIFIED-LIVE (PWA probe): nav [Home, Notes, Vaults, Build Memory, Connections,
+      Settings]; both vault doors create; sidebar menu [New vault…, Switch vault…, Open vault
+      folder, Copy vault path]; sync button aria "Relay sync is off"; 4 toolbar aria-labels;
+      no cloud copy on welcome. C1 canary at the shipped tag (ci.yml run 29699768607 at
+      28a8272, rust job 88226716923):
+      `test telemetry_tests::born_redacted_canary_no_secret_or_note_body_on_disk ... ok`.
+      cargo test locally still walled at gdk-3.0 (container) — Windows/CI route stands.
+- [ ] P8-10 F21 onboarding steward walk: LOGGED for Stage G per the register — no build
+      this cut.
+- [ ] P8-G GATE (builder, in order): push branch → PR → merge → tag v0.1.0-beta.3 → publish →
+      updater-loop proof on the installed beta.2 (Settings → check for updates → 0.1.2 offered
+      with the tester notes) → F20 delete the dryrun draft
+      (`gh release delete v0.0.0-dryrun.1 --yes` or the releases page) → optionally align the
+      live beta.2 body with the beta.2 notes (F18's live half).
+- [x] P8-11 F22 REGRESSION (quality gate, builder-filed 2026-07-20): PWA Lighthouse perf
+      0.78 / LCP 3931ms at main 4626231, masked since c0a0721 by the "first-run calibration"
+      soft-fail (long stale). Recon (local Lighthouse, LCP-element audit + trace candidates +
+      Playwright PerformanceObserver probes): LCP element was the 512px/312K Alfred-mark PNG
+      on onboarding, paint-gated behind the whole SPA JS chain; entry bundle carried the
+      full CodeMirror+Milkdown editor. Fix, four parts: (1) mark resized/quantized 312K→29K
+      (+ PWA icons 88K→20K, 26K→7K, 312K→62K), served as stable /alfred-mark.png;
+      (2) Editor now lazy() like the other heavy views — entry chunk 923K→416K raw;
+      (3) SW register script deferred (was render-blocking ~435ms); (4) static splash in
+      index.html paints the mark from raw HTML/CSS and the app's first render waits for its
+      decode + one committed frame (double rAF) — kills the LCP-candidate race between the
+      splash and the app's first paint (trace-verified: the race, not size, caused the
+      0.99↔0.78 flapping). EXECUTED + VERIFIED-LIVE: five consecutive Lighthouse runs
+      perf 0.99 / LCP 1.8s / CLS 0.02; a11y 0.95; the exact CI command
+      (`lhci autorun`, assertions hard) passes; functional probe: splash retires, onboarding
+      completes, capture→note opens the lazy editor. Soft-fail REMOVED from ci.yml with a
+      never-again note (F22b). Precache now 5.4MB — flagged as a suspect but not what moved
+      the metric; full-offline precache kept deliberately (advisory for a later round).
+
+## PASS 9 (a11y margin — builder's order 2026-07-21: real fixes only, bars untouched) — 2026-07-21
+The hard gate left a11y at exactly 0.95 — zero margin, so single-run noise could fail CI on
+chance. STEP-0 recon (lhci, CI config): the WHOLE deduction was color-contrast (weight 7);
+label-content-name-mismatch also failing at weight 0.
+- [x] P9-1 color-contrast, at the source: .onboarding-button.primary was literal white-on-brass
+      (3.22:1) — now var(--accent-text); static --accent-text token corrected #ffffff→#000000
+      to match the check-contrast canon pair (black on brass 6.52:1) and the runtime
+      derivation; .onboarding-name__opt dropped its opacity:0.7 de-emphasis (3.07:1 at 13px →
+      text-secondary 4.90:1). Same defect class fixed on live surfaces Lighthouse couldn't
+      see from page one: .unlock-submit and the user chat bubble (both white-on-brass →
+      token). Onboarding vault-icon + skill-checkbox glyphs joined the token. Zero new colors.
+- [x] P9-2 label-content-name-mismatch (WCAG 2.5.3): the vault-line button's aria-label was
+      "Vault options" while its visible text read "Holmes · on this machine" — voice-control
+      users couldn't say what they saw. New src/lib/vault-line.ts (vaultLineText/Label —
+      accessible name contains the visible text), wired into App.tsx; 6 unit tests (contract
+      test fails against the old constant label). +4 CSS pin tests (a11y-pins.test.ts).
+- [x] P9-3 Sampling (ratified addendum): lighthouserc numberOfRuns 1→3 with EXPLICIT
+      aggregationMethod "median" on every assertion — verified against lhci v0.14.0 docs that
+      the default is "optimistic" (never rely on it). Bars unchanged: perf 0.90 / a11y 0.95 /
+      LCP 2500 / CLS 0.10, all "error". Rule comment in the config: bars never change
+      silently.
+- [x] P9-4 Evidence: THREE consecutive `lhci autorun` (committed config, exit 0, zero
+      assertion failures) — a11y 1.00 on all nine samples (was 0.95); perf 0.96–1.00,
+      LCP 1.2–1.8s, CLS 0.02 (unchanged within noise). Both STEP-0 audits score 1 with zero
+      failing items. axe (wcag2a+2aa, same page CI audits): 0 violations total. tsc 0;
+      vitest 321|4 (+10); contrast 33/33; build ✓ + build:web ✓. Findings logged, not
+      touched: white-on---danger buttons (~4.0:1, needs an on-danger token decision);
+      orphaned .openclaw-* CSS from the deleted Phase-1 component.
+- [ ] P9-G GATE: local commit only — no push, no PR, no tag. Awaiting the builder's word.

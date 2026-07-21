@@ -1,7 +1,7 @@
 {
   "name": "alfred",
-  "version": "0.1.1",
-  "description": "Sovereign, local-first, Nostr-native PKM for agentic AI development \u2014 part of wecanjustbuildthings.dev",
+  "version": "0.1.2",
+  "description": "Sovereign, local-first, Nostr-native PKM for builders who direct AI to build software \u2014 part of wecanjustbuildthings.dev",
   "type": "module",
   "author": "Martin Montero",
   "repository": {

@@ -42,7 +42,9 @@ import { calloutPlugin } from '../lib/editor/callout-plugin';
 import { historyPlugin, historyKeymap } from '../lib/editor/history';
 import { AssetIndex } from '../lib/editor/asset-index';
 import { splitFrontmatter, joinFrontmatter } from '../lib/frontmatter';
-import AlfredMark from '../assets/onboarding/alfred-mark.png';
+// The mark ships as a stable public asset (/alfred-mark.png) so the static
+// splash in index.html and the app share one copy (F22).
+const AlfredMark = '/alfred-mark.png';
 import {
   vaultUploadPlugin,
   setUploadVaultPath,

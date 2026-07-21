@@ -6,7 +6,7 @@
  * Guides users through setting up their Alfred workspace including:
  * - Vault creation/selection
  * - Nostr identity setup
- * - Cloud sync configuration
+ * - Nostr relay sync configuration
  */
 
 import { Component, createSignal, Show, For, onMount } from 'solid-js';
@@ -16,7 +16,9 @@ import type { NostrIdentity } from '../lib/nostr/types';
 import '../styles/onboarding.css';
 
 // Import SVG illustrations
-import AlfredMark from '../assets/onboarding/alfred-mark.png';
+// The mark ships as a stable public asset (/alfred-mark.png) so the static
+// splash in index.html and the app share one copy (F22).
+const AlfredMark = '/alfred-mark.png';
 import VaultSvg from '../assets/onboarding/vault.svg';
 import FeaturesSvg from '../assets/onboarding/features.svg';
 import NostrSvg from '../assets/onboarding/nostr.svg';
@@ -615,7 +617,7 @@ const Onboarding: Component<OnboardingProps> = (props) => {
 
         <div class="onboarding-sync-toggle">
           <div class="onboarding-sync-info">
-            <div class="onboarding-sync-label">Enable cloud sync</div>
+            <div class="onboarding-sync-label">Sync over your Nostr relays</div>
             <div class="onboarding-sync-desc">Sync your notes across devices</div>
           </div>
           <label class="onboarding-toggle">
@@ -693,7 +695,7 @@ const Onboarding: Component<OnboardingProps> = (props) => {
             </Show>
           </div>
           <span class={`onboarding-summary-text ${!syncEnabled() ? 'skipped' : ''}`}>
-            {syncEnabled() ? 'Cloud sync enabled' : 'Cloud sync — set up in Settings'}
+            {syncEnabled() ? 'Relay sync on — your notes travel encrypted over your own relays' : 'Relay sync — set up in Settings'}
           </span>
         </div>
 

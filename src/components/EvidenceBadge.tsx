@@ -127,6 +127,7 @@ const EvidenceBadge: Component<EvidenceBadgeProps> = (props) => {
             class={`ev-badge ev-badge--button ${stateClass()}`}
             aria-expanded={open()}
             title="Show provenance"
+            aria-label="Show provenance"
             onClick={toggle}
           >
             {badgeBody()}

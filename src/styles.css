@@ -9,7 +9,9 @@
   --accent: #b8863d;
   --accent-hover: #e9b76e;
   --accent-muted: rgba(184, 134, 61, 0.15);
-  --accent-text: #ffffff;
+  /* On-accent text. Black on brass = 6.52:1 (check-contrast canon pair);
+     runtime derivation (App/Settings) recomputes for custom accents. */
+  --accent-text: #000000;
   --border: #3a3a3f;
   --sidebar-width: 260px;
   --danger: #ef4444;
@@ -616,15 +618,15 @@ body {
   animation: spin 1s linear infinite;
 }
 
-.sync-status svg.cloud-syncing {
-  animation: cloud-pulse 1.5s ease-in-out infinite;
+.sync-status svg.relay-syncing {
+  animation: relay-pulse 1.5s ease-in-out infinite;
 }
 
-.sync-status svg.cloud-syncing .sync-arrows {
+.sync-status svg.relay-syncing .relay-waves {
   animation: sync-arrows-move 0.8s ease-in-out infinite;
 }
 
-@keyframes cloud-pulse {
+@keyframes relay-pulse {
   0%, 100% { opacity: 1; transform: scale(1); }
   50% { opacity: 0.7; transform: scale(1.1); }
 }
@@ -7703,12 +7705,12 @@ body {
   color: var(--accent);
 }
 
-.file-info-section-icon.cloud {
+.file-info-section-icon.relay {
   background: linear-gradient(135deg, rgba(34, 197, 94, 0.15), transparent);
   color: #22c55e;
 }
 
-.file-info-section-icon.cloud.not-synced {
+.file-info-section-icon.relay.not-synced {
   background: linear-gradient(135deg, rgba(156, 163, 175, 0.15), transparent);
   color: var(--text-secondary);
 }
@@ -9692,7 +9694,7 @@ body {
 
 .custom-provider-message.user .custom-provider-message-content {
   background: var(--accent);
-  color: #fff;
+  color: var(--accent-text);
   border-radius: 14px 14px 4px 14px;
   padding: 8px 14px;
 }
@@ -9994,7 +9996,7 @@ body {
 
 .unlock-submit {
   background: var(--accent);
-  color: white;
+  color: var(--accent-text);
   border: none;
   border-radius: 8px;
   padding: 8px 18px;
@@ -11124,7 +11126,8 @@ body {
 /* Onboarding: the optional name field on the welcome step. */
 .onboarding-name { margin: 6px 0 18px; text-align: left; }
 .onboarding-name label { display: block; font-size: 13px; color: var(--text-secondary); margin-bottom: 6px; }
-.onboarding-name__opt { opacity: 0.7; }
+/* .onboarding-name__opt carries no opacity de-emphasis: 13px text on
+   bg-primary must hold 4.5:1; text-secondary already reads as the aside. */
 .onboarding-name input {
   width: 100%;
   background: var(--bg-secondary);
@@ -11219,3 +11222,81 @@ body {
 }
 .new-vault__preview code { font-family: var(--font-data); font-size: 11px; color: var(--text-primary); }
 .new-vault__error { margin-top: 10px; font-size: 12.5px; color: var(--danger); }
+
+/* ============================================================
+   PASS 8 — icon contract + vault everywhere + agent entry.
+   ============================================================ */
+.presence--button {
+  background: none;
+  border: none;
+  padding: 2px 4px;
+  border-radius: 6px;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+  font-family: var(--font-data);
+  font-size: 11px;
+}
+.presence--button:hover { background: var(--bg-tertiary); color: var(--text-primary); }
+.presence--button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.presence-anchor { position: relative; display: inline-flex; }
+.agent-hint {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  z-index: 80;
+  width: 260px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-left: 2px solid var(--reg-evidence-accent);
+  border-radius: 10px;
+  padding: 10px 30px 10px 12px;
+  font-family: var(--font-ui);
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text-primary);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+}
+.agent-hint__close {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 11px;
+  padding: 2px 4px;
+}
+.agent-hint__close:hover { color: var(--text-primary); }
+.study-nav__vaults-anchor { position: relative; display: block; }
+.study-nav__vault-menu--nav { top: 100%; left: 10px; }
+.study-nav__vault-current {
+  padding: 6px 10px 8px;
+  font-family: var(--font-data);
+  font-size: 11px;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 4px;
+}
+/* Icon contract: visible focus on every small control (F14). */
+.header-btn:focus-visible,
+.tab-close:focus-visible,
+.toolbar-tool:focus-visible,
+.modal-close:focus-visible,
+.sync-status:focus-visible,
+.sidebar-segment__btn:focus-visible,
+.icon-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+/* The sync button was a span; keep its layout as a quiet button. */
+button.sync-status {
+  background: none;
+  border: none;
+  color: inherit;
+  font: inherit;
+  cursor: default;
+  padding: 0;
+}
+button.sync-status.clickable { cursor: pointer; }
