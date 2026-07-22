@@ -46,6 +46,8 @@ version = "0.1.2"
 dependencies = [
  "dirs 5.0.1",
  "futures-util",
+ "holmes-core",
+ "holmes-guard",
  "keyring",
  "log",
  "notify",
@@ -1963,6 +1965,19 @@ name = "hex"
 version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
+
+[[package]]
+name = "holmes-core"
+version = "0.1.0"
+source = "git+https://github.com/MartinMontero/Holmes.git?rev=63f877a7399bee0d34b10fed08e35e87a434cd73#63f877a7399bee0d34b10fed08e35e87a434cd73"
+dependencies = [
+ "holmes-guard",
+]
+
+[[package]]
+name = "holmes-guard"
+version = "0.1.0"
+source = "git+https://github.com/MartinMontero/Holmes.git?rev=63f877a7399bee0d34b10fed08e35e87a434cd73#63f877a7399bee0d34b10fed08e35e87a434cd73"
 
 [[package]]
 name = "html5ever"

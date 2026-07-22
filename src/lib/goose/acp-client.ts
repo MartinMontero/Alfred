@@ -3,18 +3,18 @@
 /**
  * goose ACP client (desktop / Tauri).
  *
- * Spawns the bundled `goose acp` sidecar and drives it as an ACP **agent** over
- * stdio. Alfred is the ACP **client** ([ClientSideConnection]). The sidecar's raw
- * stdout/stdin are bridged into the Web streams `ndJsonStream` expects.
+ * Drives a guarded `goose acp` child as an ACP **agent** over stdio. Alfred is
+ * the ACP **client** ([ClientSideConnection]). The child is created in Rust
+ * behind `holmes_guard::spawn::sanitized_spawn` (L2) and rides the L1a egress
+ * proxy — see `guard-transport.ts`. This module never spawns a process itself
+ * and holds no provider policy: the guard is the single authority (ADR-0008).
  *
- * Lifecycle: every spawned child is tracked and killed on app exit (window close
- * or reload) so a long-lived `goose acp` server can never be orphaned.
+ * Lifecycle: every guarded child is killed on app exit (window close or reload)
+ * so a long-lived `goose acp` server can never be orphaned.
  *
- * This module is desktop-only — it imports `@tauri-apps/plugin-shell`. Gate its
- * use behind `platform.info.is_web === false`.
+ * Desktop-only — gate its use behind `platform.info.is_web === false`.
  */
 
-import { Command, type Child } from '@tauri-apps/plugin-shell';
 import {
   ClientSideConnection,
   ndJsonStream,
@@ -28,37 +28,26 @@ import {
   type InitializeResponse,
   type PromptResponse,
 } from '@agentclientprotocol/sdk';
-import type { GooseProviderCreds } from './provider-lockdown';
-import { buildGooseEnv } from './provider-lockdown';
-import { toUint8Array } from './stdio-bytes';
+import { spawnGuardedGoose, killAllGuardedGoose, type GuardCreds, type GuardTransport } from './guard-transport';
 import { optionalTraceMeta, type TraceContext } from '../telemetry/trace';
 
-/** Stem of the sidecar declared in tauri.conf.json `externalBin`. */
-export const GOOSE_SIDECAR = 'binaries/goose';
+// --- kill-on-exit hooks ------------------------------------------------------
+// The authoritative kill switch is Rust (`guard_goose_kill_all`, plus the
+// Windows Job Object backstop). These hooks trigger it on the web-lifecycle
+// events Rust cannot see.
 
-// --- kill-on-exit registry -------------------------------------------------
-
-const liveChildren = new Set<Child>();
 let exitHooksInstalled = false;
-
-async function killAllGooseChildren(): Promise<void> {
-  const children = [...liveChildren];
-  liveChildren.clear();
-  await Promise.allSettled(children.map((c) => c.kill()));
-}
 
 function installExitHooks(): void {
   if (exitHooksInstalled || typeof window === 'undefined') return;
   exitHooksInstalled = true;
-  // Reloads / navigations.
   window.addEventListener('beforeunload', () => {
-    void killAllGooseChildren();
+    void killAllGuardedGoose();
   });
-  // Native window close. Imported lazily so the web bundle never pulls it in.
   void import('@tauri-apps/api/window')
     .then(({ getCurrentWindow }) =>
       getCurrentWindow().onCloseRequested(async () => {
-        await killAllGooseChildren();
+        await killAllGuardedGoose();
       }),
     )
     .catch(() => {
@@ -80,16 +69,17 @@ export interface GooseSessionHandlers {
 }
 
 export interface GooseSessionOptions {
-  creds: GooseProviderCreds;
+  creds: GuardCreds;
   /** Working directory for the session (absolute) — typically the vault root. */
   cwd: string;
-  /** Isolated goose root (GOOSE_PATH_ROOT) so Alfred never touches the user's config. */
-  pathRoot?: string;
-  /** ACP-native MCP servers. The vault is normally registered via the config.yaml
-   *  extension instead; pass servers here only for ad-hoc, session-scoped registration. */
+  /** Absolute vault root the MCP server serves (registered as the guard config's stdio extension). */
+  vaultPath: string;
+  /** Builtin goose extensions to enable (e.g. subagent support). */
+  builtins?: string[];
+  /** ACP-native MCP servers for ad-hoc, session-scoped registration. */
   mcpServers?: McpServer[];
   handlers?: GooseSessionHandlers;
-  /** Extra env merged into the spawn (excluded-vendor keys are still blanked). */
+  /** Extra env merged in Rust (refused there if provider-selecting). */
   extraEnv?: Record<string, string>;
   /** Initialize timeout (ms). */
   timeoutMs?: number;
@@ -99,12 +89,19 @@ export interface GooseSessionOptions {
   /** W3C trace context for the session (SEP-414). When present, its traceparent is
    *  injected into ACP newSession/prompt _meta. Omit to disable tracing (opt-in). */
   traceContext?: TraceContext;
+  /** OPT-IN OTLP endpoint forwarded to goose (default: goose OTel off). */
+  otelEndpoint?: string;
 }
 
 export interface GooseSession {
   readonly sessionId: string;
   /** The session's W3C trace id, if tracing is enabled — tag telemetry events with this. */
   readonly traceId?: string;
+  /** Guard-resolved provider/model actually used (normalized). */
+  readonly provider: string;
+  readonly model: string;
+  /** B5 config-scan warnings from the guarded distribution — surface, never hide. */
+  readonly warnings: string[];
   readonly initialize: InitializeResponse;
   prompt(text: string): Promise<PromptResponse>;
   cancel(): Promise<void>;
@@ -112,77 +109,35 @@ export interface GooseSession {
   readonly closed: Promise<void>;
 }
 
-const decoder = new TextDecoder();
-
 /**
- * Start a goose ACP session: spawn the sidecar, initialize, and create a session.
- * Refuses to launch if the provider/model resolves to an excluded vendor (the env
- * builder throws), so Alfred can never drive goose against Meta/OpenAI/xAI.
+ * Start a guarded goose ACP session: spawn through the Rust guard, initialize,
+ * and create a session. The guard refuses to launch if the provider/model
+ * resolves to an excluded or unknown id (L1b), so Alfred can never drive goose
+ * against Meta/OpenAI/xAI — or anything off the permitted roster.
  */
 export async function startGooseSession(opts: GooseSessionOptions): Promise<GooseSession> {
   installExitHooks();
 
-  // buildGooseEnv throws ProviderNotAllowedError for an excluded provider/model.
-  const env = buildGooseEnv(opts.creds, { pathRoot: opts.pathRoot, extra: opts.extraEnv });
-
-  const command = Command.sidecar(GOOSE_SIDECAR, ['acp'], {
-    encoding: 'raw',
-    cwd: opts.cwd,
-    env,
-  });
-
-  if (opts.handlers?.onStderr) {
-    command.stderr.on('data', (bytes: unknown) => {
-      opts.handlers?.onStderr?.(decoder.decode(toUint8Array(bytes)));
+  // The Rust guard prepares the isolated distribution, resolves L1b, builds the
+  // L2 sanitized command, and starts streaming. Throws for a denied provider/model.
+  let transport: GuardTransport;
+  try {
+    transport = await spawnGuardedGoose({
+      creds: opts.creds,
+      cwd: opts.cwd,
+      vaultPath: opts.vaultPath,
+      builtins: opts.builtins,
+      otelEndpoint: opts.otelEndpoint,
+      extraEnv: opts.extraEnv,
+      onStderr: (t) => opts.handlers?.onStderr?.(t),
     });
+  } catch (err) {
+    throw err instanceof Error ? err : new Error(String(err));
   }
 
-  // Bridge the sidecar's stdout into a Web ReadableStream<Uint8Array>. Listeners
-  // are attached before spawn so no early bytes are lost.
-  let closedResolve!: () => void;
-  const closed = new Promise<void>((r) => {
-    closedResolve = r;
-  });
-  const readable = new ReadableStream<Uint8Array>({
-    start(controller) {
-      command.stdout.on('data', (bytes: unknown) => {
-        try {
-          // encoding:'raw' arrives as a number[] over IPC — coerce to real
-          // Uint8Array so the ACP nd-json reader's TextDecoder doesn't throw.
-          controller.enqueue(toUint8Array(bytes));
-        } catch {
-          /* stream already closed */
-        }
-      });
-      command.on('close', () => {
-        try {
-          controller.close();
-        } catch {
-          /* already closed */
-        }
-        opts.handlers?.onClosed?.();
-        closedResolve();
-      });
-      command.on('error', (err) => {
-        try {
-          controller.error(err);
-        } catch {
-          /* already errored */
-        }
-      });
-    },
-  });
+  transport.closed.then(() => opts.handlers?.onClosed?.());
 
-  const child = await command.spawn();
-  liveChildren.add(child);
-
-  const writable = new WritableStream<Uint8Array>({
-    write(chunk) {
-      return child.write(chunk);
-    },
-  });
-
-  const stream: Stream = ndJsonStream(writable, readable);
+  const stream: Stream = ndJsonStream(transport.writable, transport.readable);
 
   const client: Client = {
     sessionUpdate: (params) => {
@@ -199,10 +154,7 @@ export async function startGooseSession(opts: GooseSessionOptions): Promise<Goos
   const conn = new ClientSideConnection(() => client, stream);
 
   const kill = async (): Promise<void> => {
-    liveChildren.delete(child);
-    await child.kill().catch(() => {
-      /* already gone */
-    });
+    await transport.kill();
   };
 
   try {
@@ -245,6 +197,9 @@ export async function startGooseSession(opts: GooseSessionOptions): Promise<Goos
     return {
       sessionId: session.sessionId,
       traceId: opts.traceContext?.traceId,
+      provider: transport.provider,
+      model: transport.model,
+      warnings: transport.warnings,
       initialize,
       prompt: (text: string) =>
         Promise.resolve(
@@ -256,7 +211,7 @@ export async function startGooseSession(opts: GooseSessionOptions): Promise<Goos
         ),
       cancel: () => Promise.resolve(conn.cancel({ sessionId: session.sessionId })),
       kill,
-      closed,
+      closed: transport.closed,
     };
   } catch (err) {
     await kill();
@@ -280,16 +235,5 @@ function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
   });
 }
 
-/** Track a child so it is killed on app exit (used by the recipe runner too). */
-export function trackGooseChild(child: Child): void {
-  installExitHooks();
-  liveChildren.add(child);
-}
-
-/** Stop tracking a child (e.g. after it exits on its own). */
-export function untrackGooseChild(child: Child): void {
-  liveChildren.delete(child);
-}
-
 /** Kill any live goose children — exposed for explicit teardown (e.g. on logout). */
-export { killAllGooseChildren };
+export { killAllGuardedGoose as killAllGooseChildren };

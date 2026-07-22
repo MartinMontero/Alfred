@@ -58,13 +58,16 @@ export function mapGooseConnectError(err: unknown): GooseConnectFailure {
 /**
  * Per-provider starting models for the connect form. Editable placeholders,
  * not assertions — the reset-on-provider-change is what fixes the observed
- * incoherence (Ollama paired with a Claude id). Denylist enforcement is
- * upstream (filterGooseProviderOptions + config lockdown) and untouched.
+ * incoherence (Ollama paired with a Claude id). Every default here is a
+ * family-permitted id under the compiled guard (holmes-guard L1b, ADR-0008),
+ * so the form never starts on a value the guard would deny; resolution is the
+ * crate's, not this table's.
  */
 export const PROVIDER_DEFAULT_MODEL: Record<string, string> = {
   anthropic: 'claude-sonnet-4-6',
   google: 'gemini-2.5-pro',
-  ollama: 'llama3',
-  openrouter: '',
+  deepseek: 'deepseek-v3',
+  qwen: 'qwen3-max',
   mistral: 'mistral-large-latest',
+  ollama: 'qwen3',
 };

@@ -85,6 +85,8 @@ Then W7 PWA (subdomain word pending) → W8 docs/SHIP.**
   0.1.1); (4) cleanup clicks: the unpublished beta.1 draft + the lingering `v0.0.0-dryrun.1`
   draft. Standing pre-PUBLIC-beta item: "Alfred" trademark clearance (Running with Crayons) per
   ADR 0006 §6.
+- **Holmes Stage-1 integration loop (2026-07-22) → ledger in `LOOP-INTEGRATION.md`** (guard
+  adoption / RC unblock / perimeter / embedding; branch `claude/holmes-stage1-integration-zim9m4`).
 
 ## W5 DRY-RUN #5 (2026-07-17) — GREEN; acceptance met verbatim; ceremony chain proven end-to-end
 Builder's capture: run 80203426635, 15m52s, **282/282 tests** (every platform skip executes on

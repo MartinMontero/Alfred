@@ -4,26 +4,26 @@
  * GoosePanel — drives an embedded goose agent over ACP (stdio) and renders the
  * session in a chat view + an xterm.js terminal. Desktop only.
  *
- * Provider selection is filtered through Alfred's vendor-identity denylist, so the
- * UI never offers Meta/OpenAI/xAI; the lockdown is also enforced at spawn time
- * (buildGooseEnv throws for an excluded provider/model). The goose child is killed
- * on unmount.
+ * Provider selection reads the permitted roster from the compiled guard
+ * (holmes-guard, ADR-0008); the UI never enforces anything. Every spawn goes
+ * through the Rust guard's L1b resolution + L2 sanitized spawn, so an
+ * excluded/unknown provider or model is refused before any process starts. The
+ * goose child is killed on unmount.
  */
-import { createSignal, Show, For, onCleanup, type Component } from 'solid-js';
+import { createSignal, Show, For, onCleanup, onMount, type Component } from 'solid-js';
 import { platform } from '@platform';
 import {
   startGooseSession,
-  prepareGooseDistribution,
   validateRecipe,
   runRecipe,
   scanRecipeFile,
   buildRecipePreview,
-  filterGooseProviderOptions,
+  guardPermittedProviders,
   selectAllowOption,
   DENY,
   type GooseSession,
-  type GooseProviderOption,
-  type GooseProviderCreds,
+  type GuardProviderInfo,
+  type GuardCreds,
   type RecipeRun,
   type RecipePreview,
 } from '../lib/goose';
@@ -51,19 +51,23 @@ interface ChatMessage {
   text: string;
 }
 
-// A curated set of permitted providers. Passed through the denylist defensively —
-// a no-op for these, but it proves the UI chokepoint and would drop any excluded id.
-const PERMITTED_PROVIDERS: GooseProviderOption[] = filterGooseProviderOptions([
-  { value: 'anthropic', name: 'Anthropic (Claude)' },
-  { value: 'google', name: 'Google (Gemini)' },
-  { value: 'ollama', name: 'Ollama (local)' },
-  { value: 'openrouter', name: 'OpenRouter (open models)' },
-  { value: 'mistral', name: 'Mistral AI' },
-]);
+// Display labels for the crate-permitted provider ids (the roster itself comes
+// from the guard at runtime — this only prettifies the names it returns).
+const PROVIDER_LABELS: Record<string, string> = {
+  anthropic: 'Anthropic (Claude)',
+  google: 'Google (Gemini)',
+  deepseek: 'DeepSeek',
+  qwen: 'Qwen',
+  mistral: 'Mistral AI',
+  ollama: 'Ollama (local)',
+};
 
 const GOOSE_KEY_SECRET = 'alfred:goose_api_key';
 
 const GoosePanel: Component<GoosePanelProps> = (props) => {
+  // The permitted roster is read from the compiled guard at mount — the UI
+  // reads, never enforces (ADR-0008).
+  const [providers, setProviders] = createSignal<GuardProviderInfo[]>([]);
   const [provider, setProvider] = createSignal('anthropic');
   const [model, setModel] = createSignal('claude-sonnet-4-6');
   const [apiKey, setApiKey] = createSignal('');
@@ -96,6 +100,14 @@ const GoosePanel: Component<GoosePanelProps> = (props) => {
   let tap: SessionTap | undefined;
   let recipeRun: RecipeRun | null = null;
   let termEl: HTMLDivElement | undefined;
+
+  onMount(async () => {
+    try {
+      setProviders(await guardPermittedProviders());
+    } catch {
+      /* roster read failed — the picker falls back to its default entry */
+    }
+  });
   // xterm is loaded lazily so the web bundle never pulls it in.
   // biome-ignore lint/suspicious/noExplicitAny: xterm types are loaded dynamically
   let term: any = null;
@@ -183,16 +195,12 @@ const GoosePanel: Component<GoosePanelProps> = (props) => {
       if (apiKey()) await platform.secrets.set(GOOSE_KEY_SECRET, apiKey());
       const key = apiKey() || (await platform.secrets.get(GOOSE_KEY_SECRET)) || undefined;
 
-      const creds: GooseProviderCreds = {
+      const creds: GuardCreds = {
         provider: provider(),
         model: model(),
         apiKey: provider() === 'ollama' ? undefined : key,
         ollamaHost: provider() === 'ollama' ? 'http://localhost:11434' : undefined,
       };
-
-      // Write Alfred's isolated, locked-down goose distribution (config + env).
-      const dist = await prepareGooseDistribution({ creds, vaultPath: props.vaultPath });
-      setConfigWarnings(dist.warnings);
 
       // Telemetry opt-in — the SAME setting the Rust writer gates on (load_settings).
       // On => mint a trace context (drives _meta injection) and arm the live emission
@@ -217,8 +225,9 @@ const GoosePanel: Component<GoosePanelProps> = (props) => {
       session = await startGooseSession({
         creds,
         cwd: props.vaultPath,
-        pathRoot: dist.pathRoot,
+        vaultPath: props.vaultPath,
         traceContext,
+        otelEndpoint: undefined,
         handlers: {
           onSessionUpdate: (note) => {
             tap?.onSessionUpdate(note);
@@ -232,6 +241,8 @@ const GoosePanel: Component<GoosePanelProps> = (props) => {
           },
         },
       });
+      // B5 config-scan warnings from the guarded distribution — surface, never hide.
+      setConfigWarnings(session.warnings);
       setConnected(true);
       append('system', `Connected to goose (${session.initialize.agentInfo?.name} ${session.initialize.agentInfo?.version}). The vault is registered as ground truth.`);
     } catch (e) {
@@ -290,16 +301,23 @@ const GoosePanel: Component<GoosePanelProps> = (props) => {
     setBusy(true);
     setError(null);
     try {
-      const v = await validateRecipe(pending.recipePath);
+      const v = await validateRecipe({ provider: provider(), model: model() }, pending.recipePath);
       termWrite(`\x1b[33m$ goose recipe validate\x1b[0m\n${v.output}\n`);
       if (!v.valid) {
         setError('Recipe is invalid — see terminal.');
         return;
       }
       append('system', 'Running recipe: vault-summary (cleaned)');
+      const pathRoot = await invoke<string>('guard_goose_paths');
       recipeRun = await runRecipe(pending.recipePath, {
-        creds: { provider: provider(), model: model(), apiKey: apiKey() || undefined },
+        creds: {
+          provider: provider(),
+          model: model(),
+          apiKey: provider() === 'ollama' ? undefined : apiKey() || undefined,
+          ollamaHost: provider() === 'ollama' ? 'http://localhost:11434' : undefined,
+        },
         cwd: props.vaultPath,
+        pathRoot,
         acknowledged: true,
         onOutput: (t) => termWrite(t),
       });
@@ -354,7 +372,9 @@ const GoosePanel: Component<GoosePanelProps> = (props) => {
                   setModel(PROVIDER_DEFAULT_MODEL[next] ?? '');
                 }}
               >
-                <For each={PERMITTED_PROVIDERS}>{(p) => <option value={p.value}>{p.name}</option>}</For>
+                <For each={providers()}>
+                  {(p) => <option value={p.id}>{PROVIDER_LABELS[p.id] ?? p.id}</option>}
+                </For>
               </select>
             </label>
             <label>

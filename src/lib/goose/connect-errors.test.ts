@@ -25,12 +25,18 @@ describe('F5 — goose connect failures map to honest, actionable states', () =>
 });
 
 describe('F5 — provider/model coherence', () => {
-  it('every offered provider has a starting-model entry (empty allowed)', () => {
-    for (const p of ['anthropic', 'google', 'ollama', 'openrouter', 'mistral']) {
+  // The guard-permitted roster (holmes-guard PERMITTED_PROVIDERS, ADR-0008).
+  it('every guard-permitted provider has a starting-model entry', () => {
+    for (const p of ['anthropic', 'google', 'deepseek', 'qwen', 'mistral', 'ollama']) {
       expect(PROVIDER_DEFAULT_MODEL).toHaveProperty(p);
     }
   });
   it('no default model pairs a local provider with a Claude id', () => {
     expect(PROVIDER_DEFAULT_MODEL.ollama).not.toMatch(/claude/i);
+  });
+  it('the ollama default is a guard-permitted family (never llama, dropped on the agentic surface)', () => {
+    // ADR-0008 narrowing: llama-family ids deny everywhere on the agentic
+    // surface; the picker must not start on one.
+    expect(PROVIDER_DEFAULT_MODEL.ollama).not.toMatch(/llama/i);
   });
 });
