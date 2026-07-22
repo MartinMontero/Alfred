@@ -1,6 +1,6 @@
 # 0008 — Adopt the compiled holmes-guard policy layer; retire the TypeScript one
 
-**Status:** Proposed (2026-07-22). Martin's merge of the Track-1 PR flips this Accepted.
+**Status:** Accepted (2026-07-22) — ratified by Martin's merge of the Track-1 PR (#21, merge `b4c11c6`), per the rule recorded at proposal time.
 **Decider:** builder (Martin Montero).
 **Context:** Alfred × Holmes integration brief, Stage 1, Track 1 (`alfred-holmes-integration-brief.md`,
 repo root); Holmes cross-repo obligation "`holmes-guard` adoption retiring `provider-lockdown.ts`".

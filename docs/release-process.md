@@ -35,23 +35,37 @@ checklist Martin executes manually.
 
 ## Real-goose release gate
 
-**Update (Stage D):** `.github/workflows/release.yml` now downloads the pinned goose 1.41.0 CLI on
-the Windows runner, stages it, and runs `npm run test` before building — so the live-goose trio
+**Update (Stage D):** `.github/workflows/release.yml` downloads the pinned goose 1.41.0 CLI on the
+Windows runner, stages it, and runs `npm run test` before building — so the live-goose recipe test
 **does execute in the release lane** (a Windows runner has what Linux CI cannot). `ci.yml` (Linux,
-every push) still cannot, and says so in its job summary. The manual checklist below remains the
-belt-and-suspenders gate for a human-verified release and for the installed-app journeys.
+every push) says so in its job summary.
 
-The three live-goose tests (permission-startup, acp-handshake, recipes.live) skip off-Windows/
-without the sidecar — hosted **Linux** CI can NEVER prove goose behavior. Options:
+**ADR-0008 update:** goose spawning moved out of the webview into the compiled guard
+(`holmes-guard`). Two of the former three live-goose tests — `permission-startup` and
+`acp-handshake` — were retired with the TypeScript policy layer; their intent is now covered by
+(a) the `src-tauri` guard-seam tests (`guard_tests`: L1b resolution, L2 sanitized-spawn env,
+permission.yaml shape) and (b) the **artifact-level guard probe** — a new `ci.yml` job that builds
+the real Alfred binary and drives it under WebDriver (excluded provider refused; planted config
+selects nothing; permitted provider works; hostile ambient env cleared; egress pinned to L1a).
+`recipes.live` remains the live-goose recipe validation on Windows.
+
+**Platform honesty (integration-brief flag 3):** the artifact-guard job exercises the **Linux**
+artifact on every push. The **Windows** artifact users install is built here; wiring the same
+WebDriver probe to it (msedgedriver + placing the staged sidecar next to the raw exe) is a ledgered
+follow-up (LOOP-INTEGRATION.md, Track 2). Until then the manual checklist below is the
+human-verified Windows gate.
+
+Options for a fully-automated Windows goose gate:
 - **Preferred:** a self-hosted Windows runner (Martin's machine or dedicated) registered for a
-  `release-gate` job that stages the pinned sidecar and runs the trio + `npm run verify:all`.
+  `release-gate` job that stages the pinned sidecar and runs `recipes.live` + `npm run verify:all`
+  + the artifact-guard probe against the Windows `.exe`.
 - **Until that exists (the operative gate):** a manual checklist Martin executes per release, on
   Windows, and records in the release notes:
   1. `git checkout <tag>` clean tree; `npm ci`; `npm run stage:goose` (pinned version verified).
-  2. `npm run verify:all` — full skip report attached; the trio must EXECUTE (not skip).
+  2. `npm run verify:all` — full skip report attached; `recipes.live` must EXECUTE (not skip).
   3. Walk journeys J1–J6 (LOOP.md) on the **installed** app from the candidate installer.
   4. Byte-scan telemetry canary green (`cargo test` telemetry_tests).
-A release claim about goose behavior without step 2's trio executing is invalid.
+A release claim about goose recipe behavior without step 2's `recipes.live` executing is invalid.
 
 ## Rollback
 

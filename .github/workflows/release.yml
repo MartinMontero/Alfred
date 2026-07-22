@@ -76,9 +76,15 @@ jobs:
           npm run stage:goose -- --require
 
       # Gate the release on tests. On this Windows runner WITH the sidecar staged,
-      # the live-goose trio EXECUTES (permission-startup / acp-handshake /
-      # recipes.live) — the release lane is where goose behavior is proven in CI.
-      - name: Tests (incl. live-goose trio)
+      # the live-goose recipe test EXECUTES (recipes.live) — the release lane is
+      # where goose behavior is proven in CI. NOTE (ADR-0008): permission-startup
+      # and acp-handshake were retired with the TS policy layer; goose spawning
+      # moved into the compiled guard (holmes-guard), whose spawn/env behavior is
+      # covered by src-tauri guard_tests + the Linux artifact-guard job (ci.yml).
+      # Wiring the full WebDriver artifact probe to this Windows artifact
+      # (msedgedriver + sidecar placement next to the raw exe) is the ledgered
+      # follow-up in LOOP-INTEGRATION.md, Track 2 (flag 3 platform honesty).
+      - name: Tests (incl. live-goose recipe validation)
         run: npm run test
 
       # F18: the release body ships to testers twice — on the release page and

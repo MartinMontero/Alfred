@@ -202,3 +202,61 @@ class is Holmes-verified against 1.43.0; the container cannot run goose (no side
 staged binary) so Alfred's own live check routes to the Windows release lane. Bumping the
 pin to 1.43.0 is a separate Martin decision — recorded, not taken.
 
+### TRACK 2 — the artifact-level guard test: the Holmes RC unblock (this PR) — DONE
+
+New CI job `artifact-guard` (`.github/workflows/ci.yml`): builds the **actual release
+artifact** (`tauri build --no-bundle`) and drives it under WebDriver (tauri-driver 2.0.6 +
+WebKitWebDriver, headless via xvfb), exercising the compiled guard through the artifact's
+own IPC. Probe script: `scripts/artifact-guard-probe.mjs`. **A crate unit test does not
+count — the subject is the built binary.**
+
+**Executed locally against the real built binary** (`src-tauri/target/release/alfred`,
+16.9 MB, built in-container after the announced GTK install) — **15 passed, 0 failed, 0
+skipped**:
+
+```
+GOOSE_PROVIDER=openai OPENAI_API_KEY=hostile-ambient-key XAI_API_KEY=hostile-xai \
+  xvfb-run -a node scripts/artifact-guard-probe.mjs src-tauri/target/release/alfred
+PASS  artifact launches and exposes IPC under WebDriver
+PASS  compiled roster is exactly the guard-permitted six — ["anthropic","google","deepseek","qwen","mistral","ollama"]
+PASS  (a) L1b in the artifact refuses provider openai — "excluded by the compiled denylist"
+PASS  (a) L1b in the artifact denies unknown provider ids (deny-by-default) — lmstudio
+PASS  (a) a spawn demanding openai is refused by the artifact
+PASS  (a) Direct Chat in the artifact refuses an OpenAI endpoint
+PASS  (a) Direct Chat in the artifact refuses an xAI endpoint
+PASS  Direct Chat screen passes a permitted local endpoint (fails later on connect, not policy)
+PASS  (c) a permitted provider spawns through the artifact — {id:1, model:"qwen2.5", …}
+PASS  (b) the planted hostile config is surfaced as a B5 warning, not silently honored
+PASS  (c) the goose child actually ran (env dump written by the stub)
+PASS  (a) hostile ambient OPENAI_API_KEY did NOT reach the goose child (env cleared wholesale)
+PASS  (b) the child provider is the permitted one — the planted config selected nothing — GOOSE_PROVIDER=ollama
+PASS  (a) the child egress is pinned to the in-process L1a proxy — HTTPS_PROXY=http://127.0.0.1:42463
+PASS  the child runs keyring-free with the isolated goose home
+15 passed, 0 failed, 0 skipped
+```
+
+| item | status | evidence class | proof |
+|---|---|---|---|
+| Build the actual release artifact | DONE | EXECUTED | `npm run tauri build -- --no-bundle` → "Built application at: …/target/release/alfred" (6m21s) |
+| (a) excluded-provider env → refused | DONE | EXECUTED | probe: L1b + spawn + Direct Chat OpenAI/xAI all refused; hostile ambient `OPENAI_API_KEY` cleared from child |
+| (b) planted hostile config → refused-in-effect | DONE | EXECUTED | probe: config surfaced as B5 warning AND child `GOOSE_PROVIDER=ollama` (config selected nothing) |
+| (c) permitted provider → works | DONE | EXECUTED | probe: `guard_spawn_goose` ollama/qwen2.5 → session id 1, stub child ran |
+| L1a egress pin on the shipped artifact | DONE | EXECUTED | probe: child `HTTPS_PROXY=http://127.0.0.1:<ephemeral>`, `NO_PROXY` absent |
+| CI job wired (Linux) | DONE | EXECUTED | `ci.yml` job `artifact-guard`; tauri-driver pinned 2.0.6 `--locked` |
+| CI run green on the branch/main | PENDING-CI | UNVERIFIED → will link | run URL captured after push below |
+| required check on main | GATE-Martin | — | branch-protection click is Martin's; **prepare + request at gate** |
+| platform honesty (flag 3) | DONE | EXECUTED | job summary states it exercises the **Linux** artifact; Windows artifact probe = ledgered follow-up (needs msedgedriver + sidecar-next-to-exe on a Windows runner); `release.yml` + `docs/release-process.md` corrected (deleted permission-startup/acp-handshake no longer claimed) |
+
+**THE UNBLOCK (loud, for cross-linking into Holmes STATE.md):** the artifact-level guard
+test is green against Alfred's real built binary. CI run URL on Alfred main lands once
+Martin merges this PR; the local execution above is the same job, same probe, same binary
+class. **The Holmes STATE.md cross-link edit is Holmes-side — this loop delivers the URL,
+does not touch the Holmes repo.**
+
+**Windows-probe follow-up (ledgered, flag 3):** the probe script is already platform-aware
+(msedgedriver + `goose.exe` stub + `%APPDATA%` config dir); wiring it into `release.yml`
+against the shipped Windows `.exe` needs a Windows runner to develop the msedgedriver path
+and place the staged sidecar next to the raw exe. Until then: the Linux job is the binding
+per-push proof (identical compiled guard), the Rust `guard_tests` cover spawn/env, and
+`recipes.live` exercises the real Windows sidecar in the release lane.
+
