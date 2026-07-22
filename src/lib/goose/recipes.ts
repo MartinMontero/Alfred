@@ -5,16 +5,16 @@
  *
  * Recipes are YAML files (see goose-recipes/). Alfred lets the builder author a
  * recipe (it is a note editor), validate it with `goose recipe validate`, and run
- * it with `goose run --recipe`, streaming output to the chat panel + terminal.
- * Recipe runs go through the same locked-down env as ACP sessions, so a recipe
- * can never reach an excluded vendor.
+ * it with `goose run --recipe`. Both go through the Rust guard (ADR-0008): the
+ * same `sanitized_spawn` (L2) + L1a proxy as an ACP session, so a recipe can
+ * never reach an excluded/unknown provider. The Pale Fire safety scan + clean
+ * staging stay TS-side (separate from provider policy).
  */
 
-import { Command, type Child } from '@tauri-apps/plugin-shell';
+import { invoke, Channel } from '@tauri-apps/api/core';
 import { readTextFile, writeTextFile, mkdir, exists } from '@tauri-apps/plugin-fs';
 import { toUint8Array } from './stdio-bytes';
-import { GOOSE_SIDECAR, trackGooseChild, untrackGooseChild } from './acp-client';
-import { buildGooseEnv, type GooseProviderCreds } from './provider-lockdown';
+import type { GuardCreds } from './guard-transport';
 import {
   scanRecipe,
   stageCleanRecipe,
@@ -29,12 +29,16 @@ export interface RecipeValidation {
   output: string;
 }
 
-/** Validate a recipe file with `goose recipe validate <path>` via the sidecar. */
-export async function validateRecipe(recipePath: string): Promise<RecipeValidation> {
-  const cmd = Command.sidecar(GOOSE_SIDECAR, ['recipe', 'validate', recipePath]);
-  const res = await cmd.execute();
-  const output = [res.stdout, res.stderr].filter(Boolean).join('\n').trim();
-  return { valid: res.code === 0, output };
+/** Validate a recipe file with `goose recipe validate <path>` through the guard. */
+export async function validateRecipe(
+  creds: Pick<GuardCreds, 'provider' | 'model'>,
+  recipePath: string,
+): Promise<RecipeValidation> {
+  return invoke<RecipeValidation>('guard_goose_recipe_validate', {
+    provider: creds.provider,
+    model: creds.model,
+    recipePath,
+  });
 }
 
 // --- Pale Fire safety scan (Step 1) -----------------------------------------
@@ -61,12 +65,21 @@ export class RecipeBlockedError extends Error {
   }
 }
 
+type GooseIoEvent =
+  | { type: 'stdout'; data: number[] }
+  | { type: 'stderr'; data: number[] }
+  | { type: 'closed'; code: number | null };
+
+interface SpawnedGoose {
+  id: number;
+}
+
 export interface RunRecipeOptions {
-  creds: GooseProviderCreds;
+  creds: GuardCreds;
   /** Working directory (vault root, absolute). */
   cwd: string;
-  /** Isolated goose root (GOOSE_PATH_ROOT). */
-  pathRoot?: string;
+  /** Isolated goose root (GOOSE_PATH_ROOT); recipes stage a cleaned copy under it. */
+  pathRoot: string;
   /** Streamed stdout+stderr text (wire to the chat panel / xterm terminal). */
   onOutput?: (text: string) => void;
   /** Operator has acknowledged the pre-flight preview/warnings. Required to run a
@@ -75,62 +88,64 @@ export interface RunRecipeOptions {
 }
 
 export interface RecipeRun {
-  child: Child;
   /** Resolves with the process exit code when the recipe finishes. */
   done: Promise<number | null>;
   kill(): Promise<void>;
 }
 
+const decoder = new TextDecoder();
+
 /**
- * Run a recipe non-interactively. Re-scans for safety (defense in depth): refuses
- * if any high-severity warning is unacknowledged, then stages a **fully-cleaned**
- * copy of the recipe tree and runs goose against that — so the executed recipe is
- * guaranteed free of invisible/deceptive characters. Streams output; the child is
- * tracked for kill-on-exit.
+ * Run a recipe non-interactively through the guard. Re-scans for safety (defense
+ * in depth): refuses if any high-severity warning is unacknowledged, then stages
+ * a **fully-cleaned** copy of the recipe tree and runs goose against that — so
+ * the executed recipe is guaranteed free of invisible/deceptive characters.
+ * Streams output; the child is guard-tracked for kill-on-exit.
  */
 export async function runRecipe(recipePath: string, opts: RunRecipeOptions): Promise<RecipeRun> {
-  // buildGooseEnv throws for an excluded provider/model — a recipe cannot escape the denylist.
-  const env = buildGooseEnv(opts.creds, { pathRoot: opts.pathRoot });
-
   // Safety gate: scan, refuse unacknowledged warnings, run on cleaned content.
   const scan = await scanRecipeFile(recipePath);
   if (scanHasWarnings(scan) && !opts.acknowledged) {
     throw new RecipeBlockedError();
   }
-  const stageDir = `${(opts.pathRoot ?? opts.cwd).replace(/\\/g, '/')}/recipe-stage`;
+  const stageDir = `${opts.pathRoot.replace(/\\/g, '/')}/recipe-stage`;
   const staged = await stageCleanRecipe(scan, stageDir, tauriRead, tauriWrite);
-
-  const cmd = Command.sidecar(GOOSE_SIDECAR, ['run', '--recipe', staged.parentPath, '--no-session'], {
-    encoding: 'raw',
-    cwd: opts.cwd,
-    env,
-  });
-
-  const decoder = new TextDecoder();
-  if (opts.onOutput) {
-    // Same Tauri raw-encoding coercion as the ACP stdio bridge (stdio-bytes.ts).
-    cmd.stdout.on('data', (b: unknown) => opts.onOutput?.(decoder.decode(toUint8Array(b))));
-    cmd.stderr.on('data', (b: unknown) => opts.onOutput?.(decoder.decode(toUint8Array(b))));
-  }
 
   let resolveDone!: (code: number | null) => void;
   const done = new Promise<number | null>((r) => {
     resolveDone = r;
   });
 
-  const child = await cmd.spawn();
-  trackGooseChild(child);
-  cmd.on('close', (data) => {
-    untrackGooseChild(child);
-    resolveDone(data.code);
+  const channel = new Channel<GooseIoEvent>();
+  channel.onmessage = (event) => {
+    switch (event.type) {
+      case 'stdout':
+      case 'stderr':
+        opts.onOutput?.(decoder.decode(toUint8Array(event.data)));
+        break;
+      case 'closed':
+        resolveDone(event.code);
+        break;
+    }
+  };
+
+  // guard_goose_recipe_run refuses an excluded/unknown provider/model in Rust.
+  const spawned = await invoke<SpawnedGoose>('guard_goose_recipe_run', {
+    args: {
+      provider: opts.creds.provider,
+      model: opts.creds.model,
+      apiKey: opts.creds.apiKey,
+      ollamaHost: opts.creds.ollamaHost,
+      cwd: opts.cwd,
+      stagedRecipePath: staged.parentPath,
+    },
+    onEvent: channel,
   });
 
   return {
-    child,
     done,
     kill: async () => {
-      untrackGooseChild(child);
-      await child.kill().catch(() => {
+      await invoke('guard_goose_kill', { id: spawned.id }).catch(() => {
         /* already gone */
       });
     },

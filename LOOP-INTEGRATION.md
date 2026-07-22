@@ -155,3 +155,50 @@ loop claims otherwise anywhere.
 ---
 
 ## TRACK ENTRIES (appended per track)
+
+### TRACK 1 — adopt the guard, retire the TS one (PR 1) — DONE, awaiting Martin's merge
+
+Compiled `holmes-guard` + `holmes-core` adopted (ADR-0008, Proposed). The agentic
+(goose) surface now routes every spawn through the Rust guard seam
+(`src-tauri/src/guard.rs`): L1b `resolution::resolve`, L2 `spawn::sanitized_spawn`,
+in-process L1a `proxy::EgressProxy`. The UI reads the permitted roster from the crate
+(`guard_permitted_providers`). The Direct Chat (non-agentic) surface keeps Alfred's
+canon denylist, moved from strippable TS into compiled Rust
+(`src-tauri/src/direct_chat_policy.rs`) inside the `custom_provider_*` commands.
+`provider-lockdown.ts`, `provider-policy.ts`, `distribution.ts` — **deleted**.
+
+Security tightening (required, not incidental): the webview's `shell:allow-spawn` /
+`allow-execute` / `allow-stdin-write` / `allow-kill` sidecar permissions for goose were
+removed from `capabilities/default.json`. Goose is now Rust-spawned; leaving those would
+let a compromised webview launch goose directly and bypass L1a/L1b/L2. The guard is now
+the only path to a goose process.
+
+| item | status | evidence class | proof (command → output / file:line) |
+|---|---|---|---|
+| Pinned dep added (flag 2) | DONE | EXECUTED | `src-tauri/Cargo.toml` `holmes-guard`/`holmes-core` `rev = "63f877a…"`; `cargo tree` → zero new third-party crates |
+| L1b routing via Tauri seam | DONE | EXECUTED | `guard::guard_resolve` / `guard_spawn_goose`; `guard_tests::l1b_*` (5 tests) green |
+| UI reads roster from crate | DONE | EXECUTED | `guard::guard_permitted_providers`; `GoosePanel.tsx` `onMount` reads it; `For each={providers()}` |
+| Every goose spawn via `sanitized_spawn` (L2) | DONE | EXECUTED | `guard::build_goose_spawn` for acp + recipe validate + recipe run; `guard_tests::l2_*` (6 tests) |
+| L1a proxy env on spawned sessions | DONE | EXECUTED | `GuardState::proxy_addr` → `EgressProxy::spawn`; `l2_builds_a_locked_down_env…` asserts HTTP(S)_PROXY pinned, NO_PROXY absent |
+| Direct Chat policy compiled (flag 1 regime B) | DONE | EXECUTED | `direct_chat_policy.rs`; `ensure_endpoint_allowed` in all three `custom_provider_*` commands; `direct_chat_policy_tests` (17) green |
+| Refusal-test intent ported (flag 5) | DONE | EXECUTED | mapping table: `docs/audit/holmes-stage1-track1-mapping.md`; 70 removed TS tests → 50 Rust tests + Track-2 |
+| `provider-lockdown.ts` deleted | DONE | EXECUTED | `git rm` executed; `grep -r provider-lockdown src/` → only the mapping doc references it |
+| release-mode Rust tests | DONE | EXECUTED | `cargo test --lib --release` → **50 passed; 0 failed** |
+| spawn path launches a real process (flag 4 container stand-in) | DONE | EXECUTED | `guard_tests::l2_built_command_actually_spawns_a_process_with_the_sanitized_env` (unix-gated) → spawn Ok, sanitized env applied |
+| live-goose connection against staged 1.41.0 | ROUTED | HONEST-SKIP → Windows | no sidecar + no goose in container; routes to Windows/release lane (flag 4). Bump to Holmes-verified 1.43.0 = separate Martin decision, NOT taken |
+| capability surface tightened | DONE | EXECUTED | `capabilities/default.json`: goose shell sidecar perms removed; `cargo test` compiles (generate_context validates the ACL) → 50 passed |
+| typecheck | DONE | EXECUTED | `tsc --noEmit` → exit 0 |
+| vitest (mapping-accounted) | DONE | EXECUTED | **252 passed \| 2 skipped**; delta 321\|4 → 252\|2 fully mapped (70 removed → Rust; 2 skips superseded; +1 added) |
+| exclusion L1/L2 (flag 6) | DONE | EXECUTED | `npm run check:exclusion` → "6 manifests clean" / "2 lockfiles clean", passed with dep resolved |
+| exclusion L3 (flag 6) | DONE (advisory, as before) | EXECUTED | 17 hits, all in `direct_chat_policy*.rs` + `guard*.rs` (the compiled denylist + its tests) — same advisory class the deleted TS files carried, **count down 23 → 17**; `|| exit 0`, non-blocking in CI; NO platform-repo exemption needed |
+| zero-Soapbox | DONE | EXECUTED | `grep -riE 'soapbox\|@nostrify'` → clean |
+| tauri-align | DONE | EXECUTED | "All 12 tauri Rust/JS pairs aligned" |
+| build (vite desktop) | DONE | EXECUTED | `npm run build` → "✓ built in 19.74s" |
+| build:web (PWA) | DONE | EXECUTED | `npm run build:web` → "PWA … files generated" |
+| clippy on new modules | DONE | EXECUTED | `cargo clippy --lib` → 0 warnings in guard.rs/direct_chat_policy.rs (4 pre-existing lib.rs warnings untouched) |
+
+**Flag 4 note:** Alfred stays on staged goose **1.41.0**. The guard's spawn/handshake
+class is Holmes-verified against 1.43.0; the container cannot run goose (no sidecar, no
+staged binary) so Alfred's own live check routes to the Windows release lane. Bumping the
+pin to 1.43.0 is a separate Martin decision — recorded, not taken.
+

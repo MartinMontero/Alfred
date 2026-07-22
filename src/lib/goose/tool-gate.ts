@@ -16,7 +16,6 @@
  *      and returns no decision type.
  */
 
-import { stringify as stringifyYaml } from 'yaml';
 import type { ToolKind, PermissionOption } from '@agentclientprotocol/sdk';
 
 /** The Alfred vault MCP extension name (matches docs/mcp-server.md + distribution config). */
@@ -109,30 +108,10 @@ export function selectAllowOption(options: PermissionOption[]): PermissionDecisi
 /** The default-deny decision (no acknowledgement / no handler). */
 export const DENY: PermissionDecision = { outcome: { outcome: 'cancelled' } };
 
-/** Build the curated permission.yaml: always_allow read-only vault tools, ask
- *  before every vault write and the shell/command surface.
- *
- *  goose 1.39.0's `PermissionConfig` deserializes THREE required lists
- *  (always_allow, ask_before, never_allow) — omitting any one makes goose reject
- *  the file ("Corrupted permission config") and panic on startup, so the whole
- *  session never launches. `never_allow` is intentionally empty: deny-by-default
- *  is carried by ask_before plus the human acknowledgement surface in
- *  GoosePanel — never by title, never by a goose-side blocklist — and the empty
- *  list satisfies goose's schema without changing the allow/ask semantics. */
-export function buildPermissionYaml(extensionName: string = ALFRED_VAULT_EXTENSION): string {
-  const ns = (t: string) => `${extensionName}__${t}`;
-  const doc = {
-    user: {
-      always_allow: VAULT_READ_TOOLS.map(ns),
-      ask_before: [...VAULT_WRITE_TOOLS.map(ns), GOOSE_SHELL_TOOL],
-      never_allow: [] as string[],
-    },
-  };
-  return stringifyYaml(doc);
-}
-
-/** Path of the permission.yaml inside Alfred's ISOLATED goose root — never the
- *  user's shared %APPDATA%\Block\goose. */
-export function goosePermissionPath(pathRoot: string): string {
-  return `${pathRoot.replace(/\\/g, '/')}/config/permission.yaml`;
-}
+// The curated permission.yaml (always_allow read-only vault tools; ask_before
+// every write + the shell surface; never_allow empty so goose's three-list
+// schema doesn't panic) is now generated in Rust — `guard::build_permission_yaml`
+// — because the whole isolated distribution is prepared behind the guarded
+// spawn (ADR-0008). This module keeps only the pure ACP permission-response
+// hints. The tool-name constants above remain the shared reference for those
+// hints; the Rust copy is the one goose actually reads.

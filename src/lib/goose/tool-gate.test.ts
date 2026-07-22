@@ -6,14 +6,17 @@ import { join } from 'node:path';
 import {
   describeToolCallHint,
   selectAllowOption,
-  buildPermissionYaml,
-  goosePermissionPath,
-  VAULT_READ_TOOLS,
   VAULT_WRITE_TOOLS,
   GOOSE_SHELL_TOOL,
 } from './tool-gate';
 import * as toolGateModule from './tool-gate';
-import { parse as parseYaml } from 'yaml';
+
+// permission.yaml generation moved to Rust (guard::build_permission_yaml,
+// ADR-0008) since the whole isolated distribution is now prepared behind the
+// guarded spawn. Its shape pins (the three-list schema goose requires; the
+// id-keyed always_allow/ask_before enforcement) live in
+// src-tauri/src/guard_tests.rs::permission_yaml_carries_the_three_required_lists.
+// This file keeps the pure ACP permission-response hint tests.
 
 // ---------------------------------------------------------------------------
 // ENFORCEMENT PIN (threat-model §3, builder decision 2026-07-12): permission
@@ -90,42 +93,3 @@ describe('selectAllowOption (used only after explicit human approval)', () => {
   });
 });
 
-describe('buildPermissionYaml — the id-keyed enforcement layer', () => {
-  it('always_allows the read tools and asks before writes + shell, keyed on extension__tool_name', () => {
-    const yaml = parseYaml(buildPermissionYaml()) as {
-      user: { always_allow: string[]; ask_before: string[] };
-    };
-    for (const r of VAULT_READ_TOOLS) expect(yaml.user.always_allow).toContain(`alfred-vault__${r}`);
-    for (const w of VAULT_WRITE_TOOLS) expect(yaml.user.ask_before).toContain(`alfred-vault__${w}`);
-    expect(yaml.user.ask_before).toContain('developer__shell');
-    // No write is ever in always_allow.
-    for (const w of VAULT_WRITE_TOOLS) expect(yaml.user.always_allow).not.toContain(`alfred-vault__${w}`);
-    // Every enforcement entry is a namespaced id or a goose builtin id — never prose.
-    for (const entry of [...yaml.user.always_allow, ...yaml.user.ask_before]) {
-      expect(entry).toMatch(/^[a-z0-9_-]+__[a-z0-9_]+$/);
-    }
-  });
-
-  // SECONDARY (cheap) regression guard: goose 1.39.0's PermissionConfig requires
-  // all THREE lists — omitting never_allow makes goose panic on startup. This shape
-  // check is necessary but NOT sufficient (it would pass even if goose rejected the
-  // file); the definitive proof is the goose-start test in permission-startup.test.ts.
-  it('emits all three lists goose requires (always_allow, ask_before, never_allow)', () => {
-    const yaml = parseYaml(buildPermissionYaml()) as {
-      user: { always_allow: string[]; ask_before: string[]; never_allow: string[] };
-    };
-    expect(Array.isArray(yaml.user.always_allow)).toBe(true);
-    expect(Array.isArray(yaml.user.ask_before)).toBe(true);
-    expect(Array.isArray(yaml.user.never_allow)).toBe(true);
-    expect(yaml.user.never_allow).toEqual([]); // empty: deny-by-default lives elsewhere
-  });
-});
-
-describe('goosePermissionPath', () => {
-  it('resolves under the isolated goose root, never the user’s shared config', () => {
-    const isolated = 'C:/Users/u/AppData/Roaming/dev.wecanjustbuildthings.alfred/goose';
-    const p = goosePermissionPath(isolated);
-    expect(p).toBe(`${isolated}/config/permission.yaml`);
-    expect(p).not.toContain('Block/goose');
-  });
-});

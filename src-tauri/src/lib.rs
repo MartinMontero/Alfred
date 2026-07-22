@@ -14,6 +14,15 @@ mod telemetry_tests;
 #[cfg(test)]
 mod vault_path_tests;
 
+// Compiled provider policy (ADR-0008): the holmes-guard agentic seam (every
+// goose spawn) and the Direct Chat denylist (the custom_provider_* commands).
+mod direct_chat_policy;
+#[cfg(test)]
+mod direct_chat_policy_tests;
+mod guard;
+#[cfg(test)]
+mod guard_tests;
+
 #[cfg(not(target_os = "android"))]
 use keyring::Entry;
 use notify::{Config, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
@@ -915,6 +924,9 @@ mod keyring_commands {
 
 #[tauri::command]
 async fn custom_provider_request(url: String, api_key: String, body: String) -> Result<String, String> {
+    // Compiled Direct Chat screen (ADR-0008): the refusal lives here, in the
+    // shipped binary, not in strippable webview code.
+    direct_chat_policy::ensure_endpoint_allowed(&url, direct_chat_policy::model_from_body(&body).as_deref())?;
     let client = reqwest::Client::new();
     let mut request = client
         .post(&url)
@@ -953,6 +965,8 @@ async fn custom_provider_stream(
 ) -> Result<(), String> {
     use futures_util::StreamExt;
 
+    // Compiled Direct Chat screen (ADR-0008) — same refusal as the non-streaming path.
+    direct_chat_policy::ensure_endpoint_allowed(&url, direct_chat_policy::model_from_body(&body).as_deref())?;
     let client = reqwest::Client::new();
     let mut request = client
         .post(&url)
@@ -999,6 +1013,8 @@ async fn custom_provider_stream(
 
 #[tauri::command]
 async fn custom_provider_list_models(url: String, api_key: String) -> Result<String, String> {
+    // Compiled Direct Chat screen (ADR-0008) — endpoint-only (no body/model here).
+    direct_chat_policy::ensure_endpoint_allowed(&url, None)?;
     let client = reqwest::Client::new();
     let mut request = client
         .get(&url)
@@ -1161,6 +1177,8 @@ pub fn run() {
 
     builder
         .manage(Arc::new(Mutex::new(WatcherState::default())) as SharedWatcherState)
+        // Agentic guard seam state: the L1a egress proxy + live goose children.
+        .manage(guard::GuardState::default())
         // Register asset protocol to serve local files
         .register_uri_scheme_protocol("asset", |ctx, request| {
             let app = ctx.app_handle();
@@ -1317,6 +1335,15 @@ pub fn run() {
             custom_provider_request,
             custom_provider_stream,
             custom_provider_list_models,
+            guard::guard_permitted_providers,
+            guard::guard_resolve,
+            guard::guard_goose_paths,
+            guard::guard_spawn_goose,
+            guard::guard_goose_write,
+            guard::guard_goose_kill,
+            guard::guard_goose_kill_all,
+            guard::guard_goose_recipe_validate,
+            guard::guard_goose_recipe_run,
             telemetry_record,
             telemetry_wipe,
             telemetry_metrics,

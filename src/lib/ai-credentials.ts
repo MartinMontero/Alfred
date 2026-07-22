@@ -17,22 +17,11 @@
 
 import { platform } from '@platform';
 
-// --- Provider lockdown (vendor-exclusion chokepoint) ---
-// The provider denylist (exclude Meta/OpenAI/xAI; permit every other
-// provider/model — Anthropic, Google, Mistral, open-weights, OpenRouter-routed
-// open models, local/Ollama) lives in provider-policy.ts (pure + unit-tested)
-// and is enforced at the platform AI adapter (src/platform/tauri/ai.ts) for
-// every custom-provider request. Re-exported here so the lockdown is reachable
-// from the credentials layer.
-export {
-  assertProviderAllowed,
-  assertProviderIdentityAllowed,
-  isProviderAllowed,
-  checkProvider,
-  checkProviderEndpoint,
-  resolveExcludedVendor,
-  ProviderNotAllowedError,
-} from './provider-policy';
+// Provider policy is no longer TypeScript. The Direct Chat vendor-exclusion
+// denylist is compiled into the custom_provider_* Tauri commands
+// (src-tauri/src/direct_chat_policy.rs); the agentic surface is the holmes-guard
+// crate (ADR-0008). This module now handles only credential storage — no policy
+// logic, no policy re-exports.
 
 interface Credential {
   get(): Promise<string | null>;

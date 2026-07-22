@@ -43,6 +43,12 @@ dirs = "5.0"
 # in, no system dependency; gives direct PRAGMA / wal_checkpoint / VACUUM control.
 rusqlite = { version = "0.32", features = ["bundled"] }
 tauri-plugin-updater = "2"
+# Compiled provider-policy layer (ADR-0008): holmes-guard is the single source of
+# truth for the agentic (goose) surface — L1b resolution, L2 sanitized spawn, L1a
+# egress proxy. Pinned to a full commit SHA, never a branch (re-pin to the Holmes
+# RC tag, when cut, in its own commit). Zero third-party crates enter the graph.
+holmes-guard = { git = "https://github.com/MartinMontero/Holmes.git", rev = "63f877a7399bee0d34b10fed08e35e87a434cd73" }
+holmes-core = { git = "https://github.com/MartinMontero/Holmes.git", rev = "63f877a7399bee0d34b10fed08e35e87a434cd73" }
 
 [target.'cfg(not(target_os = "android"))'.dependencies]
 keyring = { version = "3", features = ["sync-secret-service", "apple-native", "windows-native"] }
