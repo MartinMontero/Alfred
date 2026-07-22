@@ -260,10 +260,14 @@ and place the staged sidecar next to the raw exe. Until then: the Linux job is t
 per-push proof (identical compiled guard), the Rust `guard_tests` cover spawn/env, and
 `recipes.live` exercises the real Windows sidecar in the release lane.
 
-**CI run (PR #22, run 29883573480):** verify / rust / supply-chain / quality all green;
-`artifact-guard` job = `…/actions/runs/29883573480/job/88809385185` (running at ledger time;
-final URL confirmed at Stage-1 close). This is the run URL Holmes STATE.md cross-links for
-the RC unblock — delivered here, the Holmes-side edit is Holmes's.
+**★ RC-UNBLOCK URL (green on Alfred `main`) ★**
+`https://github.com/MartinMontero/Alfred/actions/runs/29883979445/job/88810606926`
+— the `artifact-guard` job on main (merge commit `513a34e`), conclusion **success**: the
+"Build the release artifact (tauri build)" step and the "Artifact-level guard probe (hostile
+env, planted config)" step both green. **This is the single link Holmes `STATE.md` cross-links
+to flip Holmes RC from BLOCKED.** Delivered here; the Holmes-side `STATE.md` edit is Holmes's
+(this loop does not touch the Holmes repo). PR #22 run (pre-merge, same content):
+`…/runs/29883573480/job/88809385185`, also success.
 
 ### TRACK 3 — perimeter remainder, items (2)(3)(4) (this PR) — DONE / one PENDING-Martin by design
 
@@ -305,3 +309,49 @@ surface rider (a) keeps absent. The beta ships the emission gate + honest render
 approval/consent operator patterns. The direct-`emit()` path runs the identical gate the case
 machine's `resolve()` calls, so the honesty guarantees are the same.
 
+
+---
+
+## STAGE 1 CLOSE — verdict table + gate handoff
+
+### The four Holmes cross-repo obligations (brief §7 definition of done)
+
+| Obligation | Verdict | Linked evidence |
+|---|---|---|
+| 1. Artifact-level guard CI test (RC unblock) | **VERIFIED** | `artifact-guard` green on main: `…/runs/29883979445/job/88810606926` (tauri build + guard probe, 15/15 locally). Required-check click is Martin's (gate below). |
+| 2. OS/artifact-level egress enforcement | **VERIFIED-with-honest-residual** | L1a proxy env pinned on the shipped artifact (probe: `HTTPS_PROXY=http://127.0.0.1:<ephemeral>`, `NO_PROXY` absent); the documented residual (hostile binary ignoring proxy env) is ledgered as future OS-level work, not closed — Track 3(2). |
+| 3. Signed update channel with rollback | **VERIFIED (channel) · PENDING-Martin (rollback exercise)** | channel live + minisign-signed (Martin's beta.2 intake, LOOP.md:628-630); rollback checklist authored (`docs/beta/rollback-checklist.md`); the rollback dry-run walk is Martin's. **Gates the beta.4 publish.** |
+| 4. Memory/resurfacing channel | **VERIFIED** | born-redacted typed allowlist (`telemetry.rs`) + canary + single-writer; `session-tap.ts` reads only bounded scalars; `memory-review.ts` proposal-only. Loop E rides this channel, no new one. |
+
+### Stage-1 done-when (brief §7) — status
+
+- ✅ `provider-lockdown.ts` no longer exists (deleted, Track 1).
+- ✅ the artifact-level test is green on Alfred `main` (Track 2) — **required-check click is Martin's** (gate).
+- ✅ rider (b)'s sentence ships in beta copy (panel + README + known-issues, Track 4).
+- ◻ obligations read VERIFIED in **both** ledgers — Alfred side done here; the Holmes `STATE.md` edits (cross-link + status flips) are Holmes-side, Martin's.
+- ◻ obligation 3's rollback exercise is PENDING-Martin (the one non-code item, by design).
+
+### Baselines — evolved only as named, never silently shrunk
+
+| Baseline | At Stage-0 | At Stage-1 close | Delta (accounted) |
+|---|---|---|---|
+| vitest | 321 passed \| 4 skipped | **256 passed \| 2 skipped** | −70 TS policy tests (mapped to Rust), +5 new TS tests (connect-errors, analytical helpers), −2 Windows-live skips (superseded) — full map in `docs/audit/holmes-stage1-track1-mapping.md` |
+| cargo | 12 | **61** | +38 guard/direct-chat, +11 analytical (incl. a spawn-execution proof) |
+| contrast | 33/33 | **33/33** | new lab-register UI uses existing evidence tokens; no new pairs |
+| CI jobs | 4 (verify/rust/supply-chain/quality) | **5** (+ artifact-guard) | Track 2 |
+| exclusion L1/L2 | clean | **clean** | dep resolved; L3 advisory 23→17 (compiled denylist + tests, same exempt class) |
+
+### GATES awaiting Martin (execution order)
+
+1. **Make `artifact-guard` a required status check on `main`** (branch-protection click) — the RC-unblock job is green; binding it makes the guarantee permanent.
+2. **Holmes `STATE.md` cross-link + obligation flips** (Holmes-side edit): paste the RC-unblock URL above into the RC gate; flip obligations 1/2/4 → VERIFIED, 3 → VERIFIED-channel/PENDING-rollback, and the adoption row → done. This loop deliberately does not touch the Holmes repo.
+3. **Run the rollback dry-run** (`docs/beta/rollback-checklist.md`, journey J6 against a local `latest.json`) + the beta.2→beta.3 live update-cycle walk — flips obligation 3 to fully VERIFIED and clears the beta.4 publish gate.
+4. **Publish `v0.1.0-beta.4` ↔ `0.1.3`** — GATED on #3 VERIFIED + Martin's word. The version bump is committed here as its own unpublished commit; publishing is not part of this loop.
+5. **Pin bump (optional, separate decision):** re-pin Holmes to its RC tag when cut (its own commit); and/or bump Alfred's staged goose 1.41.0 → the Holmes-verified 1.43.0 (requires a Windows re-stage + live-goose re-verify).
+6. **Windows artifact-probe follow-up (ledgered, flag 3):** wire `scripts/artifact-guard-probe.mjs` into `release.yml` against the Windows `.exe` (msedgedriver + sidecar placement) — the probe is already platform-aware.
+
+### Honest limits (verbatim, for release notes and anywhere the guard is described)
+
+The guard governs Alfred's own sessions — a user's separately installed stock goose is theirs;
+AGPL forks can strip anything — governance, not the binary, answers for forks; nothing in this
+loop claims otherwise anywhere.
