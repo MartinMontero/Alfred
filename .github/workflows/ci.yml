@@ -175,6 +175,81 @@ jobs:
           print('  No actual vulnerabilities. Informational advisories reported but non-blocking (all transitive; see docs/threat-model.md).')
           PY
 
+  # ---- artifact-level guard test: the Holmes RC unblock (Stage 1, Track 2) ----
+  # Builds the ACTUAL Alfred release binary, then drives it under WebDriver
+  # (tauri-driver + WebKitWebDriver, headless via xvfb) and exercises the
+  # COMPILED holmes-guard through the artifact's own IPC. A crate unit test does
+  # not count here — the subject is what ships.
+  #
+  # PLATFORM HONESTY (integration-brief flag 3): this job exercises the LINUX
+  # artifact (ubuntu runner). The Windows artifact users install is built and
+  # its spawn/handshake path exercised in release.yml (the live-goose trio on a
+  # Windows runner against the real staged goose 1.41.0). Extending the full
+  # WebDriver artifact probe to Windows (msedgedriver + a goose.exe stub) is a
+  # ledgered follow-up (LOOP-INTEGRATION.md, Track 2) that needs a Windows
+  # runner to develop against; the probe script is already platform-aware.
+  artifact-guard:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Setup Node
+        uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30 # stable
+        with:
+          toolchain: stable
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@9d47c6ad4b02e050fd481d890b2ea34778fd09d6 # v2.7.8
+        with:
+          workspaces: src-tauri
+
+      # Tauri build deps + the headless WebDriver stack for driving the artifact.
+      - name: Install Linux system libs + WebDriver stack
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev \
+            patchelf libsecret-1-dev libssl-dev libdbus-1-dev \
+            webkit2gtk-driver xvfb
+
+      - name: Install Alfred deps
+        run: npm ci
+
+      # tauri build's externalBin existence check needs a Linux sidecar present;
+      # the probe writes its OWN goose stub next to the built binary at runtime,
+      # so this placeholder only satisfies the build script.
+      - name: Placeholder goose sidecar (build-script existence check only)
+        run: |
+          mkdir -p src-tauri/binaries
+          printf '#!/bin/sh\nexit 0\n' > src-tauri/binaries/goose-x86_64-unknown-linux-gnu
+          chmod +x src-tauri/binaries/goose-x86_64-unknown-linux-gnu
+
+      - name: Install tauri-driver (SHA-free; cargo crate, pinned + --locked)
+        run: cargo install tauri-driver --version 2.0.6 --locked
+
+      - name: Build the release artifact (tauri build)
+        run: npm run tauri build -- --no-bundle
+
+      # THE UNBLOCK: run the guard probe against the built product with a hostile
+      # ambient environment. Excluded provider demanded -> refused; planted
+      # hostile config -> selects nothing; permitted provider -> works; hostile
+      # ambient keys never reach the goose child; egress pinned to L1a.
+      - name: Artifact-level guard probe (hostile env, planted config)
+        run: |
+          GOOSE_PROVIDER=openai \
+          OPENAI_API_KEY=hostile-ambient-key \
+          XAI_API_KEY=hostile-ambient-xai \
+          WEBKIT_DISABLE_COMPOSITING_MODE=1 \
+          xvfb-run -a --server-args="-screen 0 1280x1024x24" \
+            node scripts/artifact-guard-probe.mjs src-tauri/target/release/alfred
+
   # ---- supply chain: OSV, gitleaks, Syft SBOM + Grype ------------------------
   supply-chain:
     runs-on: ubuntu-latest
