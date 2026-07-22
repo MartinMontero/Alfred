@@ -260,3 +260,21 @@ and place the staged sidecar next to the raw exe. Until then: the Linux job is t
 per-push proof (identical compiled guard), the Rust `guard_tests` cover spawn/env, and
 `recipes.live` exercises the real Windows sidecar in the release lane.
 
+**CI run (PR #22, run 29883573480):** verify / rust / supply-chain / quality all green;
+`artifact-guard` job = `…/actions/runs/29883573480/job/88809385185` (running at ledger time;
+final URL confirmed at Stage-1 close). This is the run URL Holmes STATE.md cross-links for
+the RC unblock — delivered here, the Holmes-side edit is Holmes's.
+
+### TRACK 3 — perimeter remainder, items (2)(3)(4) (this PR) — DONE / one PENDING-Martin by design
+
+| item | status | evidence class | proof |
+|---|---|---|---|
+| **(2) OS/artifact-level egress** | GAP-LEDGERED (honest) | EXECUTED (reads) | **Exists:** the in-process L1a proxy (`guard.rs` `GuardState::proxy_addr` → `EgressProxy::spawn`) with the goose child's `HTTP(S)_PROXY` pinned to it and `NO_PROXY` cleared (`sanitized_spawn`; proven by the artifact probe: child `HTTPS_PROXY=http://127.0.0.1:<ephemeral>`). This is a **cooperative-process** control. **Gap (ledgered, not closed):** no OS-level egress enforcement exists in the tree (`grep firewall\|iptables\|seccomp\|namespace\|WFP` → none; `job_guard.rs` is lifecycle kill-on-close, not egress). The crate's own honest residual holds verbatim: *"a hostile binary that ignores proxy environment variables escapes this library-level boundary"* (`holmes-guard/src/proxy.rs`). OS-level egress (WFP on Windows / netns on Linux) is a **ledgered future work item**, not a beta deliverable. No silent middle. |
+| **(3a) signed update channel** | VERIFIED | REPORTED (Martin, live) | `tauri.conf.json` updater endpoint `https://github.com/MartinMontero/Alfred/releases/latest/download/latest.json`, pubkey present, `createUpdaterArtifacts: true`. Flow = three explicit user consent steps, signature-verify-then-install, never automatic (`src/lib/updater.ts`, `Settings.tsx`). Martin's live intake (LOOP.md:628-630): *"Update feed VERIFIED-LIVE: GET releases/latest/download/latest.json → HTTP 200, version 0.1.1, minisign signature embedded"* (beta.2 published 2026-07-19). |
+| **(3b) rollback exercise** | PENDING-Martin | REPORTED (partial) | Rollback checklist authored for Martin: `docs/beta/rollback-checklist.md` — consistent with the comparator rule (rollback = higher-numbered release carrying prior code) and journey J6 (updater dry-run against a **local** `latest.json`, no live publish). Status stays PENDING-Martin until his beta.2→beta.3 live update-cycle walk + a rollback dry-run land; then VERIFIED in both ledgers. **This item gates the beta.4 publish.** |
+| **(4) memory/resurfacing channel** | VERIFIED | EXECUTED (reads) | Born-redacted **by construction**: `telemetry.rs` `TelemetryEvent` is a typed allowlist — counts/durations/booleans/enums/stable ids only, **no field for a note body / prompt / tool arg / key / file content** (module doc: *"redaction is structural … such data cannot be written"*). Canary `born_redacted_canary_no_secret_or_note_body_on_disk` scans the db + WAL/SHM with a raw-write control guarding against a blind scan (`telemetry_tests.rs`; green in the 50-test cargo run). Live tap `session-tap.ts` reads ONLY bounded scalars/ids (ToolKind, stopReason, toolCallId, clock) — content-bearing ACP fields never enter an event; inert unless telemetry opted in; one writer (`telemetry_record`). Memory-proposal gate `memory-review.ts` is **proposal-only** (`auto-promote` only for clean user-authored facts; agent-authored → `needs-review`; obfuscation/policy-tamper → hard `reject`) with a `POLICY_TAMPER` regex guarding the lockdown. |
+
+**Loop-E sentence (recorded, per the brief):** Holmes's Loop E later rides **this** born-redacted
+memory/telemetry channel and is granted **no new one** — the typed-allowlist store + the
+single-writer `telemetry_record` command is the only resurfacing surface.
+
