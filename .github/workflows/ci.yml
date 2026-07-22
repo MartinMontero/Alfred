@@ -82,6 +82,12 @@ jobs:
       - name: Tauri Rust/JS version-alignment guard
         run: npm run check:tauri-align
 
+      # Structural boundary gate (integration-brief §6): Alfred's tree never
+      # reaches the quarantine accessor, constructs a sealed safety token, or
+      # renders a raw (un-emitted) pack. Seconds-cheap, like zero-Soapbox.
+      - name: Guard boundary gate (Holmes safety boundary)
+        run: npm run check:guard-boundary
+
       - name: Zero-Soapbox dependency gate
         run: |
           if grep -riE 'soapbox|@nostrify' package.json package-lock.json .mcp.json; then

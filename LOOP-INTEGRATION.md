@@ -278,3 +278,30 @@ the RC unblock — delivered here, the Holmes-side edit is Holmes's.
 memory/telemetry channel and is granted **no new one** — the typed-allowlist store + the
 single-writer `telemetry_record` command is the only resurfacing surface.
 
+### TRACK 4 — embed the analytical surface, D-14 Option A (this PR) — DONE
+
+The compiled analytical projection (`src-tauri/src/analytical.rs`, 11 tests) + the lab-register
+render surface (`src/components/AnalyticalPanel.tsx`, `src/lib/analytical.ts`, 4 helper tests),
+wired into the shell as the **Evidence** nav item (desktop-gated).
+
+| item | status | evidence class | proof |
+|---|---|---|---|
+| Flow: operator brief → ResearchBrief → emission gate → render | DONE | EXECUTED | `analytical_emit`: operator brief → `ResearchBrief::new` → `EvidencePack` → `emission::emit` (the real lock-1a + lock-2.5b gate). `emit_produces_a_rendered_pack_with_every_honesty_field` green |
+| **Render ONLY EmittedEvidencePack** (compiler-backed) | DONE | EXECUTED | `EmittedPackDto::from_emitted(&EmittedEvidencePack)` is the sole constructor — no `from_pack`; a raw pack has no render path. The boundary gate forbids `from_pack` / `EmittedEvidencePack::pack(&` / sealed struct literals |
+| Render the honesty untruncated | DONE | EXECUTED | knowability, the three-part limits, uncertainty, `[eliminated]` labels, risk flags, recommendation all project to the DTO and render (`AnalyticalPanel.tsx`); `limitsSections`/`isEliminated`/`hypothesisText` tests pin no-truncation |
+| Gate denials rendered, not swallowed | DONE | EXECUTED | `EmitOutcome::Denied { reason, class }` surfaced verbatim in UI; `emit_surfaces_the_uncorroborated_denial_verbatim`, `emit_denies_confident_uncalibrated_and_names_the_remedy`, `emit_denies_missing_limits` |
+| Approval (2.5c): preview via ActionPreview; grants mint from operator approval | DONE | EXECUTED | `analytical_preview_approval` grants nothing; `analytical_decide_approval` — Approved→one grant/tool, Denied→zero (`approved_mints_one_grant_per_tool_denied_mints_zero`); ToolGrant sealed, minted only here |
+| Consent (2.5d): mints only from operator UI | DONE | EXECUTED | `analytical_record_consent` (empty reference refused as forgery), `analytical_assess_targeting` (private individual refused permanently) — never from case content; `consent_mints_only_*`, `targeting_refuses_a_private_individual_permanently` |
+| Reader separation honored (documented) | DONE | CANON | no live quarantined reader ships this beta (investigative absent); the in-process trust limit is documented in Holmes `docs/security.md` and the separate-no-tools-process rule holds when it runs — not enabled here |
+| Rider (a): investigative feature absent, grep-proven | DONE | EXECUTED | Alfred's `holmes-core` dep enables no features (`cargo tree -f` → `default` only); compile-time `const _: () = assert!(holmes_core::observability::INVESTIGATIVE_ABSENT)` in `analytical.rs` breaks the build if ever enabled |
+| Rider (b): beta copy states investigative not shipped | DONE | EXECUTED | steward-register sentence in `AnalyticalPanel.tsx` (where testers see it), `README.md`, and `docs/beta/known-issues.md` ("Investigative mode is not shipped this beta") |
+| Boundary check (Alfred-side, CI-cheap) | DONE | EXECUTED | `scripts/check-guard-boundary.mjs` (self-tested: catches quarantine-accessor + sealed-literal); `npm run check:guard-boundary` in `verify:all` + a blocking `ci.yml` step; **clean over 198 files** |
+| Lab register (0006) + two-layer rule (0005) | DONE | EXECUTED | muted-steel `--reg-evidence-accent`, verdict-first, no glow/violet; `knowabilityLabel` test asserts no loop/build vocabulary in UI copy |
+| typecheck / vitest / builds / cargo | DONE | EXECUTED | tsc 0; vitest **256 passed \| 2 skipped**; both builds green; cargo **61 passed** (12 + 38 guard + 11 analytical) |
+
+**Deliberate beta scope (stated, not a gap):** the six-phase `AnalyticalCase` collection machine
+(live tools, the quarantined reader) is **not** driven — that IS the investigative/collection
+surface rider (a) keeps absent. The beta ships the emission gate + honest rendering + the
+approval/consent operator patterns. The direct-`emit()` path runs the identical gate the case
+machine's `resolve()` calls, so the honesty guarantees are the same.
+

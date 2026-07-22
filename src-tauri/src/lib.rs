@@ -23,6 +23,12 @@ mod guard;
 #[cfg(test)]
 mod guard_tests;
 
+// The analytical surface (Track 4, D-14 Option A): holmes-core IPC projection —
+// render only EmittedEvidencePack; operator-only approval/consent mints.
+mod analytical;
+#[cfg(test)]
+mod analytical_tests;
+
 #[cfg(not(target_os = "android"))]
 use keyring::Entry;
 use notify::{Config, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
@@ -1344,6 +1350,11 @@ pub fn run() {
             guard::guard_goose_kill_all,
             guard::guard_goose_recipe_validate,
             guard::guard_goose_recipe_run,
+            analytical::analytical_emit,
+            analytical::analytical_preview_approval,
+            analytical::analytical_decide_approval,
+            analytical::analytical_record_consent,
+            analytical::analytical_assess_targeting,
             telemetry_record,
             telemetry_wipe,
             telemetry_metrics,

@@ -25,7 +25,8 @@
     "test:rust": "cargo test --manifest-path src-tauri/Cargo.toml",
     "check:exclusion": "tsx ../wecanjustbuildthings.dev/enforcement/cli.ts layer1 --tree . && tsx ../wecanjustbuildthings.dev/enforcement/cli.ts layer2 --tree .",
     "check:exclusion:l3": "tsx ../wecanjustbuildthings.dev/enforcement/cli.ts layer3 --tree . || exit 0",
-    "verify:all": "npm run typecheck && npm run typecheck:mcp && npm run test && npm run test:rust && npm run check:exclusion && npm run check:exclusion:l3 && npm run build && npm run build:web",
+    "check:guard-boundary": "node scripts/check-guard-boundary.mjs .",
+    "verify:all": "npm run typecheck && npm run typecheck:mcp && npm run test && npm run test:rust && npm run check:exclusion && npm run check:exclusion:l3 && npm run check:guard-boundary && npm run build && npm run build:web",
     "postinstall": "patch-package",
     "check:tauri-align": "node scripts/check-tauri-alignment.mjs"
   },

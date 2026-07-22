@@ -18,6 +18,7 @@ const Home = lazy(() => import('./components/Home'));
 // Desktop-only goose harness panel — keeps the ACP SDK, Tauri shell, and xterm
 // out of the web/startup bundle (rendered behind <Show> on desktop only).
 const GoosePanel = lazy(() => import('./components/GoosePanel'));
+const AnalyticalPanel = lazy(() => import('./components/AnalyticalPanel'));
 import OutlinePanel from './components/OutlinePanel';
 import BacklinksPanel from './components/BacklinksPanel';
 import PropertiesPanel from './components/PropertiesPanel';
@@ -146,6 +147,7 @@ const App: Component = () => {
   );
   // goose agent panel (desktop only)
   const [showGoose, setShowGoose] = createSignal(false);
+  const [showAnalytical, setShowAnalytical] = createSignal(false);
   const [gooseWidth, setGooseWidth] = createSignal(
     parseInt(localStorage.getItem('goose_width') || '500')
   );
@@ -2966,6 +2968,16 @@ const App: Component = () => {
               </svg>
               Agent
             </button>
+            <button
+              class="study-nav__item study-nav__item--evidence"
+              classList={{ 'study-nav__item--on': showAnalytical() }}
+              onClick={() => setShowAnalytical(!showAnalytical())}
+            >
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+              Evidence
+            </button>
           </div>
         </Show>
         <div class="study-nav__group study-nav__group--last">
@@ -3436,6 +3448,12 @@ const App: Component = () => {
                 }}
                 onPresenceChange={setAgentPresence}
               />
+            </div>
+          </Show>
+
+          <Show when={showAnalytical() && !isMobileApp() && !isWeb()}>
+            <div class="analytical-dock" data-register="evidence">
+              <AnalyticalPanel onClose={() => setShowAnalytical(false)} />
             </div>
           </Show>
 
