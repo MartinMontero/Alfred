@@ -107,7 +107,9 @@ version are distinct and BOTH required:
   is greater than the installed one — re-cutting a tag without bumping the
   numeric means installed apps will never see the new build.
 - Recorded pairs: `v0.1.0-beta.1` ↔ `0.1.0` (never published) ·
-  `v0.1.0-beta.2` ↔ `0.1.1` (published 2026-07-19) · `v0.1.0-beta.3` ↔ `0.1.2`.
+  `v0.1.0-beta.2` ↔ `0.1.1` (published 2026-07-19) · `v0.1.0-beta.3` ↔ `0.1.2` ·
+  `v0.1.0-beta.4` ↔ `0.1.3` (proposed, unpublished — gated on Track 3(3) VERIFIED
+  + Martin's word; Holmes Stage 1).
 - Tester-facing release notes live at `docs/beta/RELEASE-NOTES-<tag>.md`; the
   release workflow reads that file into the release body and the update
   dialog's notes. Write it before pushing the tag.

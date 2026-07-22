@@ -11300,3 +11300,114 @@ button.sync-status {
   padding: 0;
 }
 button.sync-status.clickable { cursor: pointer; }
+
+/* ==========================================================================
+   Analytical surface (Track 4, D-14 Option A) — lab register (ADR-0006):
+   muted steel/cyan, verdict-first, serif for the finding, mono for the badges.
+   No cosmic-purple, no glow (0006 §2). Two-layer rule: no loop vocabulary.
+   ========================================================================== */
+.analytical-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 16px;
+  border-left: 2px solid var(--reg-evidence-accent);
+  background: var(--reg-evidence-accent-muted);
+  overflow-y: auto;
+}
+.analytical-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.analytical-panel__title {
+  font-family: var(--font-data);
+  letter-spacing: 0.02em;
+  color: var(--reg-evidence-accent);
+}
+.analytical-panel__scope-note {
+  font-size: 0.86em;
+  line-height: 1.5;
+  color: var(--text-secondary, var(--text));
+  border: 1px solid var(--ev-flag-border);
+  background: var(--ev-flag-bg);
+  border-radius: 6px;
+  padding: 8px 10px;
+  margin: 0;
+}
+.analytical-panel__error { color: var(--danger); font-family: var(--font-data); font-size: 0.85em; }
+
+.analytical-denial {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border: 1px solid var(--ev-invalid-border);
+  background: var(--ev-invalid-bg);
+  border-radius: 6px;
+  padding: 10px 12px;
+}
+.analytical-denial__reason { margin: 0; font-family: var(--font-data); font-size: 0.85em; color: var(--ev-invalid-text); }
+
+.evidence-pack { display: flex; flex-direction: column; gap: 14px; }
+.evidence-pack__question {
+  font-family: var(--font-canon);
+  font-size: 1.15em;
+  line-height: 1.35;
+  margin: 0;
+  color: var(--text);
+}
+.evidence-pack__knowability {
+  margin: 0;
+  font-family: var(--font-data);
+  font-size: 0.82em;
+  color: var(--reg-evidence-accent);
+}
+
+.finding { display: flex; flex-direction: column; gap: 6px; padding: 10px 0; border-top: 1px solid var(--border); }
+.finding--superseded { opacity: 0.66; }
+.finding__claim { margin: 0; font-family: var(--font-canon); line-height: 1.4; }
+.finding__provenance { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.provenance__source { font-family: var(--font-data); font-size: 0.8em; color: var(--reg-evidence-accent); overflow-wrap: anywhere; }
+.provenance__quote {
+  margin: 3px 0 0;
+  padding-left: 10px;
+  border-left: 2px solid var(--ev-flag-border);
+  font-style: italic;
+  font-size: 0.9em;
+  color: var(--text-secondary, var(--text));
+}
+
+.limits { border: 1px solid var(--ev-flag-border); background: var(--ev-flag-bg); border-radius: 6px; padding: 10px 12px; }
+.limits__title { margin: 0 0 8px; font-family: var(--font-data); font-size: 0.85em; color: var(--ev-flag-text); }
+.limits__part { margin-bottom: 8px; }
+.limits__part:last-child { margin-bottom: 0; }
+.limits__label { font-family: var(--font-data); font-size: 0.78em; color: var(--ev-flag-text); display: block; margin-bottom: 2px; }
+.limits__part ul { margin: 0; padding-left: 18px; }
+.limits__part li { line-height: 1.45; }
+
+.evidence-pack__uncertainty {
+  margin: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--ev-mid-border);
+  background: var(--ev-mid-bg);
+  color: var(--ev-mid-text);
+  border-radius: 6px;
+  font-size: 0.9em;
+  line-height: 1.45;
+}
+
+.hypotheses__title { margin: 0 0 6px; font-family: var(--font-data); font-size: 0.85em; color: var(--reg-evidence-accent); }
+.hypotheses ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.hypothesis { display: flex; align-items: baseline; gap: 8px; line-height: 1.4; }
+.hypothesis--eliminated { color: var(--text-secondary, var(--text)); text-decoration: line-through; text-decoration-color: var(--ev-invalid-border); }
+.hypothesis--eliminated .ev-badge { text-decoration: none; }
+
+.risk-flags { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.risk-flags__item { display: flex; align-items: baseline; gap: 8px; font-size: 0.9em; line-height: 1.4; }
+
+.evidence-pack__recommendation { margin: 0; line-height: 1.45; }
+.evidence-pack__rec-label { font-family: var(--font-data); font-size: 0.82em; color: var(--reg-evidence-accent); }
+
+/* Analytical dock — the evidence panel's shell slot (mirrors the agent dock). */
+.analytical-dock { width: 380px; display: flex; flex-direction: column; min-height: 0; }
+.study-nav__item--evidence.study-nav__item--on { color: var(--reg-evidence-accent); }

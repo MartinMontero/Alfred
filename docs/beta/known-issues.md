@@ -46,3 +46,11 @@ printing. Never run `npm audit fix --force` — it installs a breaking exceljs d
 Alfred's skill system (reusable agent workflows) is switched off while its
 security review finishes. The agent still reads, searches, and — with your
 approval — writes notes; skills return in a later beta.
+
+## Investigative mode is not shipped this beta
+The Evidence panel shows analytical findings after they pass the evidence gate,
+with each finding's limits stated in full. Collecting the evidence for you — the
+investigative mode — is **not switched on** this beta: it sits behind separate
+safety gates (targeting limited to power, never private individuals; disclosure
+only with recorded consent; tool use only after your explicit approval). What
+you see this beta is the review surface, not a collector.

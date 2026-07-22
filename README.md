@@ -66,7 +66,12 @@ Phases 6–7 ahead: the AT Protocol domain pack, then platform integration and i
 - An **MCP server** that hands your AI tools the vault as ground truth, read-first and
   write-confirmed, so an agent works from your decisions instead of guessing.
 - An **embedded goose harness** that runs agentic work against the vault, with the
-  provider denylist, the recipe safety scanner, and tool-permission gating all in the path.
+  compiled provider guard, the recipe safety scanner, and tool-permission gating all in
+  the path.
+- An **evidence review surface** that shows analytical findings only after they pass the
+  evidence gate, with each finding's limits stated in full. Collecting evidence for you —
+  the investigative mode — is **not part of this beta**; it sits behind separate safety
+  gates and is not switched on.
 
 ## Principles
 

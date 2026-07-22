@@ -260,3 +260,98 @@ and place the staged sidecar next to the raw exe. Until then: the Linux job is t
 per-push proof (identical compiled guard), the Rust `guard_tests` cover spawn/env, and
 `recipes.live` exercises the real Windows sidecar in the release lane.
 
+**★ RC-UNBLOCK URL (green on Alfred `main`) ★**
+`https://github.com/MartinMontero/Alfred/actions/runs/29883979445/job/88810606926`
+— the `artifact-guard` job on main (merge commit `513a34e`), conclusion **success**: the
+"Build the release artifact (tauri build)" step and the "Artifact-level guard probe (hostile
+env, planted config)" step both green. **This is the single link Holmes `STATE.md` cross-links
+to flip Holmes RC from BLOCKED.** Delivered here; the Holmes-side `STATE.md` edit is Holmes's
+(this loop does not touch the Holmes repo). PR #22 run (pre-merge, same content):
+`…/runs/29883573480/job/88809385185`, also success.
+
+### TRACK 3 — perimeter remainder, items (2)(3)(4) (this PR) — DONE / one PENDING-Martin by design
+
+| item | status | evidence class | proof |
+|---|---|---|---|
+| **(2) OS/artifact-level egress** | GAP-LEDGERED (honest) | EXECUTED (reads) | **Exists:** the in-process L1a proxy (`guard.rs` `GuardState::proxy_addr` → `EgressProxy::spawn`) with the goose child's `HTTP(S)_PROXY` pinned to it and `NO_PROXY` cleared (`sanitized_spawn`; proven by the artifact probe: child `HTTPS_PROXY=http://127.0.0.1:<ephemeral>`). This is a **cooperative-process** control. **Gap (ledgered, not closed):** no OS-level egress enforcement exists in the tree (`grep firewall\|iptables\|seccomp\|namespace\|WFP` → none; `job_guard.rs` is lifecycle kill-on-close, not egress). The crate's own honest residual holds verbatim: *"a hostile binary that ignores proxy environment variables escapes this library-level boundary"* (`holmes-guard/src/proxy.rs`). OS-level egress (WFP on Windows / netns on Linux) is a **ledgered future work item**, not a beta deliverable. No silent middle. |
+| **(3a) signed update channel** | VERIFIED | REPORTED (Martin, live) | `tauri.conf.json` updater endpoint `https://github.com/MartinMontero/Alfred/releases/latest/download/latest.json`, pubkey present, `createUpdaterArtifacts: true`. Flow = three explicit user consent steps, signature-verify-then-install, never automatic (`src/lib/updater.ts`, `Settings.tsx`). Martin's live intake (LOOP.md:628-630): *"Update feed VERIFIED-LIVE: GET releases/latest/download/latest.json → HTTP 200, version 0.1.1, minisign signature embedded"* (beta.2 published 2026-07-19). |
+| **(3b) rollback exercise** | PENDING-Martin | REPORTED (partial) | Rollback checklist authored for Martin: `docs/beta/rollback-checklist.md` — consistent with the comparator rule (rollback = higher-numbered release carrying prior code) and journey J6 (updater dry-run against a **local** `latest.json`, no live publish). Status stays PENDING-Martin until his beta.2→beta.3 live update-cycle walk + a rollback dry-run land; then VERIFIED in both ledgers. **This item gates the beta.4 publish.** |
+| **(4) memory/resurfacing channel** | VERIFIED | EXECUTED (reads) | Born-redacted **by construction**: `telemetry.rs` `TelemetryEvent` is a typed allowlist — counts/durations/booleans/enums/stable ids only, **no field for a note body / prompt / tool arg / key / file content** (module doc: *"redaction is structural … such data cannot be written"*). Canary `born_redacted_canary_no_secret_or_note_body_on_disk` scans the db + WAL/SHM with a raw-write control guarding against a blind scan (`telemetry_tests.rs`; green in the 50-test cargo run). Live tap `session-tap.ts` reads ONLY bounded scalars/ids (ToolKind, stopReason, toolCallId, clock) — content-bearing ACP fields never enter an event; inert unless telemetry opted in; one writer (`telemetry_record`). Memory-proposal gate `memory-review.ts` is **proposal-only** (`auto-promote` only for clean user-authored facts; agent-authored → `needs-review`; obfuscation/policy-tamper → hard `reject`) with a `POLICY_TAMPER` regex guarding the lockdown. |
+
+**Loop-E sentence (recorded, per the brief):** Holmes's Loop E later rides **this** born-redacted
+memory/telemetry channel and is granted **no new one** — the typed-allowlist store + the
+single-writer `telemetry_record` command is the only resurfacing surface.
+
+### TRACK 4 — embed the analytical surface, D-14 Option A (this PR) — DONE
+
+The compiled analytical projection (`src-tauri/src/analytical.rs`, 11 tests) + the lab-register
+render surface (`src/components/AnalyticalPanel.tsx`, `src/lib/analytical.ts`, 4 helper tests),
+wired into the shell as the **Evidence** nav item (desktop-gated).
+
+| item | status | evidence class | proof |
+|---|---|---|---|
+| Flow: operator brief → ResearchBrief → emission gate → render | DONE | EXECUTED | `analytical_emit`: operator brief → `ResearchBrief::new` → `EvidencePack` → `emission::emit` (the real lock-1a + lock-2.5b gate). `emit_produces_a_rendered_pack_with_every_honesty_field` green |
+| **Render ONLY EmittedEvidencePack** (compiler-backed) | DONE | EXECUTED | `EmittedPackDto::from_emitted(&EmittedEvidencePack)` is the sole constructor — no `from_pack`; a raw pack has no render path. The boundary gate forbids `from_pack` / `EmittedEvidencePack::pack(&` / sealed struct literals |
+| Render the honesty untruncated | DONE | EXECUTED | knowability, the three-part limits, uncertainty, `[eliminated]` labels, risk flags, recommendation all project to the DTO and render (`AnalyticalPanel.tsx`); `limitsSections`/`isEliminated`/`hypothesisText` tests pin no-truncation |
+| Gate denials rendered, not swallowed | DONE | EXECUTED | `EmitOutcome::Denied { reason, class }` surfaced verbatim in UI; `emit_surfaces_the_uncorroborated_denial_verbatim`, `emit_denies_confident_uncalibrated_and_names_the_remedy`, `emit_denies_missing_limits` |
+| Approval (2.5c): preview via ActionPreview; grants mint from operator approval | DONE | EXECUTED | `analytical_preview_approval` grants nothing; `analytical_decide_approval` — Approved→one grant/tool, Denied→zero (`approved_mints_one_grant_per_tool_denied_mints_zero`); ToolGrant sealed, minted only here |
+| Consent (2.5d): mints only from operator UI | DONE | EXECUTED | `analytical_record_consent` (empty reference refused as forgery), `analytical_assess_targeting` (private individual refused permanently) — never from case content; `consent_mints_only_*`, `targeting_refuses_a_private_individual_permanently` |
+| Reader separation honored (documented) | DONE | CANON | no live quarantined reader ships this beta (investigative absent); the in-process trust limit is documented in Holmes `docs/security.md` and the separate-no-tools-process rule holds when it runs — not enabled here |
+| Rider (a): investigative feature absent, grep-proven | DONE | EXECUTED | Alfred's `holmes-core` dep enables no features (`cargo tree -f` → `default` only); compile-time `const _: () = assert!(holmes_core::observability::INVESTIGATIVE_ABSENT)` in `analytical.rs` breaks the build if ever enabled |
+| Rider (b): beta copy states investigative not shipped | DONE | EXECUTED | steward-register sentence in `AnalyticalPanel.tsx` (where testers see it), `README.md`, and `docs/beta/known-issues.md` ("Investigative mode is not shipped this beta") |
+| Boundary check (Alfred-side, CI-cheap) | DONE | EXECUTED | `scripts/check-guard-boundary.mjs` (self-tested: catches quarantine-accessor + sealed-literal); `npm run check:guard-boundary` in `verify:all` + a blocking `ci.yml` step; **clean over 198 files** |
+| Lab register (0006) + two-layer rule (0005) | DONE | EXECUTED | muted-steel `--reg-evidence-accent`, verdict-first, no glow/violet; `knowabilityLabel` test asserts no loop/build vocabulary in UI copy |
+| typecheck / vitest / builds / cargo | DONE | EXECUTED | tsc 0; vitest **256 passed \| 2 skipped**; both builds green; cargo **61 passed** (12 + 38 guard + 11 analytical) |
+
+**Deliberate beta scope (stated, not a gap):** the six-phase `AnalyticalCase` collection machine
+(live tools, the quarantined reader) is **not** driven — that IS the investigative/collection
+surface rider (a) keeps absent. The beta ships the emission gate + honest rendering + the
+approval/consent operator patterns. The direct-`emit()` path runs the identical gate the case
+machine's `resolve()` calls, so the honesty guarantees are the same.
+
+
+---
+
+## STAGE 1 CLOSE — verdict table + gate handoff
+
+### The four Holmes cross-repo obligations (brief §7 definition of done)
+
+| Obligation | Verdict | Linked evidence |
+|---|---|---|
+| 1. Artifact-level guard CI test (RC unblock) | **VERIFIED** | `artifact-guard` green on main: `…/runs/29883979445/job/88810606926` (tauri build + guard probe, 15/15 locally). Required-check click is Martin's (gate below). |
+| 2. OS/artifact-level egress enforcement | **VERIFIED-with-honest-residual** | L1a proxy env pinned on the shipped artifact (probe: `HTTPS_PROXY=http://127.0.0.1:<ephemeral>`, `NO_PROXY` absent); the documented residual (hostile binary ignoring proxy env) is ledgered as future OS-level work, not closed — Track 3(2). |
+| 3. Signed update channel with rollback | **VERIFIED (channel) · PENDING-Martin (rollback exercise)** | channel live + minisign-signed (Martin's beta.2 intake, LOOP.md:628-630); rollback checklist authored (`docs/beta/rollback-checklist.md`); the rollback dry-run walk is Martin's. **Gates the beta.4 publish.** |
+| 4. Memory/resurfacing channel | **VERIFIED** | born-redacted typed allowlist (`telemetry.rs`) + canary + single-writer; `session-tap.ts` reads only bounded scalars; `memory-review.ts` proposal-only. Loop E rides this channel, no new one. |
+
+### Stage-1 done-when (brief §7) — status
+
+- ✅ `provider-lockdown.ts` no longer exists (deleted, Track 1).
+- ✅ the artifact-level test is green on Alfred `main` (Track 2) — **required-check click is Martin's** (gate).
+- ✅ rider (b)'s sentence ships in beta copy (panel + README + known-issues, Track 4).
+- ◻ obligations read VERIFIED in **both** ledgers — Alfred side done here; the Holmes `STATE.md` edits (cross-link + status flips) are Holmes-side, Martin's.
+- ◻ obligation 3's rollback exercise is PENDING-Martin (the one non-code item, by design).
+
+### Baselines — evolved only as named, never silently shrunk
+
+| Baseline | At Stage-0 | At Stage-1 close | Delta (accounted) |
+|---|---|---|---|
+| vitest | 321 passed \| 4 skipped | **256 passed \| 2 skipped** | −70 TS policy tests (mapped to Rust), +5 new TS tests (connect-errors, analytical helpers), −2 Windows-live skips (superseded) — full map in `docs/audit/holmes-stage1-track1-mapping.md` |
+| cargo | 12 | **61** | +38 guard/direct-chat, +11 analytical (incl. a spawn-execution proof) |
+| contrast | 33/33 | **33/33** | new lab-register UI uses existing evidence tokens; no new pairs |
+| CI jobs | 4 (verify/rust/supply-chain/quality) | **5** (+ artifact-guard) | Track 2 |
+| exclusion L1/L2 | clean | **clean** | dep resolved; L3 advisory 23→17 (compiled denylist + tests, same exempt class) |
+
+### GATES awaiting Martin (execution order)
+
+1. **Make `artifact-guard` a required status check on `main`** (branch-protection click) — the RC-unblock job is green; binding it makes the guarantee permanent.
+2. **Holmes `STATE.md` cross-link + obligation flips** (Holmes-side edit): paste the RC-unblock URL above into the RC gate; flip obligations 1/2/4 → VERIFIED, 3 → VERIFIED-channel/PENDING-rollback, and the adoption row → done. This loop deliberately does not touch the Holmes repo.
+3. **Run the rollback dry-run** (`docs/beta/rollback-checklist.md`, journey J6 against a local `latest.json`) + the beta.2→beta.3 live update-cycle walk — flips obligation 3 to fully VERIFIED and clears the beta.4 publish gate.
+4. **Publish `v0.1.0-beta.4` ↔ `0.1.3`** — GATED on #3 VERIFIED + Martin's word. The version bump is committed here as its own unpublished commit; publishing is not part of this loop.
+5. **Pin bump (optional, separate decision):** re-pin Holmes to its RC tag when cut (its own commit); and/or bump Alfred's staged goose 1.41.0 → the Holmes-verified 1.43.0 (requires a Windows re-stage + live-goose re-verify).
+6. **Windows artifact-probe follow-up (ledgered, flag 3):** wire `scripts/artifact-guard-probe.mjs` into `release.yml` against the Windows `.exe` (msedgedriver + sidecar placement) — the probe is already platform-aware.
+
+### Honest limits (verbatim, for release notes and anywhere the guard is described)
+
+The guard governs Alfred's own sessions — a user's separately installed stock goose is theirs;
+AGPL forks can strip anything — governance, not the binary, answers for forks; nothing in this
+loop claims otherwise anywhere.
