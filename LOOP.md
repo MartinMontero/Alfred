@@ -3,9 +3,10 @@
 ## SCOPE
 Take Alfred from mid-Phase-5 to an open-beta MVP a stranger can install and a non-coder can onboard:
 Phase 5 complete + audited, skills channel locked or proven closed, real CI gate, signed (or
-risk-accepted) beta installer with working updater, zero-backend PWA live on a
-wecanjustbuildthings.dev subdomain with its reduced security model stated honestly, beta docs +
-feedback channel.
+risk-accepted) beta installer with working updater, beta docs + feedback channel. **No hosted web
+app (ADR-0010, builder's ruling 2026-07-23): Alfred ships desktop-only; the `build:web` target is
+an internal dev/test harness, never deployed. The wecanjustbuildthings.dev presence is a public
+explainer/landing page that links to the desktop download — not the app.**
 
 **OUT (non-goals):** Phases 6–7 (AT Protocol pack; platform integration + i18n). Zapstore. Skillsmith
 auto-install wiring. Any lock code before the skills ADR is Accepted. Cert/key purchases executed by
@@ -53,7 +54,7 @@ key — builder's setup, not the app) → Publish (one-way; activates the first 
 Full-app-verify note: this container can't build Tauri (gdk absent), so the ACL fix's runtime
 proof is the builder's installed walk, not an in-container run. Superseded cuts kept for the record: beta.1@1801bc3 (unpublished, F1–F11 → PASS 3),
 beta.2@24799e2 (skin, no IA → PASS 4), @9c1af56 (Calm-HUD shell), @5a1e37f (nav rail).
-Then W7 PWA (subdomain word pending) → W8 docs/SHIP.**
+Then W8 docs/SHIP. **(W7 "PWA deploy" is RETIRED — ADR-0010: no hosted web app; a public explainer/landing page may replace it later, separate from the app.)**
 
 ## W6 (2026-07-17→19) — beta.1 tagged + smoke-tested (unpublished by ruling); F1–F11 fixed;
 ## 0.1.1 floor; beta.2 tagged + lane GREEN; publish gate open
@@ -334,7 +335,7 @@ cut from main + proceed to W1 (W1 needs `cc-prompt-alfred-study-instrument-land.
 
 ## PRIOR: STAGE B POINTER (kept for history)
 Stage order: A ✓ (committed b5c1a98..d1d96e3, pushed 2026-07-12) → B (now) → C three locks
-(ADR-0003 Accepted — authorized after B) → D CI gate → E release → F PWA deploy → G launch gate.
+(ADR-0003 Accepted — authorized after B) → D CI gate → E release → ~~F PWA deploy~~ (RETIRED, ADR-0010) → G launch gate.
 
 ## GATE A OUTCOME (2026-07-12, builder's words verbatim)
 1. permission gate: "fix as recommended" → option (a). 2. skills: "build the locks" → ADR-0003
@@ -532,7 +533,9 @@ pushed) before this loop started. The task's "ADR-0002 (skills)" is therefore **
       its own comment. W5 work. Earlier "hash-verified" phrasing in session reports overstated;
       corrected here.)
 - [ ] MCP server bundled — no npx tsx dependency in the packaged app.
-- [ ] PWA live at the confirmed wecanjustbuildthings.dev subdomain; delta notice visible; live
+- [x] ~~PWA live at the confirmed wecanjustbuildthings.dev subdomain~~ — RETIRED per ADR-0010
+      (no hosted web app; Alfred ships desktop-only). Replaced (optional, later) by a public
+      explainer/landing page that links to the desktop download — tracked separately, not the app; live
       journeys EXECUTED post-deploy.
 - [ ] Onboarding completable by a non-coder (Ollama path or guided key) — walked, not assumed.
 - [ ] Telemetry opt-in/wipe/export reachable in Settings; off by default; byte-scan canary still green.
@@ -548,7 +551,7 @@ J3 goose session with permission prompts (read auto via goose-side allow; write/
 J4 Recipe pre-flight: open recipe → ActionPreview → approve/reject → run.
 J5 Telemetry opt-in → session → metrics view → wipe; off-means-off re-check.
 J6 Update check on installed app (updater dry-run vs local latest.json).
-J7 PWA: load → notes CRUD → persistence across reload → delta notice visible.
+J7 (web harness, internal-only per ADR-0010 — dev smoke test, NOT a ship journey): load → notes CRUD → persistence across reload.
 J8 Beta tester: download → install (SmartScreen path documented) → onboard without hand-editing
    config.
 Desktop journeys J1–J6 EXECUTE on Windows (Martin / runner). J7 executes here via wrangler dev at
