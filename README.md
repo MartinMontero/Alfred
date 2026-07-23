@@ -56,8 +56,10 @@ Phases 6–7 ahead: the AT Protocol domain pack, then platform integration and i
 - **Nostr sync** — content is **NIP-44** encrypted with your keys *before* it reaches a
   relay; only you can decrypt it.
 - **Secure storage** — private keys live in the OS credential store and are never logged.
-- **One codebase, two builds** — a **Tauri desktop app** and a zero-backend **PWA**,
-  behind a `src/platform/{tauri,web}` abstraction.
+- **A desktop app, by design** — Alfred is a native desktop application. There is **no
+  hosted web version and no browser app**: local-first means your program and your files
+  live on your own machine, not on someone else's server. That is the whole point, not a
+  limitation.
 
 **As an external mind for agentic development:**
 
@@ -108,9 +110,6 @@ npm install
 # Desktop dev (Tauri)
 npm run tauri dev
 
-# Web/PWA production build  ->  dist-web/
-npm run build:web
-
 # Desktop production build  ->  src-tauri\target\release\<app>.exe
 #                               + installers in bundle\{msi,nsis}\
 npm run tauri build
@@ -118,6 +117,13 @@ npm run tauri build
 
 Code signing is a distribution step, deferred until release (unsigned installers trigger
 SmartScreen but build and run locally).
+
+> **Internal note (not a shipping target):** `npm run build:web` produces a browser
+> build under `dist-web/`. It exists **only** as an internal development and test
+> harness — CI runs the accessibility/performance gates against it because the shared
+> container cannot build Tauri. It is never deployed, never published, and never offered
+> to users. Alfred ships as the desktop app only. See
+> [`docs/decisions/0010-no-hosted-web-app.md`](docs/decisions/0010-no-hosted-web-app.md).
 
 ## How sync works
 

@@ -61,10 +61,13 @@ const webPlugins =
           // first paint (~435ms on the Lighthouse mobile profile, F22).
           injectRegister: 'script-defer',
           includeAssets: ['icons/icon.png', 'icons/128x128.png', 'icons/128x128@2x.png'],
+          // Alfred ships desktop-only (ADR-0010). This web build is an INTERNAL
+          // dev/test harness, never shipped or hosted — the manifest is labeled
+          // so a stray load never presents as the real product.
           manifest: {
-            name: 'Alfred',
-            short_name: 'Alfred',
-            description: 'Agentic development brain for builders using the Wecanjustbuildthings.dev connective intelligence system.',
+            name: 'Alfred (internal web harness — not the app)',
+            short_name: 'Alfred (dev)',
+            description: 'Internal development/test harness for Alfred. Alfred ships as a desktop app only; this is never deployed. See ADR-0010.',
             theme_color: '#1e1e1e',
             background_color: '#1e1e1e',
             display: 'standalone',

@@ -16,8 +16,12 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
+// Scope: IN-APP user copy — strings a non-developer reads inside the app —
+// plus the release-notes boilerplate. The README is a project/GitHub doc, not
+// in-app copy: it is the place where "local-first" is deliberately EXPLAINED
+// (ADR-0010, the explainer intent), so it is out of this gate's scope. Its
+// lead tagline is human-reviewed.
 const SURFACES = [
-  'README.md',
   '.github/workflows/release.yml',
   'src/App.tsx',
   'src/components/Settings.tsx',
