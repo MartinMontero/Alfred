@@ -113,3 +113,20 @@ version are distinct and BOTH required:
 - Tester-facing release notes live at `docs/beta/RELEASE-NOTES-<tag>.md`; the
   release workflow reads that file into the release body and the update
   dialog's notes. Write it before pushing the tag.
+
+## Updater feed shape (ADR-0009, canon since beta.4)
+
+The release lane authors `latest.json` itself — `scripts/updater-feed.mjs
+build` replaces tauri-action's asset — because the plugin probes
+`{os}-{arch}-{installer}` before `{os}-{arch}` and installs whatever the feed
+serves with no installed-type check (the beta.2→beta.3 MSI defect). The feed
+carries three keys, all built from the current run's artifacts:
+
+- `windows-x86_64-nsis` → `-setup.exe` + `.exe.sig` (the tester population)
+- `windows-x86_64-msi` → `.msi` + `.msi.sig`
+- `windows-x86_64` → the NSIS entry (fallback only)
+
+The lane then downloads the feed back off the release and hard-fails unless
+every key points at THIS tag's artifacts with matching signatures
+(`scripts/updater-feed.mjs verify` — also catches stale-merge inheritance).
+Never hand-edit `latest.json` on a release; re-run the lane instead.

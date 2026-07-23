@@ -54,3 +54,13 @@ investigative mode — is **not switched on** this beta: it sits behind separate
 safety gates (targeting limited to power, never private individuals; disclosure
 only with recorded consent; tool use only after your explicit approval). What
 you see this beta is the review surface, not a collector.
+
+## Updating from beta.2 needs one manual install
+beta.3's update feed pointed at the MSI installer while your app was installed
+by the setup.exe (NSIS, per-user) — so the in-app update either did nothing or
+installed a second, separate copy under `C:\Program Files\Alfred`, and About
+kept showing 0.1.1. To get current: download `Alfred_x64-setup.exe` from the
+latest release page and run it once — it updates your existing install in
+place. If Settings → Apps shows two Alfred entries, uninstall the one whose
+location is `C:\Program Files\Alfred` (keep the AppData one). From beta.4 on,
+the feed serves the right installer type and in-app updates work again.
