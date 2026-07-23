@@ -1,7 +1,7 @@
 [package]
 name = "alfred"
 version = "0.1.3"
-description = "Sovereign, local-first, Nostr-native PKM for builders who direct AI to build software"
+description = "Agentic development brain for builders using the Wecanjustbuildthings.dev connective intelligence system"
 authors = ["Martin Montero"]
 license = "AGPL-3.0-or-later"
 repository = "https://github.com/MartinMontero/Alfred"

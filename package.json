@@ -1,7 +1,7 @@
 {
   "name": "alfred",
   "version": "0.1.3",
-  "description": "Sovereign, local-first, Nostr-native PKM for builders who direct AI to build software \u2014 part of wecanjustbuildthings.dev",
+  "description": "Agentic development brain for builders using the Wecanjustbuildthings.dev connective intelligence system — part of wecanjustbuildthings.dev",
   "type": "module",
   "author": "Martin Montero",
   "repository": {
