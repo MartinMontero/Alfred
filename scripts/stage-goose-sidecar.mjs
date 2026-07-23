@@ -28,7 +28,7 @@ const EXE = IS_WIN ? '.exe' : '';
 // this is a SOFT check — a mismatch warns (so a re-stage against the wrong
 // version is visible) but never blocks. Bump this constant when the harness
 // version decision changes, and re-run the live-goose trio on Windows.
-const EXPECTED_GOOSE_VERSION = '1.41.0';
+const EXPECTED_GOOSE_VERSION = '1.43.0';
 
 function checkGooseVersion(bin) {
   try {

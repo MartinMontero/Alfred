@@ -190,7 +190,7 @@ jobs:
   # PLATFORM HONESTY (integration-brief flag 3): this job exercises the LINUX
   # artifact (ubuntu runner). The Windows artifact users install is built and
   # its spawn/handshake path exercised in release.yml (the live-goose trio on a
-  # Windows runner against the real staged goose 1.41.0). Extending the full
+  # Windows runner against the real staged goose 1.43.0). Extending the full
   # WebDriver artifact probe to Windows (msedgedriver + a goose.exe stub) is a
   # ledgered follow-up (LOOP-INTEGRATION.md, Track 2) that needs a Windows
   # runner to develop against; the probe script is already platform-aware.
