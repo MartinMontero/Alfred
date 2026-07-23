@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # Release lane (Stage D / E). Tag-triggered. Windows desktop + PWA is the beta
 # target; macOS/Linux/Android builds are deferred (roadmap — see SCOPE OUT).
-# EVERY action is SHA-pinned. Node 22. The goose 1.41.0 sidecar is downloaded and
+# EVERY action is SHA-pinned. Node 22. The goose 1.43.0 sidecar is downloaded and
 # staged in-workflow (pinned by version), so the bundle ships the real harness AND
 # the live-goose trio actually executes here (Windows runner) — unlike ci.yml.
 # Signing is guarded: the pipeline builds UNSIGNED when signing secrets are absent.
@@ -26,7 +26,7 @@ permissions:
 
 env:
   NODE_VERSION: '22'
-  GOOSE_VERSION: '1.41.0'
+  GOOSE_VERSION: '1.43.0'
 
 jobs:
   build-windows:
