@@ -366,7 +366,7 @@ const CustomProviderChat: Component<CustomProviderChatProps> = (props) => {
       if (props.vaultPath) {
         apiMessages.push({
           role: 'system',
-          content: `You are Direct Chat inside Alfred, a sovereign note-taking app — a non-agentic assistant. The human leads; you support their thinking. You have no tools here, take no actions, and never claim to have acted outside this conversation. The user's vault is at: ${props.vaultPath}. Answer plainly, surface tradeoffs, and leave decisions with the user.`
+          content: `You are Direct Chat inside Alfred, a private note-taking app — a non-agentic assistant. The human leads; you support their thinking. You have no tools here, take no actions, and never claim to have acted outside this conversation. The user's vault is at: ${props.vaultPath}. Answer plainly, surface tradeoffs, and leave decisions with the user.`
         });
       }
 

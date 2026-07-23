@@ -2452,7 +2452,7 @@ const App: Component = () => {
     { id: 'new-file', name: 'New File', action: () => console.log('New file - use sidebar') },
     { id: 'scaffold-agentic', name: 'Scaffold Agentic Project', action: handleScaffoldAgenticVault },
     { id: 'refresh-hot', name: 'Refresh hot.md', action: handleRefreshHotMd },
-    { id: 'librarian-audit', name: 'Run AI Librarian (proposal-only)', action: handleRunLibrarian },
+    { id: 'librarian-audit', name: 'Run the Librarian (proposal-only)', action: handleRunLibrarian },
     { id: 'speckit-feature', name: 'Spec Kit: New Feature', action: handleNewSpecFeature },
     { id: 'save', name: 'Save', shortcut: 'Ctrl+S', action: saveCurrentTab },
     { id: 'quick-switcher', name: 'Quick Switcher', shortcut: 'Ctrl+O', action: () => setShowQuickSwitcher(true) },
@@ -2711,8 +2711,9 @@ const App: Component = () => {
         <div class="mobile-more-backdrop" onClick={() => setMobileMoreMenu(false)}>
           <div class="mobile-more-menu" onClick={(e) => e.stopPropagation()}>
             <div
-              class={`mobile-more-item ${showOutline() ? 'active' : ''}`}
-              onClick={() => { setShowOutline(!showOutline()); setMobileMoreMenu(false); }}
+              class={`mobile-more-item ${showOutline() && currentTab() ? 'active' : ''} ${!currentTab() ? 'mobile-more-item--disabled' : ''}`}
+              aria-disabled={!currentTab()}
+              onClick={() => { if (!currentTab()) return; setShowOutline(!showOutline()); setMobileMoreMenu(false); }}
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <line x1="8" y1="6" x2="21" y2="6"></line>
@@ -2725,8 +2726,9 @@ const App: Component = () => {
               <span>Outline</span>
             </div>
             <div
-              class={`mobile-more-item ${showBacklinks() ? 'active' : ''}`}
-              onClick={() => { setShowBacklinks(!showBacklinks()); setMobileMoreMenu(false); }}
+              class={`mobile-more-item ${showBacklinks() && currentTab() ? 'active' : ''} ${!currentTab() ? 'mobile-more-item--disabled' : ''}`}
+              aria-disabled={!currentTab()}
+              onClick={() => { if (!currentTab()) return; setShowBacklinks(!showBacklinks()); setMobileMoreMenu(false); }}
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M9 17H7A5 5 0 0 1 7 7h2"></path>
@@ -2750,8 +2752,9 @@ const App: Component = () => {
               <span>Graph View</span>
             </div>
             <div
-              class={`mobile-more-item ${showProperties() ? 'active' : ''}`}
-              onClick={() => { setShowProperties(!showProperties()); setMobileMoreMenu(false); }}
+              class={`mobile-more-item ${showProperties() && currentTab() ? 'active' : ''} ${!currentTab() ? 'mobile-more-item--disabled' : ''}`}
+              aria-disabled={!currentTab()}
+              onClick={() => { if (!currentTab()) return; setShowProperties(!showProperties()); setMobileMoreMenu(false); }}
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
@@ -3126,8 +3129,9 @@ const App: Component = () => {
                 toolbar (HIG toolbar pattern), not in primary navigation. */}
             <button
               class="icon-btn toolbar-tool"
-              classList={{ active: showOutline() }}
-              aria-pressed={showOutline()}
+              classList={{ active: showOutline() && !!currentTab() }}
+              aria-pressed={showOutline() && !!currentTab()}
+              disabled={!currentTab()}
               onClick={() => setShowOutline(!showOutline())}
               title="Outline (Ctrl+Shift+O)"
               aria-label="Outline panel"
@@ -3143,8 +3147,9 @@ const App: Component = () => {
             </button>
             <button
               class="icon-btn toolbar-tool"
-              classList={{ active: showBacklinks() }}
-              aria-pressed={showBacklinks()}
+              classList={{ active: showBacklinks() && !!currentTab() }}
+              aria-pressed={showBacklinks() && !!currentTab()}
+              disabled={!currentTab()}
               onClick={() => setShowBacklinks(!showBacklinks())}
               title="Backlinks (Ctrl+Shift+B)"
               aria-label="Backlinks panel"
@@ -3157,8 +3162,9 @@ const App: Component = () => {
             </button>
             <button
               class="icon-btn toolbar-tool"
-              classList={{ active: showProperties() }}
-              aria-pressed={showProperties()}
+              classList={{ active: showProperties() && !!currentTab() }}
+              aria-pressed={showProperties() && !!currentTab()}
+              disabled={!currentTab()}
               onClick={() => setShowProperties(!showProperties())}
               title="Properties (Ctrl+Shift+P)"
               aria-label="Properties panel"

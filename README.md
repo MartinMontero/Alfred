@@ -1,11 +1,11 @@
 # Alfred
 
-**Your sovereign, local-first external mind for building with AI.**
+**Agentic development brain for builders using the Wecanjustbuildthings.dev connective intelligence system**
 
-Alfred is a Nostr-native personal knowledge management tool for the *builder* — the
-person who directs AI to build software but doesn't write the code themselves. It's
-the persistent place your specs, decisions, context, and memory live, and the ground
-truth your agentic AI dev tools read before they act.
+Alfred is the memory of your build. It's for the builder — the person who directs
+tools to build software but doesn't write the code themselves. Your specs, decisions,
+context, and reasoning live here as plain files, and your tools read that record
+before they act, so they work from what you decided instead of guessing.
 
 The platform is the judgment; **goose** is the hands; **Alfred is the memory.** Part
 of [wecanjustbuildthings.dev](https://github.com/MartinMontero/wecanjustbuildthings.dev).
@@ -30,7 +30,7 @@ encrypted with your keys first. You stay in control and informed at every step.
   `hot.md` current-state anchor, load-bearing frontmatter, tiered memory, a Spec Kit
   flow, and a Proposal-First "Librarian" that suggests but never edits without approval.
 - **Phase 3** — the **Alfred MCP server** ([`docs/mcp-server.md`](docs/mcp-server.md)):
-  exposes the vault as ground truth to any AI harness over stdio, with strict,
+  exposes the vault as ground truth to any agent harness over stdio, with strict,
   path-confined, traversal-proof tools.
 - **Phase 4** — the **embedded goose harness** ([`docs/goose.md`](docs/goose.md)):
   Alfred drives [goose](https://goose-docs.ai/) over ACP, reads the vault via
@@ -52,7 +52,7 @@ Phases 6–7 ahead: the AT Protocol domain pack, then platform integration and i
 
 - A **Markdown editor** with live preview, slash commands, `[[wikilinks]]`, backlinks,
   an outline, a graph view, daily notes, templates, and a YAML frontmatter Properties panel.
-- **Local-first** — your vault is plain `.md` files on disk; everything works offline.
+- **Your files, your disk** — the vault is plain `.md` files; everything works offline.
 - **Nostr sync** — content is **NIP-44** encrypted with your keys *before* it reaches a
   relay; only you can decrypt it.
 - **Secure storage** — private keys live in the OS credential store and are never logged.
@@ -63,7 +63,7 @@ Phases 6–7 ahead: the AT Protocol domain pack, then platform integration and i
 
 - A **vault scaffold** that gives your project a durable structure for specs, decisions,
   and memory — born compliant with the project's standards.
-- An **MCP server** that hands your AI tools the vault as ground truth, read-first and
+- An **MCP server** that hands your tools the vault as ground truth, read-first and
   write-confirmed, so an agent works from your decisions instead of guessing.
 - An **embedded goose harness** that runs agentic work against the vault, with the
   compiled provider guard, the recipe safety scanner, and tool-permission gating all in
@@ -75,8 +75,8 @@ Phases 6–7 ahead: the AT Protocol domain pack, then platform integration and i
 
 ## Principles
 
-- **Sovereign & local-first** — you own the code, the data, and the keys; no dependence
-  on extractive AI platforms.
+- **You own it all** — the code, the data, and the keys; everything runs and lives on
+  your machine, with no dependence on extractive platforms.
 - **Builder agency** — no silent moves. Before anything destructive or outward-facing,
   Alfred tells you what and why, and leaves the final say with you.
 - **Deny-by-default** — excluded providers are unreachable; agent tools that write or run

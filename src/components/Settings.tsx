@@ -316,6 +316,7 @@ const Settings: Component<SettingsProps> = (props) => {
     localStorage.getItem('custom_provider_model') || ''
   );
   const [customProviderTestStatus, setCustomProviderTestStatus] = createSignal<'idle' | 'testing' | 'success' | 'error'>('idle');
+  const [customProviderFetchError, setCustomProviderFetchError] = createSignal<string | null>(null);
   const [customProviderTestError, setCustomProviderTestError] = createSignal<string | null>(null);
   const [customProviderModelsLoading, setCustomProviderModelsLoading] = createSignal(false);
 
@@ -352,6 +353,7 @@ const Settings: Component<SettingsProps> = (props) => {
     if (!url) return;
 
     setCustomProviderModelsLoading(true);
+    setCustomProviderFetchError(null);
     try {
       const baseUrl = url.replace(/\/+$/, '');
       const apiKey = customProviderApiKey();
@@ -369,8 +371,9 @@ const Settings: Component<SettingsProps> = (props) => {
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
-      setCustomProviderTestError(`Failed to fetch models: ${message}`);
-      setCustomProviderTestStatus('error');
+      // The failure belongs next to the button that caused it (beta.4 FIX 3),
+      // not in the Connection Test section further down.
+      setCustomProviderFetchError(`Failed to fetch models: ${message}`);
     } finally {
       setCustomProviderModelsLoading(false);
     }
@@ -1657,12 +1660,12 @@ const Settings: Component<SettingsProps> = (props) => {
 
                 <div class="settings-divider" />
 
-                <div class="settings-section-title">AI Providers</div>
+                <div class="settings-section-title">Model Providers</div>
 
                 <div class="setting-item">
                   <div class="setting-info">
                     <div class="setting-name">Custom Provider</div>
-                    <div class="setting-description">Show Custom AI provider in the sidebar</div>
+                    <div class="setting-description">Show the Custom provider chat in the sidebar</div>
                   </div>
                   <label class="setting-toggle">
                     <input
@@ -2115,6 +2118,19 @@ const Settings: Component<SettingsProps> = (props) => {
                     {customProviderModelsLoading() ? 'Fetching...' : 'Fetch Models'}
                   </button>
                 </div>
+                <Show when={!customProviderUrl()}>
+                  <div class="setting-hint">Enter a provider URL above to enable.</div>
+                </Show>
+                <Show when={customProviderFetchError()}>
+                  <div class="settings-notice warning">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <line x1="15" y1="9" x2="9" y2="15"></line>
+                      <line x1="9" y1="9" x2="15" y2="15"></line>
+                    </svg>
+                    <p>{customProviderFetchError()}</p>
+                  </div>
+                </Show>
                 <Show when={customProviderModels().length > 0}>
                   <div class="setting-item">
                     <div class="setting-info">
@@ -2155,6 +2171,9 @@ const Settings: Component<SettingsProps> = (props) => {
                     {customProviderTestStatus() === 'testing' ? 'Testing...' : 'Test Connection'}
                   </button>
                 </div>
+                <Show when={!customProviderUrl()}>
+                  <div class="setting-hint">Enter a provider URL above to enable.</div>
+                </Show>
 
                 <Show when={customProviderTestStatus() === 'success'}>
                   <div class="settings-notice success">
@@ -2816,7 +2835,7 @@ const Settings: Component<SettingsProps> = (props) => {
                     <img src={AlfredMark} width="64" height="64" alt="The Alfred mark" style={{ 'object-fit': 'contain' }} />
                   </div>
                   <h1>Alfred</h1>
-                  <p class="about-tagline">A sovereign, local-first, Nostr-native PKM for builders who direct AI to build software</p>
+                  <p class="about-tagline">Agentic development brain for builders using the Wecanjustbuildthings.dev connective intelligence system</p>
                   <p class="about-version">Version {appVersion()}</p>
                 </div>
 
@@ -2860,7 +2879,7 @@ const Settings: Component<SettingsProps> = (props) => {
 
                 <div class="about-section">
                   <h3>About</h3>
-                  <p>Alfred is an open-source, local-first, Nostr-native PKM for builders who direct AI to build software — part of wecanjustbuildthings.dev. Your notes live on your machine as plain markdown files, with optional encrypted sync over Nostr. Your keys and your work stay yours.</p>
+                  <p>Alfred is designed to make you better at building — not to build for you. It keeps the full record of your project: the specs, the decisions, the reasoning, the things that worked and the things that didn't. When your tools start a task, they read that record first, so they work from what you actually decided instead of guessing or starting over. The difference matters because tools that do the thinking for you make you worse at thinking. Alfred goes the other way — it checks claims against evidence, marks what's verified and what isn't, and tells you when something won't hold up, so your judgment gets sharper the more you use it, not duller. It stays a step ahead of you without stepping in front of you. Your notes are plain-text files on your own machine, encrypted with your own keys. Nothing leaves unless you send it. If Alfred disappeared tomorrow, every file would still open in any text editor. Part of wecanjustbuildthings.dev.</p>
                 </div>
 
                 <div class="about-section">

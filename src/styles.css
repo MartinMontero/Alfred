@@ -11411,3 +11411,28 @@ button.sync-status.clickable { cursor: pointer; }
 /* Analytical dock — the evidence panel's shell slot (mirrors the agent dock). */
 .analytical-dock { width: 380px; display: flex; flex-direction: column; min-height: 0; }
 .study-nav__item--evidence.study-nav__item--on { color: var(--reg-evidence-accent); }
+
+/* Disabled interactive states (beta.4 FIX 2/3 — ADR-0007: a control with no
+   effect must READ disabled, never render clickable). App-wide. */
+.setting-button:disabled,
+.setting-button:disabled:hover {
+  opacity: 0.5;
+  cursor: default;
+  background: var(--accent);
+}
+.icon-btn:disabled,
+.toolbar-tool:disabled {
+  opacity: 0.4;
+  cursor: default;
+  pointer-events: none;
+}
+.mobile-more-item--disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+/* Inline enable-hint under a disabled setting button (Custom Provider). */
+.setting-hint {
+  padding: 0 20px 10px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}

@@ -58,7 +58,7 @@ const PROVIDER_LABELS: Record<string, string> = {
   google: 'Google (Gemini)',
   deepseek: 'DeepSeek',
   qwen: 'Qwen',
-  mistral: 'Mistral AI',
+  mistral: 'Mistral',
   ollama: 'Ollama (local)',
 };
 
