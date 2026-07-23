@@ -132,6 +132,81 @@ jobs:
           releaseBody: ${{ steps.notes.outputs.body }}
           includeUpdaterJson: true
 
+      # ADR-0009: author the updater feed ourselves, per installer type.
+      # tauri-action's latest.json carries ONE plain windows-x86_64 key and,
+      # with both bundles present, points it at the MSI (updaterJsonPreferNsis
+      # defaults false at v0.5.20). The plugin probes {os}-{arch}-{installer}
+      # FIRST (updater-v2.10.1 updater.rs:578-587), and an NSIS per-user
+      # install fed an MSI runs msiexec blind — the beta.2→beta.3 defect. This
+      # step REPLACES the asset with a feed built from THIS run's artifacts:
+      # nsis + msi keys, plain-key fallback = nsis. Never merged from a
+      # previous release, so stale entries cannot be inherited.
+      - name: Author per-installer updater feed (nsis + msi keys)
+        if: ${{ startsWith(github.ref, 'refs/tags/') || github.event.inputs.dryRunTag != '' }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || github.event.inputs.dryRunTag }}
+          NOTES: ${{ steps.notes.outputs.body }}
+        run: |
+          set -euo pipefail
+          BUNDLE=src-tauri/target/x86_64-pc-windows-msvc/release/bundle
+          NSIS=$(ls "$BUNDLE"/nsis/*-setup.exe)
+          MSI=$(ls "$BUNDLE"/msi/*.msi)
+          VERSION=$(node -p "require('./src-tauri/tauri.conf.json').version")
+          printf '%s' "$NOTES" > notes.txt
+          node scripts/updater-feed.mjs build \
+            --tag "$TAG" --repo "$GITHUB_REPOSITORY" --version "$VERSION" \
+            --nsis "$NSIS" --msi "$MSI" --notes-file notes.txt --out latest.json
+          RELEASE_ID=$(gh api "repos/$GITHUB_REPOSITORY/releases" \
+            --jq ".[] | select(.tag_name==\"$TAG\") | .id" | head -1)
+          if [ -z "$RELEASE_ID" ]; then
+            echo "::error::No release (draft or published) found for tag $TAG"; exit 1
+          fi
+          ASSET_ID=$(gh api "repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID/assets" \
+            --jq '.[] | select(.name=="latest.json") | .id' | head -1)
+          if [ -n "$ASSET_ID" ]; then
+            gh api -X DELETE "repos/$GITHUB_REPOSITORY/releases/assets/$ASSET_ID"
+          fi
+          curl -sf -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Content-Type: application/json" \
+            --data-binary @latest.json \
+            "https://uploads.github.com/repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID/assets?name=latest.json" > /dev/null
+          echo "Replaced latest.json on release $RELEASE_ID with per-installer feed."
+
+      # Regression gate (the beta.3 class can never ship silently again):
+      # download the feed BACK from the release — proving what testers'
+      # updaters will actually receive — and verify every key points at THIS
+      # tag's artifacts with the matching local signatures. Hard fail.
+      - name: Verify updater feed on the release (regression gate)
+        if: ${{ startsWith(github.ref, 'refs/tags/') || github.event.inputs.dryRunTag != '' }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || github.event.inputs.dryRunTag }}
+        run: |
+          set -euo pipefail
+          BUNDLE=src-tauri/target/x86_64-pc-windows-msvc/release/bundle
+          NSIS=$(ls "$BUNDLE"/nsis/*-setup.exe)
+          MSI=$(ls "$BUNDLE"/msi/*.msi)
+          VERSION=$(node -p "require('./src-tauri/tauri.conf.json').version")
+          RELEASE_ID=$(gh api "repos/$GITHUB_REPOSITORY/releases" \
+            --jq ".[] | select(.tag_name==\"$TAG\") | .id" | head -1)
+          ASSET_ID=$(gh api "repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID/assets" \
+            --jq '.[] | select(.name=="latest.json") | .id' | head -1)
+          if [ -z "$ASSET_ID" ]; then
+            echo "::error::latest.json missing from release $RELEASE_ID"; exit 1
+          fi
+          curl -sfL \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/octet-stream" \
+            -o feed-from-release.json \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/releases/assets/$ASSET_ID"
+          node scripts/updater-feed.mjs verify \
+            --in feed-from-release.json \
+            --tag "$TAG" --version "$VERSION" --nsis "$NSIS" --msi "$MSI"
+
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
         with:
