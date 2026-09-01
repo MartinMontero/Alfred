@@ -1,6 +1,6 @@
 [package]
 name = "alfred"
-version = "0.1.3"
+version = "0.1.4"
 description = "Agentic development brain for builders using the Wecanjustbuildthings.dev connective intelligence system"
 authors = ["Martin Montero"]
 license = "AGPL-3.0-or-later"
