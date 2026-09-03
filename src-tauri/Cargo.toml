@@ -47,8 +47,8 @@ tauri-plugin-updater = "2"
 # truth for the agentic (goose) surface — L1b resolution, L2 sanitized spawn, L1a
 # egress proxy. Pinned to a full commit SHA, never a branch (re-pin to the Holmes
 # RC tag, when cut, in its own commit). Zero third-party crates enter the graph.
-holmes-guard = { git = "https://github.com/MartinMontero/Holmes.git", rev = "63f877a7399bee0d34b10fed08e35e87a434cd73" }
-holmes-core = { git = "https://github.com/MartinMontero/Holmes.git", rev = "63f877a7399bee0d34b10fed08e35e87a434cd73" }
+holmes-guard = { git = "https://github.com/MartinMontero/Holmes.git", tag = "v1.0.0-rc.1" }
+holmes-core = { git = "https://github.com/MartinMontero/Holmes.git", tag = "v1.0.0-rc.1" }
 
 [target.'cfg(not(target_os = "android"))'.dependencies]
 keyring = { version = "3", features = ["sync-secret-service", "apple-native", "windows-native"] }

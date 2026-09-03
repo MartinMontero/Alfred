@@ -1915,7 +1915,7 @@ checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
 [[package]]
 name = "holmes-core"
 version = "0.1.0"
-source = "git+https://github.com/MartinMontero/Holmes.git?rev=63f877a7399bee0d34b10fed08e35e87a434cd73#63f877a7399bee0d34b10fed08e35e87a434cd73"
+source = "git+https://github.com/MartinMontero/Holmes.git?tag=v1.0.0-rc.1#9f4fef8281b874d89d67613fb8d1539bdd0b4acf"
 dependencies = [
  "holmes-guard",
 ]
@@ -1923,7 +1923,7 @@ dependencies = [
 [[package]]
 name = "holmes-guard"
 version = "0.1.0"
-source = "git+https://github.com/MartinMontero/Holmes.git?rev=63f877a7399bee0d34b10fed08e35e87a434cd73#63f877a7399bee0d34b10fed08e35e87a434cd73"
+source = "git+https://github.com/MartinMontero/Holmes.git?tag=v1.0.0-rc.1#9f4fef8281b874d89d67613fb8d1539bdd0b4acf"
 
 [[package]]
 name = "html5ever"
