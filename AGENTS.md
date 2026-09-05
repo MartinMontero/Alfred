@@ -2,6 +2,13 @@
 
 **How to use this file.** Durable context every phase needs. Save at the repo root as **`CLAUDE.md`** (and copy to `AGENTS.md`) so Claude Code re-loads it each session and after compaction. For the *first* run the repo doesn't exist yet, so paste this block **with the Phase 0 prompt**; Phase 0 persists it into the repo, and from Phase 1 on you paste only the per-phase prompt. **The DECISIONS block below is already filled. Build target: native Windows 11.**
 
+## Project graph
+
+- **Read `RECIPE.md` before any work.** It is the persistent dependency graph of record: every subsystem, what must work first ("Needs"), and a checkable proof line (a number, a filename, or a named output — never a vibe). Rows are in dependency order.
+- **The session's `PLAN.md` is a subset of `RECIPE.md`:** only the subsystems being touched, in dependency order, with their proof lines carried forward unchanged. If the work touches a subsystem not in RECIPE.md, the graph drifts — add the row (with a proof) in the same PR.
+- **Run the definition-of-done gate before claiming done:** `powershell -ExecutionPolicy Bypass -File gate.ps1` must print `10/10 subsystems PASS` and exit 0. This is **separate from the build gate** (`npm run verify:all` / CI) — the gate checks the repo's structural claims; CI checks correctness, exclusion, supply chain, and builds. `gate.ps1 -SelfTest` proves the gate can fail (plants a drifted proof, watches FAIL fire, restores, shows the clean run).
+- **Drift rule (from RECIPE.md):** any PR that touches a subsystem re-verifies its proof line; a drifted proof is flagged in the PR body, never silently edited.
+
 ---
 
 ## ROLE
