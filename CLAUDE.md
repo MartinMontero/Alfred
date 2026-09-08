@@ -33,6 +33,8 @@ All toolchains are native Windows. See `docs/research/windows-build-2026-06.md` 
 
 ## READ FIRST (canonical inputs)
 
+**Canon home:** `docs/triad-canon.md` is a **mirror** -- the canonical home is the WCJBT repo (`docs/canon/triad-canon.md`); on disagreement the WCJBT copy wins (the canon's own sync rule). Canon index + precedence: `docs/canon/README.md`.
+
 In `docs/research/`: **`windows-build-2026-06.md`** (authoritative for the Windows build) and **`verification-pass-2026-06.md`** (authoritative for versions/tools/commands — **wins on any conflict** with the older reports), then `external-mind-framework.md`, `agentic-pkm-architecture.md`, `atproto-case-study.md`, `SOURCE-QA.md`. Read what a phase depends on, in full, before that phase. Encode facts as machine-consumable artifacts, never restated narrative. The four older reports are **secondary sources**: re-derive every hard constraint from its cited **primary** source at build time.
 
 Primary docs (verify before pinning): Tauri v2 `v2.tauri.app`; MCP `modelcontextprotocol.io/specification/latest`; MCP TS SDK `github.com/modelcontextprotocol/typescript-sdk`; **goose `goose-docs.ai` + `github.com/aaif-goose/goose`**; ACP `agentclientprotocol.com`; Spec Kit `github.com/github/spec-kit`; AT Protocol `atproto.com/specs`; Claude Code `code.claude.com/docs`; platform repo `github.com/MartinMontero/wecanjustbuildthings.dev`.
