@@ -9,14 +9,14 @@ spec.** Within its lane, this repo's own canon governs.
 
 `CLAUDE.md` (standing orders + constitution), `SECURITY.md`, `LOOP.md`,
 `LOOP-DESIGN.md`, `LOOP-INTEGRATION.md`, `builder-os-console-spec.md`,
-`docs/decisions/*` (ADRs 0001+), `docs/triad-canon.md` (**mirror** —
+`docs/decisions/*` (ADRs 0001+), `docs/triad-canon.md` (**pointer** to the WCJBT canonical home, pointer-only per Martin 2026-09-08 —
 canonical home: the WCJBT repo, `docs/canon/triad-canon.md`; WCJBT copy
 wins on disagreement), `docs/epistemology/claude-code-epistemic-integration-prompt.md`,
 `docs/beta/rollback-checklist.md`, `docs/release-process.md`.
 
 ## ABSENT (checked, not assumed — 2026-09-07; carried from the W2 landing audit)
 
-- **`epistemic-canon-Alfred.md`** — unrecovered on every surface checked
+- ~~`epistemic-canon-Alfred.md`~~ **COMMISSIONED 2026-09-08** at `docs/epistemic-canon-Alfred.md` — rebuilt from the epistemology sources, marked COMMISSIONED, never presented as the original (ruling 4). Prior state: unrecovered on every surface checked
   (W2 audit open item #1, 2026-07-14). Deliberately NOT re-derived.
   Resolution is Martin's: recover the original (created 2026-06-30,
   Kimi-project-side) or commission a derivation from

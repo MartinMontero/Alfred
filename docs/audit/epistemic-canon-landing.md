@@ -29,3 +29,8 @@ plan-first gate and waits for the endorsed integration plan.
 2. **WCJBT canonical-copy gap:** the canon names the WCJBT repo as its canonical home; the live
    WCJBT repo lacks `docs/triad-canon.md` — independently confirmed by the builder against the
    live repo (2026-07-14), owned and logged by the builder outside this loop.
+
+
+---
+
+**Addendum 2026-09-08:** open item #1 RESOLVED by commissioning — Martin ruled `epistemic-canon-Alfred.md` not recoverable (verified absent on disk and in the repo) and commissioned it fresh at `docs/epistemic-canon-Alfred.md`, header-marked COMMISSIONED 2026-09-08, never presented as the original. Rides in the canon/homecoming PR.
