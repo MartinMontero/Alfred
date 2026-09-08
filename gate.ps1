@@ -137,8 +137,8 @@ $Checks = @(
     Body = {
       $stage = Get-Content 'scripts/stage-goose-sidecar.mjs' -Raw
       $rel = Get-Content '.github/workflows/release.yml' -Raw
-      if ($stage -notmatch "EXPECTED_GOOSE_VERSION = '1\.43\.0'") { return (Result $false "stage-goose-sidecar.mjs does not pin EXPECTED_GOOSE_VERSION = '1.43.0'") }
-      if ($rel -notmatch "GOOSE_VERSION:\s*'1\.43\.0'") { return (Result $false "release.yml does not pin GOOSE_VERSION: '1.43.0'") }
+      if ($stage -notmatch "EXPECTED_GOOSE_VERSION = '1\.48\.0'") { return (Result $false "stage-goose-sidecar.mjs does not pin EXPECTED_GOOSE_VERSION = '1.48.0'") }
+      if ($rel -notmatch "GOOSE_VERSION:\s*'1\.48\.0'") { return (Result $false "release.yml does not pin GOOSE_VERSION: '1.48.0'") }
       $v = Invoke-External 'npx' @('vitest', 'run', 'src/lib/goose')
       if ($v.Code -ne 0) { return (Result $false "npx vitest run src/lib/goose exited $($v.Code)") }
       # Non-blocking honesty line: the staged binary is local state, not a repo
@@ -148,12 +148,12 @@ $Checks = @(
       $bin = 'src-tauri/binaries/goose-x86_64-pc-windows-msvc.exe'
       if (Test-Path $bin) {
         $ver = (Invoke-External $bin @('--version')).Output
-        if ($ver -notmatch '1\.43\.0') {
-          Write-Host "  [WARN] staged goose binary reports a version other than the 1.43.0 pin: $($ver.Trim())"
-          Write-Host '         (Known open item: Windows re-stage + live-goose re-verify against 1.43.0. Non-blocking.)'
+        if ($ver -notmatch '1\.48\.0') {
+          Write-Host "  [WARN] staged goose binary reports a version other than the 1.48.0 pin: $($ver.Trim())"
+          Write-Host '         (Local state only - re-run npm run stage:goose to re-stage. Non-blocking: the pins are the repo claim.)'
         }
       }
-      return (Result $true "both pins 1.43.0; vitest src/lib/goose exit 0")
+      return (Result $true "both pins 1.48.0; vitest src/lib/goose exit 0")
     }
   },
   @{
@@ -215,12 +215,12 @@ $Checks = @(
     Name = 'Release lane'
     Body = {
       $rel = Get-Content '.github/workflows/release.yml'
-      if (($rel -join "`n") -notmatch "GOOSE_VERSION:\s*'1\.43\.0'") { return (Result $false "release.yml does not pin GOOSE_VERSION: '1.43.0'") }
+      if (($rel -join "`n") -notmatch "GOOSE_VERSION:\s*'1\.48\.0'") { return (Result $false "release.yml does not pin GOOSE_VERSION: '1.48.0'") }
       if (-not ($rel | Select-String -Pattern 'updater-feed\.mjs\s+build' -Quiet)) { return (Result $false 'release.yml lacks updater-feed.mjs build (ADR-0009 feed authorship)') }
       if (-not ($rel | Select-String -Pattern 'updater-feed\.mjs\s+verify' -Quiet)) { return (Result $false 'release.yml lacks updater-feed.mjs verify (feed regression gate)') }
       $pins = Test-UsesPinned $rel
       if ($pins.Unpinned.Count -gt 0) { return (Result $false "release.yml has unpinned uses: $($pins.Unpinned -join ', ')") }
-      return (Result $true "GOOSE_VERSION 1.43.0; updater-feed build + verify present; $($pins.Total)/$($pins.Total) uses: SHA-pinned")
+      return (Result $true "GOOSE_VERSION 1.48.0; updater-feed build + verify present; $($pins.Total)/$($pins.Total) uses: SHA-pinned")
     }
   },
   @{
