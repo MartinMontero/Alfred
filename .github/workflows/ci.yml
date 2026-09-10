@@ -127,14 +127,17 @@ jobs:
             libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev \
             patchelf libsecret-1-dev libssl-dev libdbus-1-dev
 
-      # Tauri's build script requires the externalBin sidecar to exist for the
-      # target. Linux CI has no staged goose; the tests never spawn it, so a
-      # tiny executable placeholder satisfies the build-script existence check.
-      - name: Placeholder goose sidecar (build-script existence check only)
+      # Tauri's build script requires the externalBin sidecars to exist for the
+      # target. Linux CI has no staged goose/node; the tests never spawn them,
+      # so tiny placeholders satisfy the build-script existence check. A stub
+      # MCP bundle covers the resource reference the same way.
+      - name: Placeholder sidecars + MCP bundle (build-script existence check only)
         run: |
-          mkdir -p src-tauri/binaries
+          mkdir -p src-tauri/binaries src-tauri/mcp-bundle
           printf '#!/bin/sh\nexit 0\n' > src-tauri/binaries/goose-x86_64-unknown-linux-gnu
-          chmod +x src-tauri/binaries/goose-x86_64-unknown-linux-gnu
+          printf '#!/bin/sh\nexit 0\n' > src-tauri/binaries/node-x86_64-unknown-linux-gnu
+          printf '// placeholder\n' > src-tauri/mcp-bundle/mcp-server.cjs
+          chmod +x src-tauri/binaries/goose-x86_64-unknown-linux-gnu src-tauri/binaries/node-x86_64-unknown-linux-gnu
 
       - name: cargo test (telemetry byte-scan canary, etc.)
         run: cargo test --manifest-path src-tauri/Cargo.toml
@@ -228,14 +231,20 @@ jobs:
       - name: Install Alfred deps
         run: npm ci
 
-      # tauri build's externalBin existence check needs a Linux sidecar present;
-      # the probe writes its OWN goose stub next to the built binary at runtime,
-      # so this placeholder only satisfies the build script.
-      - name: Placeholder goose sidecar (build-script existence check only)
+      # The real MCP bundle ships inside the artifact (no npx tsx in the shipped
+      # path); sidecars stay placeholders here — the probe writes its OWN goose
+      # stub next to the built binary at runtime.
+      - name: Build the bundled MCP server (shipped resource)
+        run: npm run build:mcp
+
+      # tauri build's externalBin existence check needs the Linux sidecars
+      # present; these placeholders only satisfy the build script.
+      - name: Placeholder sidecars (build-script existence check only)
         run: |
           mkdir -p src-tauri/binaries
           printf '#!/bin/sh\nexit 0\n' > src-tauri/binaries/goose-x86_64-unknown-linux-gnu
-          chmod +x src-tauri/binaries/goose-x86_64-unknown-linux-gnu
+          printf '#!/bin/sh\nexit 0\n' > src-tauri/binaries/node-x86_64-unknown-linux-gnu
+          chmod +x src-tauri/binaries/goose-x86_64-unknown-linux-gnu src-tauri/binaries/node-x86_64-unknown-linux-gnu
 
       - name: Install tauri-driver (SHA-free; cargo crate, pinned + --locked)
         run: cargo install tauri-driver --version 2.0.6 --locked

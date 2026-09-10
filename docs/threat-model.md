@@ -28,9 +28,15 @@ the safety model). A6 the user's machine (shell reachable via goose developer__s
 - **T (memory poisoning):** agent writes to the memory bank carry provenance stamps
   (`<!-- provenance: mcp ... -->`); Step-7 review gate (Phase 5, open) adds human review before
   promotion.
-- Packaging risk: server currently launches via `npx tsx` — on a stranger's machine that path
-  does not exist → bundling is Stage-E work (E5), a reliability/integrity issue (running arbitrary
-  resolved tsx from PATH is also a supply-chain surface).
+- Packaging risk — **RESOLVED (2026-09-09, MCP bundling):** the shipped app no longer launches
+  the server via `npx tsx`. The server ships as a pre-bundled CJS resource
+  (`mcp-bundle/mcp-server.cjs`, built by `scripts/build-mcp-bundle.mjs` — the MCP SDK and Zod
+  inlined, `legalComments: 'eof'` preserving bundled license notices) executed by a pinned
+  Node 22 LTS sidecar staged by `scripts/stage-node-runtime.mjs`; the compiled guard resolves
+  that pair in `bundled_mcp_invocation` (guard.rs) and the `npx tsx` default survives only as
+  the dev fallback when no override/bundle exists (tested: `guard_tests.rs
+  bundled_mcp_invocation_*`). The `npx tsx` registrations below remain valid for running the
+  server from a source checkout (development).
 
 ## Surface 3 — ACP ↔ goose (the harness channel)
 - **FINDING (2026-07-12, STEP-0 item 4) — title-keyed permission enforcement, spoofable:**

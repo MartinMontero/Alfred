@@ -27,6 +27,10 @@ permissions:
 env:
   NODE_VERSION: '22'
   GOOSE_VERSION: '1.48.0'
+  # Pinned Node runtime shipped as the MCP-server sidecar (22 LTS; full version
+  # for the nodejs.org download URL; scripts/stage-node-runtime.mjs pins the
+  # same value in EXPECTED_NODE_VERSION).
+  NODE_DIST_VERSION: '22.23.2'
 
 jobs:
   build-windows:
@@ -74,6 +78,21 @@ jobs:
           $env:GOOSE_BIN = "$env:USERPROFILE\.local\bin\goose.exe"
           "GOOSE_BIN=$env:GOOSE_BIN" | Out-File -FilePath $env:GITHUB_ENV -Append
           npm run stage:goose -- --require
+
+      # Download the pinned Node runtime and stage it as the MCP-server sidecar.
+      # The shipped MCP server is a pre-bundled CJS resource (built by
+      # beforeBuildCommand's `npm run build:mcp`) executed by THIS runtime —
+      # the shipped path never depends on `npx tsx` on the user's machine.
+      - name: Install + stage node ${{ env.NODE_DIST_VERSION }} runtime sidecar
+        shell: pwsh
+        run: |
+          $zip = "$env:TEMP\node-dist.zip"
+          Invoke-WebRequest -Uri "https://nodejs.org/dist/v${{ env.NODE_DIST_VERSION }}/node-v${{ env.NODE_DIST_VERSION }}-win-x64.zip" -OutFile $zip
+          Expand-Archive $zip -DestinationPath "$env:TEMP\node-dist"
+          $env:NODE_BIN = "$env:TEMP\node-dist\node-v${{ env.NODE_DIST_VERSION }}-win-x64\node.exe"
+          "NODE_BIN=$env:NODE_BIN" | Out-File -FilePath $env:GITHUB_ENV -Append
+          npm run stage:node -- --require
+          npm run build:mcp
 
       # Gate the release on tests. On this Windows runner WITH the sidecar staged,
       # the live-goose recipe test EXECUTES (recipes.live) — the release lane is
