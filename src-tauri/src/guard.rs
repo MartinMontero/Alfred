@@ -197,6 +197,11 @@ fn q(s: &str) -> String {
 /// and registers the Alfred vault MCP server as a `type: stdio` extension.
 /// Refuses to emit a config for a denied provider/model. Emitted by hand (no
 /// YAML dependency); values are JSON-quoted, which is valid YAML.
+///
+/// The `mcp_command`/`mcp_args` defaults below (`npx tsx …`) are the DEV
+/// fallback only. The shipped path never uses them: `guard_spawn_goose`
+/// substitutes `bundled_mcp_invocation` (pinned Node sidecar + the pre-bundled
+/// mcp-server.cjs resource) whenever the caller passes no override.
 pub fn build_config_yaml(
     provider: &str,
     model: &str,
@@ -283,6 +288,53 @@ pub fn build_permission_yaml() -> String {
 
 pub struct PreparedDistribution {
     pub warnings: Vec<String>,
+}
+
+/// The sidecar filename Tauri installs for `externalBin: ["binaries/node"]` on
+/// the shipped target (Windows-only ship; other platforms get None and the
+/// caller keeps the dev fallback).
+fn node_sidecar_name() -> &'static str {
+    #[cfg(windows)]
+    {
+        "node-x86_64-pc-windows-msvc.exe"
+    }
+    #[cfg(target_os = "linux")]
+    {
+        "node-x86_64-unknown-linux-gnu"
+    }
+    #[cfg(target_os = "macos")]
+    {
+        "node-x86_64-apple-darwin"
+    }
+    #[cfg(not(any(windows, target_os = "linux", target_os = "macos")))]
+    {
+        "node"
+    }
+}
+
+/// Resolve the SHIPPED MCP invocation: `<node sidecar> <bundled mcp-server.cjs>
+/// <vault>`. The bundle is built by scripts/build-mcp-bundle.mjs and installed
+/// as the Tauri resource `mcp-bundle/mcp-server.cjs`; the runtime is staged by
+/// scripts/stage-node-runtime.mjs. Returns None when either is absent (a dev
+/// checkout that never ran `npm run build:mcp` / `stage:node`), so callers can
+/// keep the historical `npx tsx` dev fallback. Pure and unit-tested with
+/// explicit directories — the shipped path's freedom from `npx`/`tsx` is a
+/// tested property, not an assumption.
+pub fn bundled_mcp_invocation(
+    exe_dir: &Path,
+    resource_dir: &Path,
+    vault_path: &str,
+) -> Option<(String, Vec<String>)> {
+    let node = exe_dir.join(node_sidecar_name());
+    let script = resource_dir.join("mcp-bundle").join("mcp-server.cjs");
+    if node.is_file() && script.is_file() {
+        Some((
+            node.display().to_string(),
+            vec![script.display().to_string(), vault_path.to_string()],
+        ))
+    } else {
+        None
+    }
 }
 
 /// Write Alfred's isolated goose distribution under `isolated_home` and return
@@ -633,13 +685,31 @@ pub fn guard_spawn_goose(
     on_event: Channel<GooseIoEvent>,
 ) -> Result<SpawnedGoose, String> {
     let isolated_home = isolated_goose_home(&app)?;
+    // The shipped MCP path: a caller that passes no override gets the pinned
+    // Node sidecar + pre-bundled server, never `npx tsx`. The override slots
+    // stay for development and for the artifact-guard probe.
+    let bundled = match (
+        std::env::current_exe().ok().and_then(|p| p.parent().map(|d| d.to_path_buf())),
+        app.path().resource_dir().ok(),
+    ) {
+        (Some(exe_dir), Some(res_dir)) => bundled_mcp_invocation(&exe_dir, &res_dir, &args.vault_path),
+        _ => None,
+    };
+    let mcp_command = args
+        .mcp_command
+        .clone()
+        .or_else(|| bundled.as_ref().map(|b| b.0.clone()));
+    let mcp_args = args
+        .mcp_args
+        .clone()
+        .or_else(|| bundled.map(|b| b.1));
     let prepared = prepare_distribution(
         &isolated_home,
         &args.provider,
         &args.model,
         &args.vault_path,
-        args.mcp_command.as_deref(),
-        args.mcp_args.as_deref(),
+        mcp_command.as_deref(),
+        mcp_args.as_deref(),
         args.builtins.as_deref().unwrap_or(&[]),
     )?;
     let built = build_goose_spawn(

@@ -8,8 +8,8 @@
 //! silent. Run in CI in both debug and release (`cargo test --release`).
 
 use crate::guard::{
-    build_config_yaml, build_goose_spawn, build_permission_yaml, scan_config_text,
-    GooseInvocation,
+    build_config_yaml, build_goose_spawn, build_permission_yaml, bundled_mcp_invocation,
+    scan_config_text, GooseInvocation,
 };
 use holmes_guard::policy;
 use holmes_guard::resolution::{resolve, Denial};
@@ -380,6 +380,63 @@ fn config_yaml_refuses_a_denied_pair() {
     // Unknown ids are denied too — deny-by-default extends to the writer.
     assert!(build_config_yaml("openrouter", "qwen3", "/v", None, None, &[]).is_err());
     assert!(build_config_yaml("ollama", "llama3", "/v", None, None, &[]).is_err());
+}
+
+#[test]
+fn bundled_mcp_invocation_uses_the_pinned_runtime_and_never_mentions_npx_or_tsx() {
+    // The shipped-path property (LOOP.md beta DoD: "MCP server bundled — no npx
+    // tsx dependency in the packaged app") pinned as a tested invariant.
+    let base = std::env::temp_dir().join(format!("alfred-mcp-inv-{}", std::process::id()));
+    let exe_dir = base.join("exe");
+    let script_dir = base.join("res").join("mcp-bundle");
+    std::fs::create_dir_all(&exe_dir).unwrap();
+    std::fs::create_dir_all(&script_dir).unwrap();
+    let node_name = if cfg!(windows) {
+        "node-x86_64-pc-windows-msvc.exe"
+    } else if cfg!(target_os = "linux") {
+        "node-x86_64-unknown-linux-gnu"
+    } else if cfg!(target_os = "macos") {
+        "node-x86_64-apple-darwin"
+    } else {
+        "node"
+    };
+    std::fs::write(exe_dir.join(node_name), b"stub").unwrap();
+    std::fs::write(script_dir.join("mcp-server.cjs"), b"// stub").unwrap();
+
+    let (cmd, args) = bundled_mcp_invocation(&exe_dir, &base.join("res"), "C:\\vault")
+        .expect("bundled invocation must resolve when sidecar + bundle exist");
+    assert!(cmd.ends_with(node_name), "cmd must be the node sidecar: {cmd}");
+    assert!(!cmd.contains("npx"), "shipped cmd must never be npx: {cmd}");
+    assert!(args[0].ends_with("mcp-server.cjs"), "args[0] must be the bundle: {args:?}");
+    assert!(!args[0].ends_with(".ts"), "shipped args must never point at TypeScript: {args:?}");
+    assert!(args.iter().all(|a| !a.contains("tsx")), "shipped args must never mention tsx: {args:?}");
+    assert_eq!(args[1], "C:\\vault", "args[1] is the vault root: {args:?}");
+
+    // The emitted config carries the bundled invocation verbatim.
+    let yaml = build_config_yaml("anthropic", "claude-sonnet-4-6", "C:\\vault", Some(&cmd), Some(&args), &[]).unwrap();
+    assert!(yaml.contains("mcp-server.cjs"));
+    assert!(!yaml.contains("tsx"), "generated config must not mention tsx:\n{yaml}");
+
+    std::fs::remove_dir_all(&base).ok();
+}
+
+#[test]
+fn bundled_mcp_invocation_falls_back_when_the_bundle_or_runtime_is_absent() {
+    // Anti-false-green: the resolver must NOT invent a bundled path. Missing
+    // sidecar, missing bundle, or both -> None (the dev fallback stays a
+    // deliberate, visible branch).
+    let missing = Path::new("definitely-not-here-alfred-mcp-test");
+    assert!(bundled_mcp_invocation(missing, missing, "/v").is_none());
+
+    let base = std::env::temp_dir().join(format!("alfred-mcp-inv-absent-{}", std::process::id()));
+    let exe_dir = base.join("exe");
+    let script_dir = base.join("res").join("mcp-bundle");
+    std::fs::create_dir_all(&exe_dir).unwrap();
+    std::fs::create_dir_all(&script_dir).unwrap();
+    // Bundle present but runtime absent -> still None.
+    std::fs::write(script_dir.join("mcp-server.cjs"), b"// stub").unwrap();
+    assert!(bundled_mcp_invocation(&exe_dir, &base.join("res"), "/v").is_none());
+    std::fs::remove_dir_all(&base).ok();
 }
 
 #[test]

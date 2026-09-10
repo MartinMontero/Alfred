@@ -45,6 +45,13 @@ extensions:
 
 ## Register with Claude Code (stdio)
 
+**In the packaged desktop app none of this applies** — Alfred's guard registers the server
+itself as a pre-bundled CJS resource run by a pinned Node sidecar (`mcp-bundle/mcp-server.cjs`
++ `binaries/node-<triple>`, resolved in `guard.rs` `bundled_mcp_invocation`); no `npx`, no
+`tsx`, and no Node install are required on the user's machine. The `npx tsx` forms below are
+for running the server **from a source checkout** (development, or attaching an external
+harness to a dev vault).
+
 `claude mcp add`:
 
 ```powershell
