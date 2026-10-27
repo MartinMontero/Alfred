@@ -919,7 +919,7 @@ mod keyring_commands {
         let path = get_key_path(&app, &key)?;
         if path.exists() {
             fs::remove_file(&path)
-                .map_err(|e| format!("Failed to delete secure data: {}", e))?;
+            .map_err(|e| format!("Failed to delete secure data: {}", e))?;
         }
         Ok(())
     }
@@ -1328,20 +1328,17 @@ pub fn run() {
             // Logging is RELEASE-ON by design (beta.6 updater fix 1): the
             // updater's apply step hands off to an external installer that
             // kills this process, so the only diagnostic record that survives
-            // the handoff is a persisted log file. Local only — the log
-            // facade in this codebase never carries notes, prompts, or keys.
+            // the handoff is a persisted log file. The plugin's DEFAULT
+            // targets already write to the app log dir (rotated, KeepOne), so
+            // no target override is needed — and staying on the default
+            // builder is what compiles across tauri-plugin-log 2.x (LogDir
+            // became a struct variant mid-2.x; the previous explicit-targets
+            // form here was the E0533). Local only — the log facade in this
+            // codebase never carries notes, prompts, or keys.
             if app.path().app_log_dir().is_ok() {
                 let _ = app.handle().plugin(
                     tauri_plugin_log::Builder::default()
                         .level(log::LevelFilter::Info)
-                        .targets([
-                            tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::LogDir {
-                                file_name: None,
-                            }),
-                            tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::Stdout),
-                        ])
-                        .max_file_size(1_000_000)
-                        .rotation_strategy(tauri_plugin_log::RotationStrategy::KeepOne)
                         .build(),
                 );
             }
