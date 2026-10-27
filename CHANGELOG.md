@@ -19,6 +19,19 @@ published) · `v0.1.0-beta.5` ↔ 0.1.4 (draft, pending).
 
 ## [Unreleased]
 
+### Changed
+
+- goose sidecar pin bumped 1.48.0 → 1.56.0 (`EXPECTED_GOOSE_VERSION` in
+  `scripts/stage-goose-sidecar.mjs`, `GOOSE_VERSION` in `.github/workflows/release.yml`,
+  and the matching `gate.ps1` checks + `RECIPE.md` proof lines). Latest upstream release
+  v1.56.0 (aaif-goose/goose, 2026-10-23) verified to ship `goose-x86_64-pc-windows-msvc.zip`
+  and `download_cli.ps1`. Windows re-stage (`npm run stage:goose`) and a live-goose
+  `recipes.live` re-run against 1.56.0 remain open follow-ups, as the stage script itself
+  warns after any version change.
+- Added `src/lib/goose/version-pin.test.ts`: fails if the goose pin ever lands in only
+  some of its four sites (stage script, release workflow, gate.ps1, RECIPE.md) —
+  red-first proven against a partial bump.
+
 ## [0.1.4] — v0.1.0-beta.5 — DRAFT / PENDING (not yet tagged or published)
 
 A re-cut of the beta line from current `main`. beta.4 was never published and never will be —
