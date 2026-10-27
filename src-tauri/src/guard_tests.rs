@@ -9,7 +9,7 @@
 
 use crate::guard::{
     build_config_yaml, build_goose_spawn, build_permission_yaml, bundled_mcp_invocation,
-    scan_config_text, GooseInvocation,
+    kill_tree, scan_config_text, GooseInvocation, GuardState,
 };
 use holmes_guard::policy;
 use holmes_guard::resolution::{resolve, Denial};
@@ -482,4 +482,68 @@ fn b5_scan_documented_residual_bare_xai_host_is_not_flagged() {
     // enforcement line is sanitized_spawn — a config cannot select a provider
     // at all — so this stays warn-scope, not a hole in refusal.
     assert!(scan_config_text("a: api.x.ai\n").is_empty());
+}
+
+// --- beta.6 updater pre-apply -----------------------------------------------------
+
+#[test]
+fn kill_all_trees_reports_the_live_count_and_drains_the_set() {
+    // Failure-proof: if kill_all_trees stops clearing the set or miscounts,
+    // the second assertion fires.
+    let state = GuardState::default();
+    assert_eq!(state.kill_all_trees(), 0);
+
+    fn spawn_sleeper() -> std::process::Child {
+        let mut c = if cfg!(windows) {
+            let mut c = std::process::Command::new("cmd");
+            c.args(["/C", "timeout", "/T", "30", "/NOBREAK"]);
+            c
+        } else {
+            let mut c = std::process::Command::new("sleep");
+            c.arg("30");
+            c
+        };
+        c.stdin(std::process::Stdio::null())
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .spawn()
+            .expect("spawn the sleeper")
+    }
+
+    state.insert_test_child(spawn_sleeper());
+    state.insert_test_child(spawn_sleeper());
+    assert_eq!(state.kill_all_trees(), 2);
+    // The set is drained by the kill — a second pass has nothing live.
+    assert_eq!(state.kill_all_trees(), 0);
+}
+
+#[test]
+fn kill_tree_actually_terminates_a_live_process() {
+    // Failure-proof: if kill_tree degrades to a no-op, the wait below blocks
+    // for the sleeper's full 30s, the elapsed assertion fails, and — if the
+    // sleeper somehow completes cleanly — the success assertion fails too.
+    let mut sleeper = if cfg!(windows) {
+        let mut c = std::process::Command::new("cmd");
+        c.args(["/C", "timeout", "/T", "30", "/NOBREAK"]);
+        c
+    } else {
+        let mut c = std::process::Command::new("sleep");
+        c.arg("30");
+        c
+    };
+    let mut sleeper = sleeper
+        .stdin(std::process::Stdio::null())
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .spawn()
+        .expect("spawn the sleeper");
+
+    kill_tree(&mut sleeper);
+    let start = std::time::Instant::now();
+    let status = sleeper.wait().expect("reap the killed sleeper");
+    assert!(
+        start.elapsed().as_secs() < 29,
+        "the sleeper was not actually killed (waited its full lifetime)"
+    );
+    assert!(!status.success(), "a killed process must not report success");
 }
