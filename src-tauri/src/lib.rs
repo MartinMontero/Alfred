@@ -421,7 +421,7 @@ fn set_vault_scope(app: AppHandle, vault_path: String) -> Result<(), String> {
     use tauri_plugin_fs::FsExt;
     let path = Path::new(&vault_path);
     if !path.exists() || !path.is_dir() {
-        return Err(format!("Vault path does not exist or not a directory: {}", vault_path));
+        return Err(format!("Vault path does not exist or is not a directory: {}", vault_path));
     }
     // Reject pathological scopes: the filesystem root and the home directory itself.
     let canonical = path
