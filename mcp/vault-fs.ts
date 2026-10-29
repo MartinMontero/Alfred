@@ -15,6 +15,7 @@
  */
 
 import { promises as fs } from 'node:fs';
+import { createHash } from 'node:crypto';
 import * as nodePath from 'node:path';
 
 export class VaultPathError extends Error {
@@ -93,6 +94,22 @@ export class VaultFs {
       return true;
     } catch {
       return false;
+    }
+  }
+
+  /**
+   * Content-integrity version of a vault note: sha256 hex of its bytes, or
+   * null when the note does not exist. This is the optimistic-concurrency
+   * token (expectedVersion) for write-if-unchanged — single-writer with
+   * human-edit-wins: a write whose expectedVersion does not match the current
+   * on-disk version is rejected CONFLICT and the vault is NOT modified.
+   */
+  async versionOf(userPath: string): Promise<string | null> {
+    try {
+      const buf = await fs.readFile(this.resolve(userPath));
+      return createHash('sha256').update(buf).digest('hex');
+    } catch {
+      return null;
     }
   }
 
