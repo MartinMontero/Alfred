@@ -150,19 +150,25 @@ jobs:
       # unic-*/rustls-pemfile crates are unmaintained-not-vulnerable); they are
       # reported but do not block. A real vulnerability still fails the gate.
       #
-      # The two --ignore flags are the DOCUMENTED ALLOWLIST (builder-authorized
-      # Gate D, 2026-07-14): quick-xml RUSTSEC-2026-0194/0195, DoS-only, parse-side
-      # flaws on write-only/not-shipped usages. Per-finding proof, triggers, and
-      # the 2026-10-14 review date: docs/security/dependency-allowlist.md.
-      # These two IDs (plus npm-side GHSA-w5hq-g745-h8pq, which no cargo gate sees)
-      # are the ENTIRE allowlist. rustls-webpki RUSTSEC-2026-0098/0099/0104 were
-      # FIXED by ruling A (reqwest 0.11->0.12, patched rustls stack) — never
+      # The five --ignore flags are the DOCUMENTED ALLOWLIST: quick-xml x2
+      # (RUSTSEC-2026-0194/0195, DoS-only, parse-side flaws on write-only/
+      # not-shipped usages; builder-authorized Gate D, 2026-07-14) + zip x3
+      # (RUSTSEC-2026-0367/0368/0369; Martin's 2026-10-29 option-1 ruling:
+      # zip reachable only via tauri-plugin-updater's signature-verified
+      # update-archive extraction, Windows-only ship, no other code path).
+      # Per-finding proof, triggers, and review dates:
+      # docs/security/dependency-allowlist.md (zip entries 6-8).
+      # These five IDs (plus npm-side GHSA-w5hq-g745-h8pq, which no cargo gate
+      # sees) are the ENTIRE allowlist. rustls-webpki RUSTSEC-2026-0098/0099/0104
+      # were FIXED by ruling A (reqwest 0.11->0.12, patched rustls stack) — never
       # ignored, so any regression to a vulnerable version turns this job red.
       - name: cargo audit (fail only on real vulnerabilities)
         run: |
           cargo install cargo-audit --locked
           cargo audit --file src-tauri/Cargo.lock --json \
             --ignore RUSTSEC-2026-0194 --ignore RUSTSEC-2026-0195 \
+            --ignore RUSTSEC-2026-0367 --ignore RUSTSEC-2026-0368 \
+            --ignore RUSTSEC-2026-0369 \
             > audit.json || true
           python3 - <<'PY'
           import json, sys

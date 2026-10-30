@@ -20,9 +20,17 @@ allowlist contains **exactly three IDs** — RUSTSEC-2026-0194, RUSTSEC-2026-019
 GHSA-w5hq-g745-h8pq. rustls-webpki was ruled **A: fix, never ignore** (see the resolved section
 below). Decision record: `LOOP.md` — "GATE D VERDICT (2026-07-14)".
 
+**Extended 2026-10-29 (Martin ruling, zip option 1):** RUSTSEC-2026-0367 / -0368 / -0369
+(`zip` 4.6.1, via `tauri-plugin-updater`) added as entries 6–8 — scored, but unfixable by
+bump (patched range `>= 9.0.0`; the updater plugin pins `zip ^4`), and Unix-only impact
+classes on a Windows-only ship target. Review **2027-01-29**. The operational gate change
+(the cargo-audit `--ignore` flags in `.github/workflows/ci.yml`) is the companion
+workflow-scope commit — owner-side, same ruling.
+
 **Verification basis:** cargo-audit 0.22.2 with the advisory DB fetched 2026-07-14, run against
 `src-tauri/Cargo.lock` at HEAD `224e624`; `npm audit` against `package-lock.json` same commit;
-reverse-dependency trees via `cargo tree -i`.
+reverse-dependency trees via `cargo tree -i`. (Entries 6–8 verified against the advisory DB
+fetched 2026-10-27 by the drift-and-refresh sweep, PR #46 red/green pair.)
 
 ---
 
@@ -56,6 +64,8 @@ reverse-dependency trees via `cargo tree -i`.
   2. Any Alfred change introduces parsing of externally-sourced XML in Rust.
   3. Either advisory is reclassified beyond denial-of-service.
 - **Review date:** 2026-10-14, or the Stage E release gate, whichever comes first.
+  **STATUS 2026-10-29: review date LAPSED — standing re-ratification item for Martin**
+  (the backstop is the bump trigger above; nothing enforces the date mechanically today).
 - **Decision record:** `LOOP.md` — "GATE D VERDICT (2026-07-14)".
 
 ### 3–4. RUSTSEC-2026-0194 + RUSTSEC-2026-0195 — quick-xml 0.38.4 (not in the shipped artifact)
@@ -71,6 +81,7 @@ reverse-dependency trees via `cargo tree -i`.
 - **Triggers:** (1) Alfred ever ships a Linux target (re-evaluate before any such build);
   (2) same reclassification trigger as above.
 - **Review date:** 2026-10-14, or the Stage E release gate, whichever comes first.
+  **STATUS 2026-10-29: review date LAPSED — same standing re-ratification item as entries 1–2.**
 - **Decision record:** `LOOP.md` — "GATE D VERDICT (2026-07-14)".
 
 ### 5. GHSA-w5hq-g745-h8pq — npm `uuid` 8.3.2 via `exceljs` 4.4.0 (moderate)
@@ -97,7 +108,43 @@ reverse-dependency trees via `cargo tree -i`.
   code); (3) severity reclassification to high or above (would then trip Grype — add a
   documented `.grype.yaml` entry or fix, builder's word required again).
 - **Review date:** 2026-10-14, or the Stage E release gate, whichever comes first.
+  **STATUS 2026-10-29: review date LAPSED — same standing re-ratification item.**
 - **Decision record:** `LOOP.md` — "GATE D VERDICT (2026-07-14)".
+
+### 6–8. RUSTSEC-2026-0367 / RUSTSEC-2026-0368 / RUSTSEC-2026-0369 — zip 4.6.1 (Unix-only extraction metadata; Windows-only ship)
+
+- **Advisories:** all three against `zip` 4.6.1 (issued 2026-10-09/10): **0367** archive
+  extraction preserves SUID/SGID mode bits; **0368** symlink escape on extraction; **0369**
+  the companion Unix-permissions extraction flaw. Affected range < 9.0.0 — patched **only**
+  in zip >= 9.0.0. All three are Unix-specific impact classes.
+- **Where it sits:** `zip 4.6.1` ← `tauri-plugin-updater` (Alfred's in-app updater) — the only
+  reverse dependency (`cargo tree -i zip@4.6.1`, VERIFIED-LIVE 2026-10-27). Every branch carries
+  the same zip (updater 2.14.0 latest stable; even 3.0.0-alpha.3 pins `zip ^4`).
+- **Proof of non-applicability as shipped:** all three flaws live in zip's archive-**extraction**
+  handling of **Unix-specific metadata** (SUID/SGID mode bits; symlink entries). Alfred's
+  shipped artifact is the **Windows** installer (`x86_64-pc-windows-msvc`, WebView2): NTFS has
+  no SUID/SGID semantics, and Windows symlink creation requires elevated privileges the app
+  does not hold — neither impact class is expressible on the ship target. The only extraction
+  consumer is the updater applying release archives that are **minisign-signed and
+  signature-verified before unpack** (ADR-0009 feed), so a malicious archive would already
+  require compromising the release lane plus the signing key. The Linux artifact built in CI
+  (artifact-guard probe) is not distributed.
+- **Why not fixed instead:** no released `tauri-plugin-updater` consumes zip >= 9 (patched range
+  `>= 9.0.0`, declared range `^4`). Forking or patching the updater plugin is disproportionate
+  for platform-inapplicable findings; the bump trigger below closes it the day upstream moves.
+- **Gate impact:** without the three `--ignore` flags in the cargo-audit step, the rust CI job
+  fails on every branch until ruled — that is why this ruling exists. The flags are the
+  companion workflow commit (owner-side, same ruling, same date).
+- **Triggers (any one forces action before the review date):**
+  1. `tauri-plugin-updater` releases with zip >= 9 — take the update immediately via
+     `cargo update` and drop these three entries.
+  2. Alfred ever ships a Unix/Linux/macOS target (re-evaluate before any such build).
+  3. Any of the trio is reclassified or demonstrated exploitable on Windows.
+  4. The updater's signature-verification step is ever bypassed or weakened.
+- **Review date:** **2027-01-29** (90-day backstop), or the beta.6 release gate, whichever
+  comes first.
+- **Decision record:** Martin's ruling — zip option 1 (documented allowlist with per-finding
+  justification and review date), 2026-10-29.
 
 ---
 
