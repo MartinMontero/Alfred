@@ -85,6 +85,57 @@ impl GuardState {
         *slot = Some(proxy);
         Ok(addr)
     }
+
+    /// Kill every live goose child AND its process tree; returns the number
+    /// that were live. The updater pre-apply step (beta.6) is the caller: the
+    /// installer must replace files in the install directory, and on Windows
+    /// a running child from that directory — or its own children, notably the
+    /// stdio-spawned node sidecar holding `mcp-server.cjs` — locks the file
+    /// and the replacement step fails silently. `guard_goose_kill_all` stays
+    /// the session-teardown path; this is the install-dir-unlock path, so the
+    /// tree (not just the direct child) is taken down.
+    pub fn kill_all_trees(&self) -> usize {
+        let mut children = self.children.lock();
+        let live = children.len();
+        for (_, entry) in children.iter_mut() {
+            entry.stdin = None; // close stdin first — lets a well-behaved goose exit cleanly
+            kill_tree(&mut entry.child);
+        }
+        children.clear();
+        live
+    }
+}
+
+/// Kill one child and — on Windows — everything it spawned. Plain
+/// `Child::kill` leaves grandchildren alive: the Job Object covers only our
+/// own death, not the live-installer case, so the tree is taken down
+/// explicitly here. Failure is deliberately non-fatal (best-effort unlock).
+pub(crate) fn kill_tree(child: &mut Child) {
+    #[cfg(windows)]
+    {
+        let _ = Command::new("taskkill")
+            .args(["/T", "/F", "/PID", &child.id().to_string()])
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .output();
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = child.kill();
+    }
+}
+
+#[cfg(test)]
+impl GuardState {
+    /// Test-only seam: track an externally spawned child without a Tauri app
+    /// handle, so `kill_all_trees` is testable end to end.
+    pub fn insert_test_child(&self, child: Child) -> u32 {
+        let id = self.next_id.fetch_add(1, Ordering::SeqCst) + 1;
+        self.children
+            .lock()
+            .insert(id, GooseChild { child, stdin: None });
+        id
+    }
 }
 
 // --- events over the IPC channel ----------------------------------------------
