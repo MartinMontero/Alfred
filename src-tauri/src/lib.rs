@@ -1129,6 +1129,30 @@ fn telemetry_export(app: AppHandle) -> Result<Vec<telemetry::StoredEvent>, Strin
     telemetry::export_rows(&conn).map_err(|e| e.to_string())
 }
 
+// ---------- Updater diagnostics (beta.6: evidence for the apply handoff) ----------
+
+/// Diagnostic trace for the updater path: the apply step hands off to an
+/// external installer that kills this process, so each step is written to the
+/// persisted log BEFORE it runs. Only updater UI state ever arrives here —
+/// never notes, prompts, or keys.
+#[tauri::command]
+fn updater_trace(event: String, detail: String) {
+    log::info!(target: "alfred::updater", "{event}: {detail}");
+}
+
+/// Updater pre-apply step: release every file lock the app holds in its
+/// install directory before the installer takes over. Kills all goose
+/// children — on Windows with their full process trees, because goose's
+/// stdio-spawned node sidecar holds `mcp-server.cjs` open and a locked
+/// resource file makes the installer's replacement step fail silently (the
+/// observed beta.5 defect). Returns the number of live children killed.
+#[tauri::command]
+fn updater_pre_apply(state: tauri::State<'_, guard::GuardState>) -> usize {
+    let killed = state.kill_all_trees();
+    log::info!(target: "alfred::updater", "pre-apply: killed {killed} goose child process(es)");
+    killed
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     // FIRST: on Windows, bind this process (and every child it spawns — notably the
@@ -1301,12 +1325,22 @@ pub fn run() {
             }
         })
         .setup(|app| {
-            if cfg!(debug_assertions) {
-                app.handle().plugin(
+            // Logging is RELEASE-ON by design (beta.6 updater fix 1): the
+            // updater's apply step hands off to an external installer that
+            // kills this process, so the only diagnostic record that survives
+            // the handoff is a persisted log file. The plugin's DEFAULT
+            // targets already write to the app log dir (rotated, KeepOne), so
+            // no target override is needed — and staying on the default
+            // builder is what compiles across tauri-plugin-log 2.x (LogDir
+            // became a struct variant mid-2.x; the previous explicit-targets
+            // form here was the E0533). Local only — the log facade in this
+            // codebase never carries notes, prompts, or keys.
+            if app.path().app_log_dir().is_ok() {
+                let _ = app.handle().plugin(
                     tauri_plugin_log::Builder::default()
                         .level(log::LevelFilter::Info)
                         .build(),
-                )?;
+                );
             }
             Ok(())
         })
@@ -1359,6 +1393,8 @@ pub fn run() {
             telemetry_wipe,
             telemetry_metrics,
             telemetry_export,
+            updater_trace,
+            updater_pre_apply,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
