@@ -15,7 +15,7 @@ file summarizes and links them.
 
 **Tag ↔ numeric map so far:** `v0.1.0-beta.1` ↔ 0.1.0 (never published) · `v0.1.0-beta.2` ↔
 0.1.1 (published 2026-07-19) · `v0.1.0-beta.3` ↔ 0.1.2 · `v0.1.0-beta.4` ↔ 0.1.3 (tagged, never
-published) · `v0.1.0-beta.5` ↔ 0.1.4 (draft, pending).
+published) · `v0.1.0-beta.5` ↔ 0.1.4 (draft, pending) · `v0.1.0-beta.6` ↔ 0.1.5 (pending).
 
 ## [Unreleased]
 
@@ -31,6 +31,37 @@ published) · `v0.1.0-beta.5` ↔ 0.1.4 (draft, pending).
 - Added `src/lib/goose/version-pin.test.ts`: fails if the goose pin ever lands in only
   some of its four sites (stage script, release workflow, gate.ps1, RECIPE.md) —
   red-first proven against a partial bump.
+
+## [0.1.5] — v0.1.0-beta.6 — PENDING (the updater-apply fix release)
+
+The release whose point is: the in-app updater now leaves evidence and releases its own locks.
+beta.5's apply step died silently; beta.6 exists to make that class of failure visible and to
+stop it where we can prove the cause.
+
+- **Release-on logging.** `tauri-plugin-log` is now initialized in release builds, not just
+  debug. The apply handoff kills the process, so the only diagnostic record that survives an
+  installer death is a persisted log file (LogDir, rotated, local-only; the log facade never
+  carries notes, prompts, or keys).
+- **Apply-path instrumentation.** Every step of check → download → install is traced to that
+  log BEFORE it runs: `apply:start`, `preApply`, `apply:handoff`, `download:start/complete`,
+  `apply:returned`, and `apply:error` on failure. The next failed apply will show exactly
+  where it stopped instead of going quiet.
+- **Install-dir unlock before apply.** New `updater_pre_apply` step kills the goose children
+  (on Windows, full process trees) before the installer takes over — the stdio-spawned node
+  sidecar holding `mcp-server.cjs` open was the prime suspect for beta.5's silent death.
+  Tests prove the kill actually terminates a live process and that the pre-apply step runs
+  BEFORE the installer handoff, never after.
+- **Dual-era MCP server (Phase 2).** The vault MCP server now answers both eras: legacy
+  `initialize` at 2025-11-25 AND `server/discover` for modern (2026-07-28) clients, with
+  `expectedVersion` on every read and CONFLICT on a stale write (human-edit-wins).
+- **goose sidecar 1.48.0 → 1.56.0** with a pin-consistency test that fails on a partial bump.
+- **Dependency hygiene:** rustls/quinn/webpki lockfile bumps clear 12 RUSTSEC advisories;
+  zip x3 (RUSTSEC-2026-0367/0368/0369) are on the documented allowlist with proof and a
+  review date (Unix-only extraction paths, Windows-only ship).
+- **CI repair:** the artifact-guard WebKitGTK driver install now uses the renamed
+  `webkitgtk-webdriver` package with fallback to the old name (Ubuntu 26.04).
+
+Full notes: [docs/beta/RELEASE-NOTES-v0.1.0-beta.6.md](docs/beta/RELEASE-NOTES-v0.1.0-beta.6.md)
 
 ## [0.1.4] — v0.1.0-beta.5 — DRAFT / PENDING (not yet tagged or published)
 
