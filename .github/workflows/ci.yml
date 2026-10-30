@@ -226,13 +226,18 @@ jobs:
           workspaces: src-tauri
 
       # Tauri build deps + the headless WebDriver stack for driving the artifact.
+      # Ubuntu 26.04 (resolute) renamed the WebKitGTK driver package:
+      # webkit2gtk-driver is gone, webkitgtk-webdriver replaces it (apt itself
+      # names the replacement). Try the new name, fall back to the old one so
+      # the job keeps working on either runner image.
       - name: Install Linux system libs + WebDriver stack
         run: |
           sudo apt-get update
           sudo apt-get install -y \
             libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev \
             patchelf libsecret-1-dev libssl-dev libdbus-1-dev \
-            webkit2gtk-driver xvfb
+            xvfb
+          sudo apt-get install -y webkitgtk-webdriver || sudo apt-get install -y webkit2gtk-driver
 
       - name: Install Alfred deps
         run: npm ci
