@@ -60,6 +60,29 @@ function toToolError(e: unknown): ToolResult {
   return fail(`Error: ${e instanceof Error ? e.message : String(e)}`);
 }
 
+/** CONFLICT result (write-if-unchanged violation). isError:true, vault NOT
+ *  modified, currentVersion surfaced so the caller can re-read. */
+function conflict(path: string, current: string | null): ToolResult {
+  return fail(JSON.stringify({ ok: false, error: 'CONFLICT', path, currentVersion: current }));
+}
+
+/** Optimistic-concurrency gate shared by every write tool: proceed only when
+ *  the caller's expectedVersion equals the on-disk version (null = must not
+ *  exist yet — create-only). Returns null to proceed, else CONFLICT. */
+async function checkVersion(vault: VaultFs, path: string, expectedVersion: string | null): Promise<ToolResult | null> {
+  const current = await vault.versionOf(path);
+  if (current !== expectedVersion) return conflict(path, current);
+  return null;
+}
+
+/** The expectedVersion input field, identical on every write tool. */
+const expectedVersionField = {
+  expectedVersion: z
+    .string()
+    .nullable()
+    .describe('Optimistic-concurrency token from the read that produced the local copy (sha256 of content). null = the note must not exist yet (create-only). A stale token is rejected CONFLICT and the vault is not modified (human-edit-wins).'),
+};
+
 async function readAllNotes(vault: VaultFs): Promise<SearchNote[]> {
   const paths = await vault.list('.md');
   const notes: SearchNote[] = [];
@@ -141,7 +164,10 @@ export function createAlfredMcpServer(vaultRoot: string): { server: McpServer; v
   }, async (args) => {
     try {
       const hits = searchVault(await readAllNotes(vault), args.query, { tag: args.tag, domain: args.domain, limit: args.limit ?? 20 });
-      return ok(JSON.stringify(hits, null, 2));
+      const withVersions = await Promise.all(
+        hits.map(async (h) => ({ ...h, expectedVersion: await vault.versionOf(h.path) })),
+      );
+      return ok(JSON.stringify(withVersions, null, 2));
     } catch (e) { return toToolError(e); }
   });
 
@@ -158,7 +184,7 @@ export function createAlfredMcpServer(vaultRoot: string): { server: McpServer; v
         target,
         resolved: resolveIdentifierToPath(target, index) ?? (index.find((n) => n.path === `${target}.md` || n.path === target)?.path ?? null),
       }));
-      return ok(JSON.stringify({ path, content, wikilinks: links }, null, 2));
+      return ok(JSON.stringify({ path, content, expectedVersion: await vault.versionOf(path), wikilinks: links }, null, 2));
     } catch (e) { return toToolError(e); }
   });
 
@@ -169,35 +195,42 @@ export function createAlfredMcpServer(vaultRoot: string): { server: McpServer; v
       path: z.string(),
       heading: z.string(),
       content: z.string(),
+      ...expectedVersionField,
     }),
   }, async (args) => {
     try {
+      const gate = await checkVersion(vault, args.path, args.expectedVersion);
+      if (gate) return gate;
       const existing = (await vault.exists(args.path)) ? await vault.read(args.path) : '';
       await vault.write(args.path, appendUnderHeading(existing, args.heading, args.content));
-      return ok(`Appended under "${args.heading}" in ${args.path}.`);
+      return ok(JSON.stringify({ ok: true, path: args.path, version: await vault.versionOf(args.path) }));
     } catch (e) { return toToolError(e); }
   });
 
   server.registerTool('vault_patch', {
     title: 'Patch a heading section',
     description: 'Replace the body under an existing heading, keeping the rest of the note intact.',
-    inputSchema: z.strictObject({ path: z.string(), heading: z.string(), content: z.string() }),
+    inputSchema: z.strictObject({ path: z.string(), heading: z.string(), content: z.string(), ...expectedVersionField }),
   }, async (args) => {
     try {
+      const gate = await checkVersion(vault, args.path, args.expectedVersion);
+      if (gate) return gate;
       const existing = await vault.read(args.path);
       await vault.write(args.path, replaceUnderHeading(existing, args.heading, args.content));
-      return ok(`Patched "${args.heading}" in ${args.path}.`);
+      return ok(JSON.stringify({ ok: true, path: args.path, version: await vault.versionOf(args.path) }));
     } catch (e) { return toToolError(e); }
   });
 
   server.registerTool('vault_write', {
     title: 'Write a note (guarded)',
     description: 'Write a full note. Path-confined to the vault root; the LLM must supply the complete content.',
-    inputSchema: z.strictObject({ path: z.string(), content: z.string() }),
+    inputSchema: z.strictObject({ path: z.string(), content: z.string(), ...expectedVersionField }),
   }, async (args) => {
     try {
+      const gate = await checkVersion(vault, args.path, args.expectedVersion);
+      if (gate) return gate;
       await vault.write(args.path, args.content);
-      return ok(`Wrote ${args.path} (${args.content.length} bytes).`);
+      return ok(JSON.stringify({ ok: true, path: args.path, version: await vault.versionOf(args.path) }));
     } catch (e) { return toToolError(e); }
   });
 
@@ -207,10 +240,11 @@ export function createAlfredMcpServer(vaultRoot: string): { server: McpServer; v
     inputSchema: z.strictObject({ path: z.string() }),
   }, async (args) => {
     try {
-      const fm = parseFrontmatter(await vault.read(await resolveAddress(vault, args.path)));
+      const resolved = await resolveAddress(vault, args.path);
+      const fm = parseFrontmatter(await vault.read(resolved));
       const obj: Record<string, unknown> = {};
       if (fm) for (const p of fm.properties) obj[p.key] = p.value;
-      return ok(JSON.stringify(obj, null, 2));
+      return ok(JSON.stringify({ frontmatter: obj, expectedVersion: await vault.versionOf(resolved) }, null, 2));
     } catch (e) { return toToolError(e); }
   });
 
@@ -221,12 +255,15 @@ export function createAlfredMcpServer(vaultRoot: string): { server: McpServer; v
       path: z.string(),
       key: z.string(),
       value: z.union([z.string(), z.array(z.string()), z.boolean(), z.number()]),
+      ...expectedVersionField,
     }),
   }, async (args) => {
     try {
+      const gate = await checkVersion(vault, args.path, args.expectedVersion);
+      if (gate) return gate;
       const updated = setProperty(await vault.read(args.path), args.key, args.value);
       await vault.write(args.path, updated);
-      return ok(`Set ${args.key} on ${args.path}.`);
+      return ok(JSON.stringify({ ok: true, path: args.path, version: await vault.versionOf(args.path) }));
     } catch (e) { return toToolError(e); }
   });
 
@@ -237,14 +274,14 @@ export function createAlfredMcpServer(vaultRoot: string): { server: McpServer; v
   }, async (args) => {
     try {
       const rel = args.file.startsWith('memory-bank/') ? args.file : `memory-bank/${args.file}`;
-      return ok(await vault.read(rel));
+      return ok(JSON.stringify({ file: rel, content: await vault.read(rel), expectedVersion: await vault.versionOf(rel) }, null, 2));
     } catch (e) { return toToolError(e); }
   });
 
   server.registerTool('memory_bank_update', {
     title: 'Update a Memory Bank file (durable, provenance-stamped)',
     description: 'Append content under a heading in a memory-bank/ file. Durable write: stamped with provenance for review (anti-poisoning); never clobbers.',
-    inputSchema: z.strictObject({ file: z.string(), heading: z.string(), content: z.string() }),
+    inputSchema: z.strictObject({ file: z.string(), heading: z.string(), content: z.string(), ...expectedVersionField }),
   }, async (args) => {
     try {
       // Poisoning chokepoint (Phase 5 Step 7): an MCP write is agent-authored and
@@ -257,11 +294,13 @@ export function createAlfredMcpServer(vaultRoot: string): { server: McpServer; v
         return fail(`Refused: durable memory write blocked (${review.reasons.join(', ')}). Not recorded.`);
       }
       const rel = args.file.startsWith('memory-bank/') ? args.file : `memory-bank/${args.file}`;
+      const gate = await checkVersion(vault, rel, args.expectedVersion);
+      if (gate) return gate;
       const existing = (await vault.exists(rel)) ? await vault.read(rel) : '';
       const stamp = `<!-- provenance: mcp · ${new Date().toISOString()} · review before trusting -->`;
       const block = `${args.content.trim()}\n${stamp}`;
       await vault.write(rel, appendUnderHeading(existing, args.heading, block));
-      return ok(`Recorded under "${args.heading}" in ${rel} (provenance-stamped).`);
+      return ok(JSON.stringify({ ok: true, path: rel, provenance: 'stamped', version: await vault.versionOf(rel) }));
     } catch (e) { return toToolError(e); }
   });
 
@@ -272,7 +311,10 @@ export function createAlfredMcpServer(vaultRoot: string): { server: McpServer; v
   }, async (_args, extra) => {
     // Consume the inbound SEP-414 trace context and echo it on the response so the
     // session's trace id correlates across the MCP boundary.
-    try { return { ...ok(await vault.read('hot.md')), ...traceEcho(extra) }; } catch (e) { return toToolError(e); }
+    try {
+      const body = { path: 'hot.md', content: await vault.read('hot.md'), expectedVersion: await vault.versionOf('hot.md') };
+      return { ...ok(JSON.stringify(body, null, 2)), ...traceEcho(extra) };
+    } catch (e) { return toToolError(e); }
   });
 
   server.registerTool('spec_read', {
@@ -281,7 +323,10 @@ export function createAlfredMcpServer(vaultRoot: string): { server: McpServer; v
     inputSchema: z.strictObject({ feature: z.string().optional() }),
   }, async (args) => {
     try {
-      if (args.feature) return ok(await vault.read(`specs/${args.feature}/spec.md`));
+      if (args.feature) {
+        const rel = `specs/${args.feature}/spec.md`;
+        return ok(JSON.stringify({ path: rel, content: await vault.read(rel), expectedVersion: await vault.versionOf(rel) }, null, 2));
+      }
       const specs = (await vault.list('.md')).filter((p) => p.startsWith('specs/'));
       return ok(JSON.stringify(specs, null, 2));
     } catch (e) { return toToolError(e); }

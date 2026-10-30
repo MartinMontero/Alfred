@@ -12,6 +12,7 @@
 
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { wrapDualEra } from './dual-era';
 
 export interface TransportConfig {
   http: boolean;
@@ -34,8 +35,11 @@ export interface ConnectedTransport {
 
 export async function connect(server: McpServer, config: TransportConfig): Promise<ConnectedTransport> {
   if (!config.http) {
+    // Dual-era (2026-10-29): the stdio transport is wrapped so server/discover
+    // and modern per-request _meta version errors are answered in front of the
+    // SDK; the legacy 2025-11-25 initialize path below is unchanged.
     const transport = new StdioServerTransport();
-    await server.connect(transport);
+    await server.connect(wrapDualEra(transport));
     return { kind: 'stdio', close: async () => { await transport.close(); } };
   }
 

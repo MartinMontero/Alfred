@@ -137,7 +137,8 @@ describe('Alfred MCP server — a harness connects over stdio (in-memory) and re
   });
 
   it('runs a guarded, structure-preserving append', async () => {
-    await client.callTool({ name: 'vault_append', arguments: { path: 'inbox/log.md', heading: 'Log', content: '- first entry' } });
+    // expectedVersion contract (2026-10-29): null = create-only.
+    await client.callTool({ name: 'vault_append', arguments: { path: 'inbox/log.md', heading: 'Log', content: '- first entry', expectedVersion: null } });
     const back = textOf(await client.callTool({ name: 'vault_read', arguments: { path: 'inbox/log.md' } }) as any);
     expect(back).toContain('## Log');
     expect(back).toContain('- first entry');
@@ -159,7 +160,9 @@ describe('Alfred MCP server — security', () => {
   });
 
   it('stamps durable Memory Bank writes with provenance (anti-poisoning)', async () => {
-    await client.callTool({ name: 'memory_bank_update', arguments: { file: 'progress.md', heading: 'Progress', content: 'MCP server shipped.' } });
+    // expectedVersion contract (2026-10-29): read-then-write carries the token.
+    const pre = JSON.parse(textOf(await client.callTool({ name: 'memory_bank_read', arguments: { file: 'progress.md' } }) as any));
+    await client.callTool({ name: 'memory_bank_update', arguments: { file: 'progress.md', heading: 'Progress', content: 'MCP server shipped.', expectedVersion: pre.expectedVersion } });
     const back = textOf(await client.callTool({ name: 'memory_bank_read', arguments: { file: 'progress.md' } }) as any);
     expect(back).toContain('MCP server shipped.');
     expect(back).toContain('provenance: mcp');
