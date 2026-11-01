@@ -20,6 +20,7 @@
         "minHeight": 600,
         "fullscreen": false,
         "decorations": true,
+        "devtools": true,
         "dragDropEnabled": false
       }
     ],
