@@ -20,7 +20,6 @@
         "minHeight": 600,
         "fullscreen": false,
         "decorations": true,
-        "devtools": true,
         "dragDropEnabled": false
       }
     ],
@@ -37,7 +36,7 @@
       }
     },
     "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDNEOUEyRjdCRDlFQkY0M0UKUldRKzlPdlpleSthUGZvcnFJL2ZPYllyT2NWK3lNa2NUaGhjb1JlTzVRZDVXdGFKVEo5K2ZEZVoK",
+      "pubkey": "RWQ+9OvZey+aPforqI/fObYrOcV+yMkcThhcoReO5Qd5WtaJTJ9+fDeZ",
       "endpoints": [
         "https://github.com/MartinMontero/Alfred/releases/latest/download/latest.json"
       ]
@@ -65,7 +64,7 @@
         "desktopTemplate": "desktop/alfred.desktop"
       },
       "rpm": {
-        "desktopTemplate": "desktop/alfred.desktop"
+        "desktopTemplate": "desktop/alfred.rpm"
       },
       "appimage": {
         "bundleMediaFramework": false
