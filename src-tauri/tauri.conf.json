@@ -64,7 +64,7 @@
         "desktopTemplate": "desktop/alfred.desktop"
       },
       "rpm": {
-        "desktopTemplate": "desktop/alfred.rpm"
+        "desktopTemplate": "desktop/alfred.desktop"
       },
       "appimage": {
         "bundleMediaFramework": false
