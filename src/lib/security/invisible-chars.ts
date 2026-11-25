@@ -21,7 +21,8 @@
  *  - `warning`: flagged loudly, NOT removed by default (the operator must see it).
  *    Bidi/Trojan-Source controls, the Tags block (payload decoded into the
  *    finding) and the unassigned U+E0080–U+E00FF right after it, supplementary
- *    and Mongolian free variation selectors, the line/paragraph separators
+ *    and Mongolian free variation selectors, the rest of plane 14's unassigned
+ *    default-ignorable area (U+E01F0–U+E0FFF), the line/paragraph separators
  *    U+2028/U+2029, and the interlinear annotation controls U+FFF9–U+FFFB.
  *    Removed from `clean` only when `stripWarnings` is set (e.g. after explicit
  *    operator acknowledgement, before execution).
@@ -146,6 +147,7 @@ function classify(cp: number): Severity | null {
   if (inRange(cp, 0xe0000, 0xe007f)) return 'warning'; // Tags block (ASCII smuggling)
   if (inRange(cp, 0xe0080, 0xe00ff)) return 'warning'; // unassigned, right after Tags (byte smuggling)
   if (inRange(cp, 0xe0100, 0xe01ef)) return 'warning'; // supplementary variation selectors
+  if (inRange(cp, 0xe01f0, 0xe0fff)) return 'warning'; // rest of plane 14's default-ignorable area (unassigned)
   return null;
 }
 
@@ -156,6 +158,7 @@ function nameOf(cp: number, severity: Severity): string {
   const hex = `U+${cp.toString(16).toUpperCase().padStart(4, '0')}`;
   if (inRange(cp, 0xe0000, 0xe007f)) return `${hex} (UNICODE TAG)`;
   if (inRange(cp, 0xe0080, 0xe00ff)) return `${hex} (UNASSIGNED, TAG-ADJACENT)`;
+  if (inRange(cp, 0xe01f0, 0xe0fff)) return `${hex} (UNASSIGNED, DEFAULT-IGNORABLE)`;
   if (inRange(cp, 0xe0100, 0xe01ef)) return `${hex} (VARIATION SELECTOR-${cp - 0xe0100 + 17})`;
   return `${hex} (${severity})`;
 }

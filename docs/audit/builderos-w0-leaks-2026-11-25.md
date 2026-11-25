@@ -74,6 +74,7 @@ Node ICU, Unicode 17.0):**
 | U+180B-U+180D, U+180F | Mongolian free variation selectors (Mn) | warning | Invisible selectors usable as a covert channel; legitimate in Mongolian, so flagged for a person rather than silently removed |
 | U+1D173-U+1D17A | musical format controls (Cf) | stripped | Invisible, no legitimate use in machine input |
 | U+E0080-U+E00FF | unassigned, default-ignorable, right after the Tags block | warning | The Tags smuggling trick extended to byte values 0x80-0xFF |
+| U+E01F0-U+E0FFF | unassigned, default-ignorable (3,600 code points), the rest of plane 14's default-ignorable area | warning | Same class as the row above; render as nothing, so a hidden channel. Added as a follow-up the builder approved in this session; U+E1000 onward is not default-ignorable and stays unflagged |
 
 "Stripped" means removed before anything parses or reads the text and reported as a notice;
 "warning" means kept, flagged, and blocking until a person acknowledges it, then removed
@@ -81,12 +82,13 @@ before execution or install. Memory review rejects any finding of either kind.
 
 **Canaries.** One planted canary per range in both consumers, sharing the table in
 `src/lib/security/invisible-canaries.fixture.ts`; every code point of each range is planted,
-so a partial fix still fails. `src/lib/skills/skill-scan.test.ts` (7, through `scanSkill`,
-the consent model, and `fullyCleanSkill`) and `src/lib/goose/recipe-scan.test.ts` (7, through
-`scanRecipe`, `buildRecipePreview`, and `fullyClean`). Plus a naming test and a VS1-VS16
-characterization test in `src/lib/security/invisible-chars.test.ts`. Pre-fix: all 14 range
-canaries and the naming test fail (`expected [] to deeply equal [ 8232, 8233 ]` and so on:
-nothing caught). Post-fix: all pass.
+so a partial fix still fails. `src/lib/skills/skill-scan.test.ts` (8, through `scanSkill`,
+the consent model, and `fullyCleanSkill`) and `src/lib/goose/recipe-scan.test.ts` (8, through
+`scanRecipe`, `buildRecipePreview`, and `fullyClean`). Plus a naming test, an end-of-range
+test (U+E1000 not flagged), and a VS1-VS16 characterization test in
+`src/lib/security/invisible-chars.test.ts`. Pre-fix: all 16 range canaries and the naming
+test fail (`expected [] to deeply equal [ 8232, 8233 ]`, `... [ 918000, 918001, ... ]` and so
+on: nothing caught). Post-fix: all pass.
 
 **OPEN — variation selectors VS1-VS16 (U+FE00-U+FE0F), deliberately unchanged.** They are
 allowed today because emoji (the red heart emoji is U+2764 followed by U+FE0F) and CJK text use them
@@ -97,12 +99,11 @@ standardized variation sequence and flag the rest; or flag runs of two or more. 
 characterization test pins the current behavior so any change is deliberate.
 
 **Still uncovered after this change (EXECUTED: every default-ignorable or format code point
-run through `sanitize`), for a later pass:** U+E01F0-U+E0FFF (3,600 unassigned default-ignorable
-code points, the same class as U+E0080-U+E00FF and the largest remaining gap); U+FFF0-U+FFF8
-(unassigned, default-ignorable); U+1BCA0-U+1BCA3 (shorthand format controls); U+13430-U+1343F
-(Egyptian hieroglyph format controls); and the visible prepended concatenation marks
-U+0600-U+0605, U+06DD, U+070F, U+0890-U+0891, U+08E2, U+110BD, U+110CD (low risk). Plus
-VS1-VS16 above.
+run through `sanitize`; 3,658 uncovered before the U+E01F0-U+E0FFF follow-up, 58 after),
+for a later pass:** U+FFF0-U+FFF8 (unassigned, default-ignorable); U+1BCA0-U+1BCA3
+(shorthand format controls); U+13430-U+1343F (Egyptian hieroglyph format controls); and the
+visible prepended concatenation marks U+0600-U+0605, U+06DD, U+070F, U+0890-U+0891, U+08E2,
+U+110BD, U+110CD (low risk). Plus the 16 VS1-VS16 above.
 
 ## 3. Inventory: Alfred's copies of the banned-vendor list (no changes made)
 
@@ -167,11 +168,11 @@ DECISIONS text), plus older audit notes and ADRs.
 
 ## 5. Results and RECIPE.md drift check
 
-EXECUTED in this worktree with the environment in section 4: `npm run typecheck` exit 0;
-`npx vitest run src/lib/skills` exit 0 (2 files, 25 tests); `npx vitest run src/lib/goose`
-exit 0 (6 files passed, the live-goose file skipped; 48 tests passed, 2 skipped);
-`powershell -ExecutionPolicy Bypass -File gate.ps1` printed `10/10 subsystems PASS` and exited
-0 (`cargo test`: 65 passed).
+EXECUTED in this worktree with the environment in section 4, after the U+E01F0-U+E0FFF
+follow-up: `npm run typecheck` exit 0; `npx vitest run src/lib/skills` exit 0 (2 files,
+26 tests); `npx vitest run src/lib/goose` exit 0 (6 files passed, the live-goose file
+skipped; 49 tests passed, 2 skipped); `powershell -ExecutionPolicy Bypass -File gate.ps1`
+printed `10/10 subsystems PASS` and exited 0 (`cargo test`: 65 passed).
 
 - **goose/ACP sidecar** — re-verified, not drifted: both pins still `1.56.0`;
   `npx vitest run src/lib/goose` exits 0 (now including the stage canary); both named cargo

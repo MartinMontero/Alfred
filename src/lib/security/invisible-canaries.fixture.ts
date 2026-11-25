@@ -51,6 +51,14 @@ export const W0_CANARY_RANGES: CanaryRange[] = [
   // Unassigned, default-ignorable plane-14 slots right after the Tags block:
   // the same smuggling trick as Tags, extended to byte values 0x80-0xFF.
   { label: 'U+E0080-U+E00FF unassigned tag-adjacent range', codepoints: span(0xe0080, 0xe00ff), severity: 'warning' },
+  // Follow-up to W0 (builder-approved 2026-11-25): the rest of plane 14's
+  // default-ignorable area after the supplementary variation selectors. All
+  // 3,600 are unassigned and render as nothing, so they are a hidden channel.
+  {
+    label: 'U+E01F0-U+E0FFF unassigned plane-14 default-ignorable range',
+    codepoints: span(0xe01f0, 0xe0fff),
+    severity: 'warning',
+  },
 ];
 
 /** The planted string for a range: each code point preceded by a visible 'x'. */

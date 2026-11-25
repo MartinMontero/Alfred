@@ -83,6 +83,12 @@ describe('sanitize — W0 ranges carry readable names', () => {
     expect(name(0x1d173)).toBe('MUSICAL SYMBOL BEGIN BEAM');
     expect(name(0x2065)).toContain('U+2065');
     expect(name(0xe0080)).toContain('U+E0080');
+    expect(name(0xe01f0)).toContain('U+E01F0');
+    expect(name(0xe0fff)).toContain('U+E0FFF');
+  });
+
+  it('stops at the end of the default-ignorable area (U+E1000 is not flagged)', () => {
+    expect(sanitize(cp(0xe1000)).findings).toEqual([]);
   });
 
   // Deliberately unchanged by W0: VS1-VS16 are legitimate emoji/CJK presentation
