@@ -15,12 +15,17 @@
  *
  * Two severities:
  *  - `stripped`: removed silently. Zero-width / invisible-format chars with no
- *    legitimate purpose in machine input.
+ *    legitimate purpose in machine input (incl. the deprecated U+206A–U+206F
+ *    controls, the musical format controls U+1D173–U+1D17A, and the unassigned
+ *    U+2065).
  *  - `warning`: flagged loudly, NOT removed by default (the operator must see it).
  *    Bidi/Trojan-Source controls, the Tags block (payload decoded into the
- *    finding), and supplementary variation selectors — none has any legitimate
- *    purpose in a recipe. Removed from `clean` only when `stripWarnings` is set
- *    (e.g. after explicit operator acknowledgement, before execution).
+ *    finding) and the unassigned U+E0080–U+E00FF right after it, supplementary
+ *    and Mongolian free variation selectors, the rest of plane 14's unassigned
+ *    default-ignorable area (U+E01F0–U+E0FFF), the line/paragraph separators
+ *    U+2028/U+2029, and the interlinear annotation controls U+FFF9–U+FFFB.
+ *    Removed from `clean` only when `stripWarnings` is set (e.g. after explicit
+ *    operator acknowledgement, before execution).
  */
 
 export type Severity = 'stripped' | 'warning';
@@ -70,6 +75,25 @@ const STRIP_NAMES: Record<number, string> = {
   0x3164: 'HANGUL FILLER',
   0xfeff: 'ZERO WIDTH NO-BREAK SPACE (BOM)',
   0xffa0: 'HALFWIDTH HANGUL FILLER',
+  // W0 additions (BuilderOS integration audit, 2026-11-16). Unassigned slot in
+  // the invisible-operator block (default-ignorable, renders as nothing):
+  0x2065: 'U+2065 (UNASSIGNED, DEFAULT-IGNORABLE)',
+  // Deprecated format controls (default-ignorable):
+  0x206a: 'INHIBIT SYMMETRIC SWAPPING',
+  0x206b: 'ACTIVATE SYMMETRIC SWAPPING',
+  0x206c: 'INHIBIT ARABIC FORM SHAPING',
+  0x206d: 'ACTIVATE ARABIC FORM SHAPING',
+  0x206e: 'NATIONAL DIGIT SHAPES',
+  0x206f: 'NOMINAL DIGIT SHAPES',
+  // Musical notation format controls (default-ignorable):
+  0x1d173: 'MUSICAL SYMBOL BEGIN BEAM',
+  0x1d174: 'MUSICAL SYMBOL END BEAM',
+  0x1d175: 'MUSICAL SYMBOL BEGIN TIE',
+  0x1d176: 'MUSICAL SYMBOL END TIE',
+  0x1d177: 'MUSICAL SYMBOL BEGIN SLUR',
+  0x1d178: 'MUSICAL SYMBOL END SLUR',
+  0x1d179: 'MUSICAL SYMBOL BEGIN PHRASE',
+  0x1d17a: 'MUSICAL SYMBOL END PHRASE',
 };
 const STRIP_SET = new Set<number>(Object.keys(STRIP_NAMES).map(Number));
 
@@ -86,6 +110,26 @@ const BIDI_NAMES: Record<number, string> = {
   0x2069: 'POP DIRECTIONAL ISOLATE',
 };
 
+// W0 additions (BuilderOS integration audit, 2026-11-16): named characters that
+// can deceive a human reader or carry a hidden payload.
+const WARN_NAMES: Record<number, string> = {
+  // Zl / Zp: a line break to some renderers and parsers, ordinary text to
+  // others (YAML 1.2), so what a person sees can differ from what is parsed.
+  0x2028: 'LINE SEPARATOR',
+  0x2029: 'PARAGRAPH SEPARATOR',
+  // Interlinear annotation controls: a renderer may hide the annotated text
+  // that the model still reads.
+  0xfff9: 'INTERLINEAR ANNOTATION ANCHOR',
+  0xfffa: 'INTERLINEAR ANNOTATION SEPARATOR',
+  0xfffb: 'INTERLINEAR ANNOTATION TERMINATOR',
+  // Invisible selectors usable as a covert channel. Legitimate in Mongolian
+  // script, so they are flagged for a human rather than silently removed.
+  0x180b: 'MONGOLIAN FREE VARIATION SELECTOR ONE',
+  0x180c: 'MONGOLIAN FREE VARIATION SELECTOR TWO',
+  0x180d: 'MONGOLIAN FREE VARIATION SELECTOR THREE',
+  0x180f: 'MONGOLIAN FREE VARIATION SELECTOR FOUR',
+};
+
 function inRange(cp: number, lo: number, hi: number): boolean {
   return cp >= lo && cp <= hi;
 }
@@ -94,20 +138,27 @@ function inRange(cp: number, lo: number, hi: number): boolean {
  *
  * Note: U+FE00–U+FE0F (variation selectors 1–16) are deliberately **allowed** —
  * they are legitimate emoji/CJK presentation selectors. Only the *supplementary*
- * variation selectors (U+E0100–U+E01EF), used for steganographic smuggling, warn. */
+ * variation selectors (U+E0100–U+E01EF), used for steganographic smuggling, warn.
+ * (Flagging VS1–VS16 too is an open builder decision recorded in W0; unchanged.) */
 function classify(cp: number): Severity | null {
   if (STRIP_SET.has(cp)) return 'stripped';
   if (cp in BIDI_NAMES) return 'warning'; // 202A–202E, 2066–2069
+  if (cp in WARN_NAMES) return 'warning'; // 2028–2029, FFF9–FFFB, 180B–180D, 180F
   if (inRange(cp, 0xe0000, 0xe007f)) return 'warning'; // Tags block (ASCII smuggling)
+  if (inRange(cp, 0xe0080, 0xe00ff)) return 'warning'; // unassigned, right after Tags (byte smuggling)
   if (inRange(cp, 0xe0100, 0xe01ef)) return 'warning'; // supplementary variation selectors
+  if (inRange(cp, 0xe01f0, 0xe0fff)) return 'warning'; // rest of plane 14's default-ignorable area (unassigned)
   return null;
 }
 
 function nameOf(cp: number, severity: Severity): string {
   if (STRIP_NAMES[cp]) return STRIP_NAMES[cp];
   if (BIDI_NAMES[cp]) return BIDI_NAMES[cp];
+  if (WARN_NAMES[cp]) return WARN_NAMES[cp];
   const hex = `U+${cp.toString(16).toUpperCase().padStart(4, '0')}`;
   if (inRange(cp, 0xe0000, 0xe007f)) return `${hex} (UNICODE TAG)`;
+  if (inRange(cp, 0xe0080, 0xe00ff)) return `${hex} (UNASSIGNED, TAG-ADJACENT)`;
+  if (inRange(cp, 0xe01f0, 0xe0fff)) return `${hex} (UNASSIGNED, DEFAULT-IGNORABLE)`;
   if (inRange(cp, 0xe0100, 0xe01ef)) return `${hex} (VARIATION SELECTOR-${cp - 0xe0100 + 17})`;
   return `${hex} (${severity})`;
 }

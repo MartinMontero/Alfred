@@ -8,6 +8,7 @@ import {
   buildSkillConsent,
   fullyCleanSkill,
 } from './skill-scan';
+import { W0_CANARY_RANGES, plant } from '../security/invisible-canaries.fixture';
 
 const CLEAN_SKILL = `---
 name: Markdown Formatter
@@ -64,6 +65,34 @@ describe('scanSkill — Lock 1 (clean skills pass, hidden payloads caught)', () 
     const scan = scanSkill('# Just a body, no frontmatter\n\nDo the thing.', 'skills/nofm/SKILL.md');
     expect(scan.frontmatterError).toBeDefined();
     expect(skillScanHasWarnings(scan)).toBe(true);
+  });
+});
+
+// W0 (BuilderOS audit): invisible ranges the shared sanitizer used to miss. One
+// planted canary per range; every code point of the range is planted.
+describe('scanSkill — W0 planted canaries for previously-missed invisible ranges', () => {
+  it.each(W0_CANARY_RANGES)('CANARY: catches $label', ({ codepoints, severity }) => {
+    const raw = `${CLEAN_SKILL}\nHelpful note.${plant(codepoints)}\n`;
+    const scan = scanSkill(raw, 'skills/w0/SKILL.md');
+
+    const caught = scan.findings.filter((f) => codepoints.includes(f.codepoint));
+    expect(caught.map((f) => f.codepoint)).toEqual(codepoints);
+    expect(caught.every((f) => f.severity === severity)).toBe(true);
+
+    const consent = buildSkillConsent(scan);
+    if (severity === 'warning') {
+      // Blocks a silent install; each hidden char needs explicit acknowledgement.
+      expect(skillScanHasWarnings(scan)).toBe(true);
+      expect(consent.warnings).toHaveLength(codepoints.length);
+    } else {
+      // Removed before anything reads the skill, reported as a notice.
+      expect(skillScanHasWarnings(scan)).toBe(false);
+      for (const cp of codepoints) expect(scan.cleanText).not.toContain(String.fromCodePoint(cp));
+      expect(consent.notices.join(' ')).toContain(`${codepoints.length} invisible character(s) stripped`);
+    }
+    // Post-consent text never carries any of them.
+    const fully = fullyCleanSkill(raw);
+    for (const cp of codepoints) expect(fully).not.toContain(String.fromCodePoint(cp));
   });
 });
 
