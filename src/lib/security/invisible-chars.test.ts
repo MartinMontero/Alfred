@@ -72,6 +72,29 @@ describe('sanitize — WARN set (loud, retained until acknowledged)', () => {
   });
 });
 
+describe('sanitize — W0 ranges carry readable names', () => {
+  it('names the newly-covered characters (official Unicode names; code point for unassigned slots)', () => {
+    const name = (n: number) => sanitize(cp(n)).findings[0]?.name;
+    expect(name(0x2028)).toBe('LINE SEPARATOR');
+    expect(name(0x2029)).toBe('PARAGRAPH SEPARATOR');
+    expect(name(0x206e)).toBe('NATIONAL DIGIT SHAPES');
+    expect(name(0xfff9)).toBe('INTERLINEAR ANNOTATION ANCHOR');
+    expect(name(0x180f)).toBe('MONGOLIAN FREE VARIATION SELECTOR FOUR');
+    expect(name(0x1d173)).toBe('MUSICAL SYMBOL BEGIN BEAM');
+    expect(name(0x2065)).toContain('U+2065');
+    expect(name(0xe0080)).toContain('U+E0080');
+  });
+
+  // Deliberately unchanged by W0: VS1-VS16 are legitimate emoji/CJK presentation
+  // selectors. Whether to flag them anyway is an open decision for the builder.
+  it('still allows every standard variation selector VS1-VS16 (U+FE00-U+FE0F)', () => {
+    for (let n = 0xfe00; n <= 0xfe0f; n++) {
+      const raw = `${cp(0x2764)}${cp(n)}`;
+      expect(sanitize(raw)).toEqual({ clean: raw, findings: [] });
+    }
+  });
+});
+
 describe('sanitize — stripWarnings (post-acknowledgement)', () => {
   it('removes warning chars from clean when stripWarnings is set, still recording them', () => {
     const raw = `safe${cp(0x202e)}${cp(0xe0048)}done`;

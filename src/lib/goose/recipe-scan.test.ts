@@ -14,6 +14,7 @@ import {
   buildRecipePreview,
   type ReadFile,
 } from './recipe-scan';
+import { W0_CANARY_RANGES, plant } from '../security/invisible-canaries.fixture';
 
 const ZW = String.fromCodePoint(0x200b);
 const RLO = String.fromCodePoint(0x202e);
@@ -31,6 +32,35 @@ describe('strip-before-parse', () => {
     expect(scan.cleanText).toContain('instructions: do the thing');
     expect(scan.instructionsPresent).toBe(true); // parsed off the cleaned AST
     expect(scan.findings.some((f) => f.codepoint === 0x200b)).toBe(true);
+  });
+});
+
+// W0 (BuilderOS audit): invisible ranges the shared sanitizer used to miss. One
+// planted canary per range, through the real recipe scan + pre-flight preview.
+describe('scanRecipe + preview — W0 planted canaries for previously-missed invisible ranges', () => {
+  it.each(W0_CANARY_RANGES)('CANARY: catches $label', async ({ codepoints, severity }) => {
+    const raw = `version: "1.0.0"\ntitle: T\ninstructions: summarize the vault.${plant(codepoints)}\nprompt: go\n`;
+    const scan = await scanRecipe('r.yaml', async () => raw);
+    expect(scan.parseError).toBeUndefined();
+
+    const caught = allFindings(scan).filter((f) => codepoints.includes(f.codepoint));
+    expect(caught.map((f) => f.codepoint)).toEqual(codepoints);
+    expect(caught.every((f) => f.severity === severity)).toBe(true);
+
+    const preview = buildRecipePreview(scan);
+    if (severity === 'warning') {
+      // Blocks an unacknowledged run; each hidden char is its own warning.
+      expect(scanHasWarnings(scan)).toBe(true);
+      expect(preview.warnings).toHaveLength(codepoints.length);
+    } else {
+      // Stripped before parse, so neither the parser nor the LLM sees it.
+      expect(scanHasWarnings(scan)).toBe(false);
+      for (const cp of codepoints) expect(scan.cleanText).not.toContain(String.fromCodePoint(cp));
+      expect(preview.notices.join(' ')).toContain(`${codepoints.length} invisible character(s) stripped`);
+    }
+    // The executed (staged) text never carries any of them.
+    const fully = fullyClean(raw);
+    for (const cp of codepoints) expect(fully).not.toContain(String.fromCodePoint(cp));
   });
 });
 
